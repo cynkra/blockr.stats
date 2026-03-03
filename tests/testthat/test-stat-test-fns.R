@@ -145,3 +145,102 @@ test_that("test_correlation requires at least 2 columns", {
   )
   expect_equal(nrow(result), 0)
 })
+
+# --- One-sample t-test ---
+
+test_that("test_t_onesample returns correct structure", {
+  result <- blockr.stats:::test_t_onesample(
+    iris, values = "Sepal.Length", groups = character(),
+    params = list(alternative = "two.sided", conf_level = 0.95, null = 0)
+  )
+  expect_s3_class(result, "data.frame")
+  expect_true(all(c("method", "values", "n", "mean", "null.mean",
+                     "conf.low", "conf.high", "conf.level", "alternative",
+                     "stderr", "statistic", "df", "p.value") %in% names(result)))
+  expect_equal(nrow(result), 1)
+  expect_equal(result$values, "Sepal.Length")
+  expect_equal(result$n, 150)
+})
+
+test_that("test_t_onesample handles multiple columns", {
+  result <- blockr.stats:::test_t_onesample(
+    iris, values = c("Sepal.Length", "Sepal.Width"), groups = character(),
+    params = list(alternative = "two.sided", conf_level = 0.95, null = 0)
+  )
+  expect_equal(nrow(result), 2)
+  expect_equal(result$values, c("Sepal.Length", "Sepal.Width"))
+})
+
+test_that("test_t_onesample warns on too few observations", {
+  small_data <- data.frame(x = 1)
+  expect_warning(
+    result <- blockr.stats:::test_t_onesample(
+      small_data, values = "x", groups = character(),
+      params = list(alternative = "two.sided", conf_level = 0.95, null = 0)
+    ),
+    "fewer than 2"
+  )
+  expect_true(is.na(result$method))
+})
+
+# --- One-sample Wilcoxon ---
+
+test_that("test_wilcoxon_onesample returns correct structure", {
+  result <- blockr.stats:::test_wilcoxon_onesample(
+    iris, values = "Sepal.Length", groups = character(),
+    params = list(alternative = "two.sided", conf_level = 0.95, null = 0)
+  )
+  expect_s3_class(result, "data.frame")
+  expect_true(all(c("method", "values", "n", "location", "null.location",
+                     "conf.low", "conf.high", "conf.level", "alternative",
+                     "statistic", "p.value") %in% names(result)))
+  expect_equal(nrow(result), 1)
+})
+
+test_that("test_wilcoxon_onesample handles multiple columns", {
+  result <- blockr.stats:::test_wilcoxon_onesample(
+    iris, values = c("Sepal.Length", "Sepal.Width"), groups = character(),
+    params = list(alternative = "two.sided", conf_level = 0.95, null = 0)
+  )
+  expect_equal(nrow(result), 2)
+  expect_equal(result$values, c("Sepal.Length", "Sepal.Width"))
+})
+
+# --- One-way ANOVA ---
+
+test_that("test_anova_oneway returns correct structure", {
+  result <- blockr.stats:::test_anova_oneway(
+    iris, values = "Sepal.Length", groups = "Species",
+    params = list(variant = "welch")
+  )
+  expect_s3_class(result, "data.frame")
+  expect_true(all(c("method", "values", "groups", "n", "n.groups",
+                     "statistic", "num.df", "denom.df", "p.value") %in% names(result)))
+  expect_equal(nrow(result), 1)
+  expect_equal(result$n.groups, 3)
+})
+
+test_that("test_anova_oneway Welch vs pooled method names differ", {
+  welch <- blockr.stats:::test_anova_oneway(
+    iris, values = "Sepal.Length", groups = "Species",
+    params = list(variant = "welch")
+  )
+  pooled <- blockr.stats:::test_anova_oneway(
+    iris, values = "Sepal.Length", groups = "Species",
+    params = list(variant = "pooled")
+  )
+  expect_true(grepl("not assuming", welch$method, ignore.case = TRUE))
+  expect_false(grepl("not assuming", pooled$method, ignore.case = TRUE))
+})
+
+test_that("test_anova_oneway warns on fewer than 2 groups", {
+  single_group <- iris[iris$Species == "setosa", ]
+  expect_warning(
+    result <- blockr.stats:::test_anova_oneway(
+      single_group, values = "Sepal.Length", groups = "Species",
+      params = list(variant = "welch")
+    ),
+    "fewer than 2"
+  )
+  expect_true(is.na(result$method))
+})

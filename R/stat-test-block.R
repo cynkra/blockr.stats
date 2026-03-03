@@ -33,8 +33,19 @@ new_stat_test_block <- function(
   # all param input IDs that might exist in the UI
   all_param_ids <- c("method", "alternative", "variant", "conf_level", "null")
 
+  # Derive initial category from the type
+  initial_category <- type_to_category(type)
+
   ui <- function(id) {
     ns <- NS(id)
+
+    # Build category choices with icons
+    cat_choices <- unname(vapply(names(test_categories), identity, character(1)))
+    cat_names <- lapply(names(test_categories), function(k) {
+      cat <- test_categories[[k]]
+      tags$div(icon(cat$icon), tags$span(cat$label))
+    })
+
     tagList(
       shinyjs::useShinyjs(),
 
@@ -114,23 +125,17 @@ new_stat_test_block <- function(
         class = "block-container",
         div(
           class = "block-form-grid",
-          # One-sample row
+          # Category buttons
           div(
             style = "grid-column: 1 / -1;",
-            tags$label(
-              style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
-              test_groups$one_sample
-            ),
             div(
               class = "test-type-selector",
               shinyWidgets::radioGroupButtons(
-                inputId = ns("type_one_sample"),
+                inputId = ns("category"),
                 label = NULL,
-                choiceNames = list(
-                  tags$div(icon("chart-area"), tags$span("Normality"))
-                ),
-                choiceValues = c("normality"),
-                selected = if (test_config[[type]]$group == "one_sample") type else character(0),
+                choiceNames = cat_names,
+                choiceValues = cat_choices,
+                selected = initial_category,
                 status = "light",
                 size = "sm",
                 checkIcon = list(
@@ -140,59 +145,15 @@ new_stat_test_block <- function(
               )
             )
           ),
-          # Comparison row
+          # Test dropdown (shown only when category has multiple tests)
           div(
+            id = ns("test_container"),
             style = "grid-column: 1 / -1;",
-            tags$label(
-              style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
-              test_groups$comparison
-            ),
-            div(
-              class = "test-type-selector",
-              shinyWidgets::radioGroupButtons(
-                inputId = ns("type_comparison"),
-                label = NULL,
-                choiceNames = list(
-                  tags$div(icon("not-equal"), tags$span("T-test")),
-                  tags$div(icon("sort"), tags$span("Wilcoxon")),
-                  tags$div(icon("layer-group"), tags$span("Kruskal-Wallis")),
-                  tags$div(icon("balance-scale"), tags$span("Homogeneity"))
-                ),
-                choiceValues = c("t_test", "wilcoxon", "kruskal_wallis", "homogeneity"),
-                selected = if (test_config[[type]]$group == "comparison") type else character(0),
-                status = "light",
-                size = "sm",
-                checkIcon = list(
-                  yes = tags$i(class = "fa fa-check", style = "display: none;"),
-                  no = tags$i(style = "display: none;")
-                )
-              )
-            )
-          ),
-          # Association row
-          div(
-            style = "grid-column: 1 / -1;",
-            tags$label(
-              style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
-              test_groups$association
-            ),
-            div(
-              class = "test-type-selector",
-              shinyWidgets::radioGroupButtons(
-                inputId = ns("type_association"),
-                label = NULL,
-                choiceNames = list(
-                  tags$div(icon("chart-line"), tags$span("Correlation"))
-                ),
-                choiceValues = c("correlation"),
-                selected = if (test_config[[type]]$group == "association") type else character(0),
-                status = "light",
-                size = "sm",
-                checkIcon = list(
-                  yes = tags$i(class = "fa fa-check", style = "display: none;"),
-                  no = tags$i(style = "display: none;")
-                )
-              )
+            selectInput(
+              ns("test"),
+              label = "Test",
+              choices = NULL,
+              width = "100%"
             )
           ),
           # --- Column mappings ---
@@ -334,6 +295,8 @@ new_stat_test_block <- function(
       r_conf_level  <- as_rv(conf_level)
       r_null        <- as_rv(null)
 
+      r_category <- reactiveVal(initial_category)
+
       # Group-by selector
       r_by_selection <- mod_column_selector_server(
         id = "by_selector",
@@ -347,29 +310,30 @@ new_stat_test_block <- function(
         initial_value = by
       )
 
-      # --- Type switching: mutual exclusion across groups ---
-      observeEvent(input$type_one_sample, {
-        r_type(input$type_one_sample)
-        shinyWidgets::updateRadioGroupButtons(session, "type_comparison",
-                                              selected = character(0))
-        shinyWidgets::updateRadioGroupButtons(session, "type_association",
-                                              selected = character(0))
-      }, ignoreNULL = TRUE, ignoreInit = TRUE)
+      # --- Category switching ---
+      observeEvent(input$category, {
+        cat <- input$category
+        r_category(cat)
 
-      observeEvent(input$type_comparison, {
-        r_type(input$type_comparison)
-        shinyWidgets::updateRadioGroupButtons(session, "type_one_sample",
-                                              selected = character(0))
-        shinyWidgets::updateRadioGroupButtons(session, "type_association",
-                                              selected = character(0))
-      }, ignoreNULL = TRUE, ignoreInit = TRUE)
+        tests <- category_tests(cat)
+        if (length(tests) == 1) {
+          shinyjs::hide("test_container")
+          r_type(tests)
+        } else {
+          shinyjs::show("test_container")
+          choices <- vapply(tests, function(k) test_config[[k]]$label, character(1))
+          names(choices) <- choices
+          choices <- stats::setNames(tests, choices)
+          current <- r_type()
+          sel <- if (current %in% tests) current else tests[1]
+          updateSelectInput(session, "test", choices = choices, selected = sel)
+          r_type(sel)
+        }
+      }, ignoreNULL = TRUE, ignoreInit = FALSE)
 
-      observeEvent(input$type_association, {
-        r_type(input$type_association)
-        shinyWidgets::updateRadioGroupButtons(session, "type_one_sample",
-                                              selected = character(0))
-        shinyWidgets::updateRadioGroupButtons(session, "type_comparison",
-                                              selected = character(0))
+      # --- Test dropdown ---
+      observeEvent(input$test, {
+        r_type(input$test)
       }, ignoreNULL = TRUE, ignoreInit = TRUE)
 
       # --- Input binding ---

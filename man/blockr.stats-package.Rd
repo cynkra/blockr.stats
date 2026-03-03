@@ -6,7 +6,7 @@
 \alias{blockr.stats-package}
 \title{blockr.stats: Statistical Test Blocks for 'blockr'}
 \description{
-Extends 'blockr.core' with an interactive block for statistical hypothesis tests. Provides a single adaptive block supporting normality tests, two-sample t-tests, Wilcoxon rank-sum tests, Kruskal-Wallis tests, homogeneity of variance tests, and correlation tests, with optional group-by stratification. Also includes a p-value adjustment block for multiple comparison correction.
+Extends 'blockr.core' with an interactive block for statistical hypothesis tests. Provides a single adaptive block supporting normality tests, one-sample and two-sample t-tests, one-sample and two-sample Wilcoxon tests, Kruskal-Wallis tests, one-way ANOVA, homogeneity of variance tests, and correlation tests, with optional group-by stratification. Also includes a p-value adjustment block for multiple comparison correction.
 }
 \author{
 \strong{Maintainer}: Christoph Sax \email{christoph@cynkra.com} (\href{https://orcid.org/0000-0002-7192-7044}{ORCID})

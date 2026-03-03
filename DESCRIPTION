@@ -24,10 +24,11 @@ Authors@R:
     )
 Description: Extends 'blockr.core' with an interactive block for statistical
     hypothesis tests. Provides a single adaptive block supporting normality
-    tests, two-sample t-tests, Wilcoxon rank-sum tests, Kruskal-Wallis tests,
-    homogeneity of variance tests, and correlation tests, with optional
-    group-by stratification. Also includes a p-value adjustment block for
-    multiple comparison correction.
+    tests, one-sample and two-sample t-tests, one-sample and two-sample
+    Wilcoxon tests, Kruskal-Wallis tests, one-way ANOVA, homogeneity of
+    variance tests, and correlation tests, with optional group-by
+    stratification. Also includes a p-value adjustment block for multiple
+    comparison correction.
 License: GPL (>= 3)
 Depends:
     R (>= 4.1.0)

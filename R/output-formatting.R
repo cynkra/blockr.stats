@@ -14,7 +14,7 @@ block_output.htest_block <- function(x, result, session) {
 
   if (!is.null(result)) {
     cols <- names(result)[vapply(result, is.numeric, logical(1))]
-    cols <- setdiff(cols, c("conf.level", "null.diff", "null.shift"))
+    cols <- setdiff(cols, c("conf.level", "null.diff", "null.shift", "null.mean", "null.location"))
     result[cols] <- Map(format_decimals, result[cols])
   }
 

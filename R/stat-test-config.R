@@ -1,15 +1,16 @@
-#' Test group labels for the UI
+#' Category definitions for the UI
 #' @noRd
-test_groups <- list(
-  one_sample  = "One-sample",
-  comparison  = "Comparison",
-  association = "Association"
+test_categories <- list(
+  normality   = list(label = "Normality",   icon = "chart-area"),
+  mean_median = list(label = "Mean/Median", icon = "not-equal"),
+  variance    = list(label = "Variance",    icon = "balance-scale"),
+  correlation = list(label = "Correlation", icon = "chart-line")
 )
 
 #' Configuration for all supported statistical tests
 #'
 #' Each entry defines:
-#' - group: which UI row (one_sample, comparison, association)
+#' - category: which UI category (normality, mean_median, variance, correlation)
 #' - label: display name
 #' - icon: Bootstrap icon name
 #' - inputs: which column selectors to show (values, groups)
@@ -19,7 +20,7 @@ test_groups <- list(
 #' @noRd
 test_config <- list(
   normality = list(
-    group = "one_sample",
+    category = "normality",
     label = "Normality",
     icon = "activity",
     inputs = list(
@@ -44,8 +45,8 @@ test_config <- list(
     test_fn = "test_normality"
   ),
   t_test = list(
-    group = "comparison",
-    label = "T-test",
+    category = "mean_median",
+    label = "Two-sample t-test",
     icon = "arrows-expand",
     inputs = list(
       values = list(role = "required", type = "numeric", multiple = TRUE),
@@ -83,8 +84,8 @@ test_config <- list(
     test_fn = "test_t_twosample"
   ),
   wilcoxon = list(
-    group = "comparison",
-    label = "Wilcoxon",
+    category = "mean_median",
+    label = "Two-sample Wilcoxon",
     icon = "bar-chart-steps",
     inputs = list(
       values = list(role = "required", type = "numeric", multiple = TRUE),
@@ -116,7 +117,7 @@ test_config <- list(
     test_fn = "test_wilcoxon"
   ),
   kruskal_wallis = list(
-    group = "comparison",
+    category = "mean_median",
     label = "Kruskal-Wallis",
     icon = "distribute-vertical",
     inputs = list(
@@ -126,8 +127,92 @@ test_config <- list(
     params = list(),
     test_fn = "test_kruskal_wallis"
   ),
+  anova_oneway = list(
+    category = "mean_median",
+    label = "One-way ANOVA",
+    icon = "bar-chart",
+    inputs = list(
+      values = list(role = "required", type = "numeric", multiple = TRUE),
+      groups = list(role = "required", type = "factor")
+    ),
+    params = list(
+      variant = list(
+        type = "select",
+        label = "Variance assumption",
+        choices = c("Welch" = "welch", "Pooled" = "pooled"),
+        default = "welch"
+      )
+    ),
+    test_fn = "test_anova_oneway"
+  ),
+  t_test_one = list(
+    category = "mean_median",
+    label = "One-sample t-test",
+    icon = "arrows-expand",
+    inputs = list(
+      values = list(role = "required", type = "numeric", multiple = TRUE),
+      groups = list(role = "hidden")
+    ),
+    params = list(
+      alternative = list(
+        type = "select",
+        label = "Alternative",
+        choices = c("Two sided" = "two.sided", "Greater" = "greater", "Less" = "less"),
+        default = "two.sided",
+        advanced = TRUE
+      ),
+      conf_level = list(
+        type = "numeric",
+        label = "Confidence level",
+        default = 0.95,
+        min = 0, max = 1, step = 0.01,
+        advanced = TRUE
+      ),
+      null = list(
+        type = "numeric",
+        label = "Null mean",
+        default = 0,
+        step = 0.1,
+        advanced = TRUE
+      )
+    ),
+    test_fn = "test_t_onesample"
+  ),
+  wilcoxon_one = list(
+    category = "mean_median",
+    label = "One-sample Wilcoxon",
+    icon = "bar-chart-steps",
+    inputs = list(
+      values = list(role = "required", type = "numeric", multiple = TRUE),
+      groups = list(role = "hidden")
+    ),
+    params = list(
+      alternative = list(
+        type = "select",
+        label = "Alternative",
+        choices = c("Two sided" = "two.sided", "Greater" = "greater", "Less" = "less"),
+        default = "two.sided",
+        advanced = TRUE
+      ),
+      conf_level = list(
+        type = "numeric",
+        label = "Confidence level",
+        default = 0.95,
+        min = 0, max = 1, step = 0.01,
+        advanced = TRUE
+      ),
+      null = list(
+        type = "numeric",
+        label = "Null location",
+        default = 0,
+        step = 0.1,
+        advanced = TRUE
+      )
+    ),
+    test_fn = "test_wilcoxon_onesample"
+  ),
   homogeneity = list(
-    group = "comparison",
+    category = "variance",
     label = "Homogeneity",
     icon = "symmetry-vertical",
     inputs = list(
@@ -150,7 +235,7 @@ test_config <- list(
     test_fn = "test_homogeneity"
   ),
   correlation = list(
-    group = "association",
+    category = "correlation",
     label = "Correlation",
     icon = "graph-up",
     inputs = list(
@@ -182,3 +267,16 @@ test_config <- list(
     test_fn = "test_correlation"
   )
 )
+
+#' Look up which category a test type belongs to
+#' @noRd
+type_to_category <- function(type) {
+  test_config[[type]]$category
+}
+
+#' Get all test keys belonging to a category
+#' @noRd
+category_tests <- function(category) {
+  keys <- names(test_config)
+  keys[vapply(keys, function(k) identical(test_config[[k]]$category, category), logical(1))]
+}
