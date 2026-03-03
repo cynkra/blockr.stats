@@ -531,7 +531,7 @@ new_stat_test_block <- function(
           )
 
           by_cols <- r_by_selection()
-          fn <- match.fun(cfg$test_fn)
+          fn <- get(cfg$test_fn, envir = asNamespace("blockr.stats"), mode = "function")
           strat_fn <- stratified_eval
 
           bquote({
