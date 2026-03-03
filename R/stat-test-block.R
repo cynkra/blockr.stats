@@ -38,9 +38,38 @@ new_stat_test_block <- function(
     tagList(
       shinyjs::useShinyjs(),
 
-      # CSS for collapsible advanced section (matches blockr.ggplot pattern)
+      # CSS for test type selector and collapsible advanced section
+      # (matches blockr.ggplot pattern)
       tags$style(HTML(sprintf(
         "
+        .test-type-selector {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+          width: 100%%;
+        }
+        .test-type-selector .btn-group-toggle,
+        .test-type-selector .btn-group {
+          display: inline-flex !important;
+          flex-wrap: wrap;
+          gap: 5px;
+          margin: 0;
+        }
+        .test-type-selector .btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 8px 12px;
+          white-space: nowrap;
+          width: 130px;
+        }
+        .test-type-selector .btn i {
+          font-size: 1.2em;
+          margin-bottom: 4px;
+        }
+        .test-type-selector .btn span {
+          font-size: 0.85em;
+          white-space: nowrap;
+        }
         #%s-advanced-options {
           max-height: 0;
           overflow: hidden;
@@ -92,15 +121,23 @@ new_stat_test_block <- function(
               style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
               test_groups$one_sample
             ),
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("type_one_sample"),
-              choices = stats::setNames(
-                names(Filter(function(x) x$group == "one_sample", test_config)),
-                vapply(Filter(function(x) x$group == "one_sample", test_config),
-                       function(x) x$label, character(1))
-              ),
-              selected = if (test_config[[type]]$group == "one_sample") type else character(0),
-              size = "sm"
+            div(
+              class = "test-type-selector",
+              shinyWidgets::radioGroupButtons(
+                inputId = ns("type_one_sample"),
+                label = NULL,
+                choiceNames = list(
+                  tags$div(icon("chart-area"), tags$span("Normality"))
+                ),
+                choiceValues = c("normality"),
+                selected = if (test_config[[type]]$group == "one_sample") type else character(0),
+                status = "light",
+                size = "sm",
+                checkIcon = list(
+                  yes = tags$i(class = "fa fa-check", style = "display: none;"),
+                  no = tags$i(style = "display: none;")
+                )
+              )
             )
           ),
           # Comparison row
@@ -110,15 +147,26 @@ new_stat_test_block <- function(
               style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
               test_groups$comparison
             ),
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("type_comparison"),
-              choices = stats::setNames(
-                names(Filter(function(x) x$group == "comparison", test_config)),
-                vapply(Filter(function(x) x$group == "comparison", test_config),
-                       function(x) x$label, character(1))
-              ),
-              selected = if (test_config[[type]]$group == "comparison") type else character(0),
-              size = "sm"
+            div(
+              class = "test-type-selector",
+              shinyWidgets::radioGroupButtons(
+                inputId = ns("type_comparison"),
+                label = NULL,
+                choiceNames = list(
+                  tags$div(icon("not-equal"), tags$span("T-test")),
+                  tags$div(icon("sort"), tags$span("Wilcoxon")),
+                  tags$div(icon("layer-group"), tags$span("Kruskal-Wallis")),
+                  tags$div(icon("balance-scale"), tags$span("Homogeneity"))
+                ),
+                choiceValues = c("t_test", "wilcoxon", "kruskal_wallis", "homogeneity"),
+                selected = if (test_config[[type]]$group == "comparison") type else character(0),
+                status = "light",
+                size = "sm",
+                checkIcon = list(
+                  yes = tags$i(class = "fa fa-check", style = "display: none;"),
+                  no = tags$i(style = "display: none;")
+                )
+              )
             )
           ),
           # Association row
@@ -128,15 +176,23 @@ new_stat_test_block <- function(
               style = "font-size: 0.75em; color: #6c757d; margin-bottom: 2px; display: block;",
               test_groups$association
             ),
-            shinyWidgets::radioGroupButtons(
-              inputId = ns("type_association"),
-              choices = stats::setNames(
-                names(Filter(function(x) x$group == "association", test_config)),
-                vapply(Filter(function(x) x$group == "association", test_config),
-                       function(x) x$label, character(1))
-              ),
-              selected = if (test_config[[type]]$group == "association") type else character(0),
-              size = "sm"
+            div(
+              class = "test-type-selector",
+              shinyWidgets::radioGroupButtons(
+                inputId = ns("type_association"),
+                label = NULL,
+                choiceNames = list(
+                  tags$div(icon("chart-line"), tags$span("Correlation"))
+                ),
+                choiceValues = c("correlation"),
+                selected = if (test_config[[type]]$group == "association") type else character(0),
+                status = "light",
+                size = "sm",
+                checkIcon = list(
+                  yes = tags$i(class = "fa fa-check", style = "display: none;"),
+                  no = tags$i(style = "display: none;")
+                )
+              )
             )
           ),
           # --- Column mappings ---
