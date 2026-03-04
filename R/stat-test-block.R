@@ -60,10 +60,12 @@ new_stat_test_block <- function(
         }
         .test-type-selector .btn-group-toggle,
         .test-type-selector .btn-group {
-          display: inline-flex !important;
-          flex-wrap: wrap;
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
           gap: 5px;
           margin: 0;
+          width: 100%% !important;
+          max-width: 100%%;
         }
         .test-type-selector .btn {
           display: flex;
@@ -71,7 +73,7 @@ new_stat_test_block <- function(
           align-items: center;
           padding: 8px 12px;
           white-space: nowrap;
-          width: 130px;
+          width: 100%%;
         }
         .test-type-selector .btn i {
           font-size: 1.2em;
