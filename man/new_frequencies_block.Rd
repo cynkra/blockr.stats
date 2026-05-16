@@ -4,10 +4,12 @@
 \alias{new_frequencies_block}
 \title{Frequencies Block}
 \usage{
-new_frequencies_block(vars = character(), ...)
+new_frequencies_block(vars = character(), by = "", ...)
 }
 \arguments{
 \item{vars}{Categorical column names.}
+
+\item{by}{Optional second categorical column (crosstab).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -15,7 +17,7 @@ new_frequencies_block(vars = character(), ...)
 A \code{frequencies_block} transform block.
 }
 \description{
-Computes frequency counts and proportions for one or more categorical
-columns. Emits a long-format tibble with columns: variable, level, n,
-proportion.
+Transform block wrapping \code{\link[=tabulate_freq]{tabulate_freq()}}. One-way counts, or a
+two-way crosstab when a \code{by} variable is chosen. Emits a tidy data
+frame for the generic renderers.
 }

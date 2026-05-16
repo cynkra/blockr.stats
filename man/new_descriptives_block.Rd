@@ -15,7 +15,6 @@ new_descriptives_block(vars = character(), ...)
 A \code{descriptives_block} transform block.
 }
 \description{
-Wraps \code{\link[parameters:reexports]{parameters::describe_distribution()}} as a transform block. Emits a
-tidy tibble with one row per selected variable: mean, SD, IQR, range,
-skewness, kurtosis, n, n_missing.
+Transform block wrapping \code{\link[=describe_numeric]{describe_numeric()}}. Emits a tidy data
+frame (one row per variable) for the generic renderers.
 }

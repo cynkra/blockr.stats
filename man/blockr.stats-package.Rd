@@ -4,9 +4,9 @@
 \name{blockr.stats-package}
 \alias{blockr.stats}
 \alias{blockr.stats-package}
-\title{blockr.stats: Linear Model Blocks for blockr}
+\title{blockr.stats: Statistical Blocks for blockr}
 \description{
-Extends 'blockr.core' with interactive blocks for statistical model fitting and diagnostics. Users can build and explore linear and generalized linear models through a graphical interface, including coefficient tables, ANOVA tables, diagnostic plots, and interactive residual exploration.
+Extends 'blockr.core' with no-code statistical blocks: the applied-stats-basics spine (describe, compare, associate, regress, nonparametric) plus an advanced tier (survival). Blocks fit models and tests and emit tidy data frames consumed by generic renderers.
 }
 \seealso{
 Useful links:

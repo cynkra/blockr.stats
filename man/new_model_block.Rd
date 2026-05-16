@@ -9,45 +9,35 @@ new_model_block(
   response = character(),
   predictors = character(),
   factors = character(),
-  random_effects = character(),
   intercept = TRUE,
   ...
 )
 }
 \arguments{
-\item{model_type}{Model type. One of: "lm" (linear), "logistic" (binomial GLM),
-"poisson" (Poisson GLM), "gamma" (Gamma GLM), "multinom" (multinomial via
-\code{nnet::multinom}), "polr" (ordinal via \code{MASS::polr}), "lmer" (mixed linear
-via \code{lme4::lmer}), "glmer" (mixed logistic via \code{lme4::glmer}).}
+\item{model_type}{One of \code{"lm"}, \code{"logistic"}, \code{"poisson"},
+\code{"gamma"}, \code{"aov"}.}
 
-\item{response}{Response variable column name (single column).}
+\item{response}{Response column (single).}
 
-\item{predictors}{Numeric predictor (covariate) column names. Multiple.}
+\item{predictors}{Numeric predictor column names.}
 
-\item{factors}{Categorical predictor column names. Multiple.}
+\item{factors}{Categorical predictor column names.}
 
-\item{random_effects}{Categorical grouping variable column names for mixed
-models. One random-intercept term \code{(1 | group)} per name. Only used for
-\code{lmer} / \code{glmer}.}
-
-\item{intercept}{Logical. Include intercept term (default TRUE).}
+\item{intercept}{Logical, include intercept (default TRUE).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
 \value{
-A transform block object of class \code{model_block}.
+A transform block of class \code{model_block}.
 }
 \description{
-Fit statistical models including linear models (lm), generalized linear
-models (glm), multinomial regression, ordinal regression, and mixed-effects
-models. The block emits a fitted model object that downstream blocks
-(parameters, anova, performance, effect sizes, diagnostics, report)
-consume via easystats / broom S3 dispatch.
+Fit a statistical model: linear (\code{lm}), generalized linear (\code{glm}:
+logistic / Poisson / Gamma), or ANOVA (\code{aov}). Returns the \strong{fitted
+model object}; downstream the broom adapter (tidy / glance /
+augment) turns it into tidy frames for the generic renderers. The
+block's own preview is a generic \code{summary(model)}.
 }
-\examples{
-if (interactive()) {
-  library(blockr.core)
-  serve(new_model_block(), list(data = mtcars))
-}
-
+\details{
+The fit is committed via an explicit \strong{Fit} action so an expensive
+model does not re-run on every input keystroke.
 }
