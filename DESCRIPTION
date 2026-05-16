@@ -31,8 +31,6 @@ Imports:
     moments,
     nortest,
     stats,
-    shinyjs,
-    shinyWidgets,
     survival,
     tibble
 Suggests:

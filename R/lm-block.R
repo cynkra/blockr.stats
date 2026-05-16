@@ -147,8 +147,6 @@ new_lm_block <- function(
     },
     ui = function(id) {
       tagList(
-        shinyjs::useShinyjs(),
-
         # CSS utilities
         css_responsive_grid(),
         css_single_column("lm"),

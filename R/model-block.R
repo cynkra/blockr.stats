@@ -151,7 +151,6 @@ new_model_block <- function(
     },
     ui = function(id) {
       tagList(
-        shinyjs::useShinyjs(),
         css_responsive_grid(),
         css_single_column("model"),
         div(
