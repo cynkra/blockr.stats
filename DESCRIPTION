@@ -23,12 +23,16 @@ Imports:
     blockr.core (>= 0.1.1),
     broom,
     cmprsk,
+    dplyr,
     effsize,
     glue,
     htmltools,
     knitr,
+    moments,
+    nortest,
     stats,
     shinyjs,
+    shinyWidgets,
     survival,
     tibble
 Suggests:
