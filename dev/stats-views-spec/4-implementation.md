@@ -2,7 +2,7 @@
 
 ## Package scaffolding
 
-### `blockr.lm/DESCRIPTION` updates
+### `blockr.stats/DESCRIPTION` updates
 
 Add to `Imports:`:
 
@@ -23,10 +23,10 @@ Verify CRAN install of all four easystats packages plus nnet/MASS/lme4 succeeds 
 
 ### File layout
 
-All new R files live in `blockr.lm/R/`. One file per block, following the existing convention:
+All new R files live in `blockr.stats/R/`. One file per block, following the existing convention:
 
 ```
-blockr.lm/
+blockr.stats/
 ├── R/
 │   ├── model-block.R                 # EXTEND existing
 │   ├── parameters-block.R            # NEW
@@ -53,13 +53,13 @@ blockr.lm/
 
 ## Reference patterns to copy
 
-Every new block follows one of two reference patterns already in `blockr.lm`:
+Every new block follows one of two reference patterns already in `blockr.stats`:
 
 | Pattern | Reference | New blocks using it |
 |---|---|---|
-| **Adaptive block with type picker** | `blockr.lm/R/model-block.R:24-` (existing) | `model_block` (extend), `ttest_block` (new) |
-| **Output block: model-in, tibble-out, custom HTML render** | `blockr.lm/R/model-summary-block.R:22-434` | All other new blocks |
-| **Output block: model-in, plot-out** | `blockr.lm/R/check-model-block.R:28-74` | (none new — reusing existing) |
+| **Adaptive block with type picker** | `blockr.stats/R/model-block.R:24-` (existing) | `model_block` (extend), `ttest_block` (new) |
+| **Output block: model-in, tibble-out, custom HTML render** | `blockr.stats/R/model-summary-block.R:22-434` | All other new blocks |
+| **Output block: model-in, plot-out** | `blockr.stats/R/check-model-block.R:28-74` | (none new — reusing existing) |
 
 Authoring conventions per `blockr.docs/patterns/r-driven-blocks.md` (especially state-name-matches-constructor-arg, no `req()` use, forward `...` to parent).
 
@@ -243,7 +243,7 @@ UI exposes a column picker (multi-select, type-filtered) and 1-2 options (method
 ### `cohens-d-block.R`, `normality-check-block.R`, `homogeneity-check-block.R` — new
 
 - `cohens_d_block`: consumes htest or data + grouping; calls `effectsize::cohens_d(...)`. Exposes pooled / Hedges correction toggles.
-- `normality_check_block`: consumes data; calls `performance::check_normality()`. Outputs the test result (Shapiro-Wilk W and p, plus interpretation flag). Renders a small badge: "OK" (green) if p > 0.05, "Concern" (yellow) if 0.01-0.05, "Reject" (red) if p < 0.01 — pattern from `blockr.lm/R/model-summary-block.R:285-291`.
+- `normality_check_block`: consumes data; calls `performance::check_normality()`. Outputs the test result (Shapiro-Wilk W and p, plus interpretation flag). Renders a small badge: "OK" (green) if p > 0.05, "Concern" (yellow) if 0.01-0.05, "Reject" (red) if p < 0.01 — pattern from `blockr.stats/R/model-summary-block.R:285-291`.
 - `homogeneity_check_block`: consumes data + grouping; calls `performance::check_homogeneity()`. Same badge pattern.
 - `nonparametric_block`: adaptive type picker mirroring `ttest_block` (One-sample / Paired / Independent). Same role pickers; expression dispatches to `stats::wilcox.test(...)` with the paired / mu / formula form per type. Output: the `htest` object. Downstream consumers (`parameters_block`, `report_block`) work without changes since `wilcox.test` returns the same `htest` class as `t.test`.
 
@@ -266,14 +266,14 @@ Each new block gets `tests/testthat/test-<name>-block.R` covering:
 
 No `shinytest2` — all R-driven, all coverable with `testServer()`.
 
-Reference test pattern: `blockr.lm/tests/testthat/test-lm-block.R` (existing).
+Reference test pattern: `blockr.stats/tests/testthat/test-lm-block.R` (existing).
 
-## Demo scripts (`blockr.lm/dev/`)
+## Demo scripts (`blockr.stats/dev/`)
 
 ### Exploration script (`exploration.R`)
 
 ```r
-pkgload::load_all("blockr.core"); pkgload::load_all("blockr.lm")
+pkgload::load_all("blockr.core"); pkgload::load_all("blockr.stats")
 pkgload::load_all("blockr.dock"); pkgload::load_all("blockr.dag")
 
 board <- new_dock_board(
@@ -314,10 +314,10 @@ The full multi-view board from `3-design.md`. The artifact partners actually cli
 
 In order:
 
-1. Install updated `blockr.lm` from local source. Verify all new deps resolve.
+1. Install updated `blockr.stats` from local source. Verify all new deps resolve.
 2. `Rscript -e 'devtools::document()'` — clean.
 3. `Rscript -e 'devtools::test()'` — all tests pass.
-4. `cd /tmp && Rscript -e 'devtools::check("/workspace/blockr.lm", quiet = TRUE, error_on = "never")'` — 0 errors, 0 warnings.
+4. `cd /tmp && Rscript -e 'devtools::check("/workspace/blockr.stats", quiet = TRUE, error_on = "never")'` — 0 errors, 0 warnings.
 5. Run each demo script on the host on port 3838. Open in browser, click through:
    - **Rung 1 (View user)**: variables can be picked, output panels populate.
    - Switching the model-type picker updates panels coherently (no stale/broken state).

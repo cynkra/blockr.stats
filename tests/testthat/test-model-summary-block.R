@@ -39,7 +39,7 @@ test_that("model summary block UI generation", {
 
 test_that("significance_badge returns correct badges", {
   # Access internal function
-  sig_badge <- blockr.lm:::significance_badge
+  sig_badge <- blockr.stats:::significance_badge
 
   # Test different significance levels
   badge_001 <- sig_badge(0.0005)
@@ -67,7 +67,7 @@ test_that("html_model_coefs generates valid HTML", {
   model <- lm(mpg ~ cyl + hp, data = mtcars)
   tidy_df <- broom::tidy(model, conf.int = TRUE)
 
-  html_coefs <- blockr.lm:::html_model_coefs
+  html_coefs <- blockr.stats:::html_model_coefs
   result <- html_coefs(tidy_df)
 
   expect_s3_class(result, "shiny.tag")
@@ -83,7 +83,7 @@ test_that("html_model_stats generates valid HTML", {
   model <- lm(mpg ~ cyl + hp, data = mtcars)
   glance_df <- broom::glance(model)
 
-  html_stats <- blockr.lm:::html_model_stats
+  html_stats <- blockr.stats:::html_model_stats
   result <- html_stats(glance_df, model)
 
   expect_s3_class(result, "shiny.tag")
@@ -98,7 +98,7 @@ expect_true(grepl("R", html_text))  # R-squared
 test_that("html_model_tests generates valid HTML", {
   model <- lm(mpg ~ cyl + hp, data = mtcars)
 
-  html_tests <- blockr.lm:::html_model_tests
+  html_tests <- blockr.stats:::html_model_tests
   result <- html_tests(model)
 
   expect_s3_class(result, "shiny.tag")
@@ -123,7 +123,7 @@ test_that("model summary works with glm", {
   expect_true(nrow(glance_df) == 1)
 
   # Test html generation
-  html_coefs <- blockr.lm:::html_model_coefs
+  html_coefs <- blockr.stats:::html_model_coefs
   result <- html_coefs(tidy_df)
   expect_s3_class(result, "shiny.tag")
 })

@@ -1,4 +1,4 @@
-#' CSS Utilities for blockr.lm Blocks
+#' CSS Utilities for blockr.stats Blocks
 #'
 #' Provides centralized CSS functions for consistent block styling.
 #' Based on blockr.dplyr patterns.

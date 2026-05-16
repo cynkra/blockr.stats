@@ -1,11 +1,11 @@
-# blockr.lm
+# blockr.stats
 
 Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr) — linear models, generalized linear models, mixed-effects models, t-tests, descriptives, correlation, and easystats-backed output blocks. Aimed at no-code statistical workflows for thesis writers and intro-stats users while staying canonical R underneath.
 
 ## Installation
 
 ```r
-pak::pak("blockr-org/blockr.lm")
+pak::pak("blockr-org/blockr.stats")
 ```
 
 The package depends on the easystats family (`parameters`, `performance`, `effectsize`, `report`, `correlation`) plus `nnet`, `MASS`, `lme4` for the non-lm model families. All on CRAN.
@@ -62,7 +62,7 @@ Hand-composed `dock_board` scripts in `dev/`:
 Run from the workspace root:
 
 ```bash
-Rscript blockr.lm/dev/all-views.R
+Rscript blockr.stats/dev/all-views.R
 ```
 
 Open `http://localhost:3838`.

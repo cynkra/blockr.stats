@@ -32,7 +32,7 @@ new_diagnostic_plot_block <- function(...) {
           list(
             expr = reactive({
               # Use evaluate-compatible expression for base R plots
-              parse(text = "blockr.lm:::create_diagnostic_plots(data)")[[1]]
+              parse(text = "blockr.stats:::create_diagnostic_plots(data)")[[1]]
             }),
             state = list()
           )

@@ -1,4 +1,4 @@
-# Test data factories for blockr.lm block tests.
+# Test data factories for blockr.stats block tests.
 #
 # Pattern B testing per blockr.docs/patterns/r-driven-blocks.md:
 #   - Drive block_server with a reactive data source

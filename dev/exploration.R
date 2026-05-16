@@ -1,7 +1,7 @@
 # Data exploration view
 #
 # Run from workspace root on host:
-#   Rscript blockr.lm/dev/exploration.R
+#   Rscript blockr.stats/dev/exploration.R
 #
 # Open http://localhost:3838.
 #
@@ -22,7 +22,7 @@ options(
 )
 
 pkgload::load_all("blockr.core")
-pkgload::load_all("blockr.lm")
+pkgload::load_all("blockr.stats")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.session")

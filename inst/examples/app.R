@@ -1,4 +1,4 @@
-# Demo app for blockr.lm
+# Demo app for blockr.stats
 #
 # Run with: source("inst/examples/app.R")
 

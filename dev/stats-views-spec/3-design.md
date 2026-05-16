@@ -6,8 +6,8 @@ All blocks in this prototype are R-driven (per `blockr.docs/patterns/r-driven-bl
 
 - The blocks we need are not multi-row builders or autocomplete editors. They are "configure inputs, render result" blocks where the JS-driven payoff is small.
 - The team is new to blockr; R-driven is the documented on-ramp and uses only `testServer()` for testing.
-- All existing `blockr.lm` blocks are R-driven — staying R keeps stylistic consistency with the package we're extending.
-- Visual polish (publication-style tables, narrative paragraphs, headline panels) goes through `renderUI` + hand-rolled HTML/CSS via an `htmlDependency`, the same pattern `blockr.lm/R/model-summary-block.R:421-434` already uses.
+- All existing `blockr.stats` blocks are R-driven — staying R keeps stylistic consistency with the package we're extending.
+- Visual polish (publication-style tables, narrative paragraphs, headline panels) goes through `renderUI` + hand-rolled HTML/CSS via an `htmlDependency`, the same pattern `blockr.stats/R/model-summary-block.R:421-434` already uses.
 - "Rewrite to JS later" is explicitly supported by the docs. If a partner reaction names a specific UX gap (e.g., "I want to drag predictors between covariates and factors"), upgrade that one block.
 
 ## Block taxonomy
@@ -16,7 +16,7 @@ Two adaptive blocks (with internal type pickers) and a small set of one-purpose 
 
 ### Adaptive block 1 — `new_model_block()`
 
-Replaces / extends the existing `blockr.lm/R/model-block.R` to cover the full lm-family.
+Replaces / extends the existing `blockr.stats/R/model-block.R` to cover the full lm-family.
 
 - **Type picker** (`shinyWidgets::radioGroupButtons` with icons, the `blockr.ggplot` pattern): Linear / Logistic / Multinomial / Ordinal / Mixed Linear / Mixed Logistic.
 - **Variable roles** (selectizeInput, multi where applicable):
@@ -58,7 +58,7 @@ Each is small (~50-100 lines), R-driven, with a `block_output` method rendering 
 | `new_homogeneity_check_block` | `performance::check_homogeneity` | model/data | tibble or rendered result | For t-tests view (Independent only) |
 | `new_nonparametric_block` | `stats::wilcox.test` | data.frame (consumed like `new_ttest_block`) | `htest` object | Adaptive type picker mirroring `new_ttest_block`: One-sample / Paired (Wilcoxon signed-rank) / Independent (Mann-Whitney U). Uses the same role pickers and shows in the t-tests view. |
 
-Existing blocks reused unchanged: `new_anova_block`, `new_check_model_block`, `new_coefplot_block` (already in `blockr.lm`).
+Existing blocks reused unchanged: `new_anova_block`, `new_check_model_block`, `new_coefplot_block` (already in `blockr.stats`).
 
 ### Panels in requirements vs blocks in design
 
@@ -193,9 +193,9 @@ The rendered narrative is the visible wow on first inspection.
 
 ## Where the work lives
 
-- All new blocks: in `blockr.lm/R/`. Files follow the existing convention (`<name>-block.R`).
-- `blockr.lm/DESCRIPTION` Imports gain: `parameters`, `effectsize`, `report`, `correlation`, `nnet`, `MASS`, `lme4`. Existing imports stay.
-- View scripts: `blockr.lm/dev/exploration.R`, `blockr.lm/dev/modeling.R`, `blockr.lm/dev/ttests.R`, plus a single `blockr.lm/dev/all-views.R` that constructs the multi-view board with all three.
+- All new blocks: in `blockr.stats/R/`. Files follow the existing convention (`<name>-block.R`).
+- `blockr.stats/DESCRIPTION` Imports gain: `parameters`, `effectsize`, `report`, `correlation`, `nnet`, `MASS`, `lme4`. Existing imports stay.
+- View scripts: `blockr.stats/dev/exploration.R`, `blockr.stats/dev/modeling.R`, `blockr.stats/dev/ttests.R`, plus a single `blockr.stats/dev/all-views.R` that constructs the multi-view board with all three.
 - No new package. The function block (`blockr.extra::new_function_block`) is referenced but not modified.
 
 ## What's deliberately not specified at design level

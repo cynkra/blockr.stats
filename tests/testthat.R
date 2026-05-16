@@ -1,4 +1,4 @@
 library(testthat)
-library(blockr.lm)
+library(blockr.stats)
 
-test_check("blockr.lm")
+test_check("blockr.stats")

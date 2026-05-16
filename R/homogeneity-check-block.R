@@ -66,7 +66,7 @@ new_homogeneity_check_block <- function(
             if (length(d) == 0 || !nzchar(d)) return(quote(NULL))
             if (length(g) == 0 || !nzchar(g)) return(quote(NULL))
             expr_text <- glue::glue(
-              "blockr.lm:::homogeneity_check('{d}', '{g}', data = data)"
+              "blockr.stats:::homogeneity_check('{d}', '{g}', data = data)"
             )
             parse(text = expr_text)[[1]]
           }),

@@ -124,7 +124,7 @@ test_that("create_residual_plot_echarts helper function works", {
   model <- lm(mpg ~ cyl + hp, data = mtcars)
 
   # Access internal function
-  create_plot <- blockr.lm:::create_residual_plot_echarts
+  create_plot <- blockr.stats:::create_residual_plot_echarts
 
   # Test with default parameters
   plot <- create_plot(model, x_var = "fitted", y_var = "residuals")
@@ -149,7 +149,7 @@ test_that("create_residual_plot_echarts works with glm models", {
   # Logistic regression
   model <- glm(am ~ mpg + hp, data = mtcars, family = binomial())
 
-  create_plot <- blockr.lm:::create_residual_plot_echarts
+  create_plot <- blockr.stats:::create_residual_plot_echarts
 
   # Should work with glm
 

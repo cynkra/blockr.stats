@@ -20,7 +20,7 @@ The modeling view is the "jamovi quality" deliverable. It ships with these panel
 - **Coefficients table** — Source: `parameters::model_parameters()`. Replaces the default `broom::tidy()` formatting because parameters renders categorical level breakouts, proper variable labels, and scientific notation appropriately.
 - **ANOVA F-table** — Source: `stats::anova()` via the existing `anova_block`, polymorphic over the model type.
 - **Effect sizes** — η² / partial η² / ω² via `effectsize::eta_squared()`; standardized β via `effectsize::standardize_parameters()`.
-- **Diagnostic plots** — Existing `check_model_block` in blockr.lm, which uses `performance::check_model()`.
+- **Diagnostic plots** — Existing `check_model_block` in blockr.stats, which uses `performance::check_model()`.
 - **Auto-narrative** — APA-style paragraph via `report::report()`. The unique wedge over jamovi.
 
 Each panel is an output block consuming the model object. They polymorph naturally because easystats and broom methods exist for `lm`, `glm`, `lmer`, `glmer`, `polr`, `multinom`.
@@ -78,7 +78,7 @@ Rungs 1-3 must be exercisable in the demo. Rung 4 is implicit in the architectur
 
 ## Where the work lives
 
-- **`blockr.lm`** is the home for all the new blocks. Existing 9 blocks stay; the model block is extended to cover multinomial / ordinal / mixed-effects on top of the current lm/glm coverage. New blocks added:
+- **`blockr.stats`** is the home for all the new blocks. Existing 9 blocks stay; the model block is extended to cover multinomial / ordinal / mixed-effects on top of the current lm/glm coverage. New blocks added:
     - For modeling: `new_parameters_block`, `new_effectsize_block`, `new_standardize_block`, `new_performance_block`, `new_report_block`.
     - For data exploration: `new_descriptives_block`, `new_correlation_block`, `new_frequencies_block`.
     - For t-tests: `new_ttest_block`, `new_cohens_d_block`, `new_normality_check_block`, `new_homogeneity_check_block`, `new_nonparametric_block`.
@@ -87,8 +87,8 @@ Rungs 1-3 must be exercisable in the demo. Rung 4 is implicit in the architectur
 
     Imports gain `parameters`, `effectsize`, `report`, `correlation` (the easystats package), plus `nnet`, `MASS`, `lme4` for the new model families.
 - **`blockr.extra`** continues to host the function block — no change, just used in the prototype.
-- **View scripts** live in `blockr.lm/dev/` (or wherever the lm-related demos already live). One script per view. Convention follows `blockr.sandbox/dev/cedx-poc.R`.
-- **No new package** for the prototype. If the catalog grows beyond what fits in `blockr.lm` + `blockr.extra`, splitting comes later.
+- **View scripts** live in `blockr.stats/dev/` (or wherever the lm-related demos already live). One script per view. Convention follows `blockr.sandbox/dev/cedx-poc.R`.
+- **No new package** for the prototype. If the catalog grows beyond what fits in `blockr.stats` + `blockr.extra`, splitting comes later.
 
 ## Polish bar — operational definition
 

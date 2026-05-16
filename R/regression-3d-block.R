@@ -25,7 +25,7 @@ new_regression_3d_block <- function(...) {
         function(input, output, session) {
           list(
             expr = reactive({
-              quote(blockr.lm:::create_regression_3d_plot(data))
+              quote(blockr.stats:::create_regression_3d_plot(data))
             }),
             state = list()
           )

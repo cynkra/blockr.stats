@@ -1,7 +1,7 @@
 # Modeling view -- the polish template for stats-views
 #
 # Run from the workspace root on the host:
-#   Rscript blockr.lm/dev/modeling.R
+#   Rscript blockr.stats/dev/modeling.R
 #
 # Open http://localhost:3838 (devcontainer-forwarded port).
 #
@@ -30,7 +30,7 @@ options(
 )
 
 pkgload::load_all("blockr.core")
-pkgload::load_all("blockr.lm")
+pkgload::load_all("blockr.stats")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.dock")
 pkgload::load_all("blockr.session")

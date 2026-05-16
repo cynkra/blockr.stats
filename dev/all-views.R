@@ -4,7 +4,7 @@
 # dock_board. The partner-facing artifact for the prototype.
 #
 # Run from workspace root on host:
-#   Rscript blockr.lm/dev/all-views.R
+#   Rscript blockr.stats/dev/all-views.R
 #
 # Open http://localhost:3838.
 #
@@ -25,7 +25,7 @@ options(
 pkgload::load_all("blockr.core")
 pkgload::load_all("blockr.dplyr")
 pkgload::load_all("blockr.io")
-pkgload::load_all("blockr.lm")
+pkgload::load_all("blockr.stats")
 pkgload::load_all("blockr.extra")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.dock")
@@ -34,7 +34,7 @@ pkgload::load_all("blockr.session")
 # Bundled sample dataset (palmerpenguins, CC0). The path is resolved at
 # runtime; replace the file or switch source = "upload" to use a different
 # dataset.
-penguins_csv <- system.file("extdata", "penguins.csv", package = "blockr.lm")
+penguins_csv <- system.file("extdata", "penguins.csv", package = "blockr.stats")
 
 # Defaults derived from the penguins schema; if you swap the CSV for a
 # different file, change these too (or pick from the picker UI in the

@@ -1,6 +1,6 @@
-# Hybrid LM Demo: Combining blockr.lm blocks with blockr.extra function blocks
+# Hybrid LM Demo: Combining blockr.stats blocks with blockr.extra function blocks
 #
-# This example demonstrates how to extend blockr.lm's specialized modeling blocks
+# This example demonstrates how to extend blockr.stats's specialized modeling blocks
 # with blockr.extra's new_function_block() for custom outputs like gtsummary tables.
 # It also demonstrates async execution with new_async_function_block().
 #
@@ -19,7 +19,7 @@ run_app(
     # Data source - using mtcars
     data = new_dataset_block("mtcars"),
 
-    # === blockr.lm specialized blocks ===
+    # === blockr.stats specialized blocks ===
 
     # Fit model: mpg ~ cyl + hp + wt
     model = new_model_block(
@@ -50,7 +50,7 @@ run_app(
     ),
 
     # Custom model: Robust regression using MASS::rlm (ASYNC)
-    # (not natively supported by blockr.lm)
+    # (not natively supported by blockr.stats)
     # - formula: text input for model specification
     # - psi: dropdown for robust estimation method
     # Uses async execution - click "Run" to execute, "Cancel" to stop

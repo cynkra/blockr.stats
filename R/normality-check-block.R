@@ -76,7 +76,7 @@ new_normality_check_block <- function(
               "NULL"
             }
             expr_text <- glue::glue(
-              "blockr.lm:::normality_check({cols_str}, group = {grp_arg}, data = data)"
+              "blockr.stats:::normality_check({cols_str}, group = {grp_arg}, data = data)"
             )
             parse(text = expr_text)[[1]]
           }),

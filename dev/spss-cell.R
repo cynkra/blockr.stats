@@ -1,14 +1,14 @@
-# SPSS-style stats cell on top of blockr.lm
+# SPSS-style stats cell on top of blockr.stats
 #
-# A hand-composed dashboard: existing blockr.lm blocks arranged in a
+# A hand-composed dashboard: existing blockr.stats blocks arranged in a
 # dock_layouts grid that reads as a single SPSS / jamovi output cell,
 # even though under the hood it's still a blockr pipeline of atomic
 # blocks.
 #
 # Run from the workspace root (the directory holding blockr.core,
-# blockr.lm, blockr.dock, blockr.dag):
+# blockr.stats, blockr.dock, blockr.dag):
 #
-#   Rscript blockr.lm/dev/spss-cell.R
+#   Rscript blockr.stats/dev/spss-cell.R
 #
 # Then open http://localhost:3838 (devcontainer-forwarded port).
 #
@@ -34,7 +34,7 @@ options(
 
 pkgload::load_all("blockr.core")
 pkgload::load_all("blockr.dplyr")
-pkgload::load_all("blockr.lm")
+pkgload::load_all("blockr.stats")
 pkgload::load_all("blockr.dag")
 pkgload::load_all("blockr.dock")
 

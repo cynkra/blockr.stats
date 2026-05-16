@@ -48,7 +48,7 @@ new_residual_explorer_block <- function(
               y <- r_y_var()
 
               expr_text <- glue::glue(
-                "blockr.lm:::create_residual_plot_echarts(data, x_var = '{x}', y_var = '{y}')"
+                "blockr.stats:::create_residual_plot_echarts(data, x_var = '{x}', y_var = '{y}')"
               )
               parse(text = expr_text)[[1]]
             }),
