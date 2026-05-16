@@ -1,35 +1,82 @@
+#' Frequency counts / proportions (one- or two-way)
+#'
+#' One-way: per variable -> level, n, proportion. Two-way (when `by`
+#' is set): per variable -> level x by_level contingency in long form
+#' (level, by_level, n, proportion). Tidy data frame for the generic
+#' renderers; the two-way form also feeds the chi-square test of
+#' independence.
+#'
+#' @param data A data frame.
+#' @param vars Categorical column name(s).
+#' @param by Optional second categorical column (crosstab).
+#' @return A long tidy data frame.
+#' @export
+tabulate_freq <- function(data, vars, by = NULL) {
+  vars <- intersect(vars[nzchar(vars)], names(data))
+  if (length(vars) == 0L) {
+    return(data.frame(message = "Select categorical variable(s)",
+                      stringsAsFactors = FALSE))
+  }
+  two_way <- !is.null(by) && nzchar(by) && by %in% names(data)
+  out <- lapply(vars, function(col) {
+    if (two_way) {
+      tab <- table(data[[col]], data[[by]], useNA = "ifany")
+      df <- as.data.frame(tab, stringsAsFactors = FALSE)
+      names(df) <- c("level", "by_level", "n")
+      df$variable <- col
+      df$by <- by
+      df$proportion <- df$n / sum(df$n)
+      df[, c("variable", "level", "by", "by_level", "n", "proportion")]
+    } else {
+      tab <- table(data[[col]], useNA = "ifany")
+      data.frame(
+        variable   = col,
+        level      = names(tab),
+        n          = as.integer(tab),
+        proportion = as.numeric(tab) / sum(tab),
+        stringsAsFactors = FALSE
+      )
+    }
+  })
+  do.call(rbind, out)
+}
+
 #' Frequencies Block
 #'
-#' Computes frequency counts and proportions for one or more categorical
-#' columns. Emits a long-format tibble with columns: variable, level, n,
-#' proportion.
+#' Transform block wrapping [tabulate_freq()]. One-way counts, or a
+#' two-way crosstab when a `by` variable is chosen. Emits a tidy data
+#' frame for the generic renderers.
 #'
 #' @param vars Categorical column names.
+#' @param by Optional second categorical column (crosstab).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
-#'
 #' @return A `frequencies_block` transform block.
-#'
 #' @export
-new_frequencies_block <- function(
-  vars = character(),
-  ...
-) {
+new_frequencies_block <- function(vars = character(), by = "", ...) {
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {
         r_vars <- reactiveVal(vars)
+        r_by <- reactiveVal(by)
         r_initialized <- reactiveVal(FALSE)
 
+        cat_of <- function(d) {
+          colnames(d)[vapply(d, function(x) is.factor(x) ||
+            is.character(x), logical(1))]
+        }
+
         observeEvent(input$vars, r_vars(input$vars))
+        observeEvent(input$by,
+          r_by(if (is.null(input$by)) "" else input$by))
 
         observe({
           if (!r_initialized() && length(colnames(data())) > 0) {
-            d <- data()
-            cat_cols <- colnames(d)[vapply(
-              d, function(x) is.factor(x) || is.character(x), logical(1)
-            )]
+            cc <- cat_of(data())
             updateSelectizeInput(session, "vars",
-              choices = cat_cols, selected = r_vars())
+              choices = cc, selected = r_vars())
+            updateSelectizeInput(session, "by",
+              choices = c("(none)" = "", stats::setNames(cc, cc)),
+              selected = r_by())
             r_initialized(TRUE)
           }
         })
@@ -37,14 +84,14 @@ new_frequencies_block <- function(
         observeEvent(colnames(data()), {
           if (r_initialized()) {
             req(data())
-            d <- data()
-            cat_cols <- colnames(d)[vapply(
-              d, function(x) is.factor(x) || is.character(x), logical(1)
-            )]
-            new_vars <- intersect(r_vars(), cat_cols)
-            r_vars(new_vars)
+            cc <- cat_of(data())
+            nv <- intersect(r_vars(), cc)
+            r_vars(nv)
             updateSelectizeInput(session, "vars",
-              choices = cat_cols, selected = new_vars)
+              choices = cc, selected = nv)
+            updateSelectizeInput(session, "by",
+              choices = c("(none)" = "", stats::setNames(cc, cc)),
+              selected = if (r_by() %in% cc) r_by() else "")
           }
         }, ignoreNULL = FALSE)
 
@@ -52,22 +99,14 @@ new_frequencies_block <- function(
           expr = reactive({
             v <- r_vars()
             v <- v[nzchar(v)]
-            if (length(v) == 0) return(quote(NULL))
-            cols_str <- paste0("c(", paste0("'", v, "'", collapse = ", "), ")")
-            expr_text <- glue::glue(
-              "do.call(rbind, lapply({cols_str}, function(col) {{",
-              "  tab <- table(data[[col]], useNA = 'ifany');",
-              "  tibble::tibble(",
-              "    variable = col,",
-              "    level = names(tab),",
-              "    n = as.integer(tab),",
-              "    proportion = as.numeric(tab) / sum(tab)",
-              "  )",
-              "}}))"
+            b <- r_by()
+            b <- if (is.null(b) || !nzchar(b)) NULL else b
+            bquote(
+              blockr.stats::tabulate_freq(data, vars = .(v), by = .(b)),
+              list(v = v, b = b)
             )
-            parse(text = expr_text)[[1]]
           }),
-          state = list(vars = r_vars)
+          state = list(vars = r_vars, by = r_by)
         )
       })
     },
@@ -78,38 +117,24 @@ new_frequencies_block <- function(
           selectizeInput(
             NS(id, "vars"),
             label = "Categorical variables",
-            choices = vars,
-            selected = vars,
-            multiple = TRUE,
-            width = "100%",
+            choices = vars, selected = vars,
+            multiple = TRUE, width = "100%",
             options = list(
               plugins = list("drag_drop", "remove_button"),
               placeholder = "Pick categorical variables..."
             )
+          ),
+          selectizeInput(
+            NS(id, "by"),
+            label = "By (crosstab, optional)",
+            choices = c("(none)" = "", stats::setNames(vars, vars)),
+            selected = by, multiple = FALSE, width = "100%"
           )
         )
       )
     },
     class = "frequencies_block",
-    allow_empty_state = "vars",
+    allow_empty_state = c("vars", "by"),
     ...
   )
-}
-
-#' @export
-block_output.frequencies_block <- function(x, result, session) {
-  renderUI({
-    if (is.null(result) || nrow(result) == 0) {
-      return(htmltools::tags$em("Pick categorical variables."))
-    }
-    htmltools::tagList(
-      htmltools::tags$style(htmltools::HTML(parameters_block_css())),
-      htmltools::HTML(format_easystats_table(result))
-    )
-  })
-}
-
-#' @export
-block_ui.frequencies_block <- function(id, x, ...) {
-  tagList(uiOutput(NS(id, "result")))
 }

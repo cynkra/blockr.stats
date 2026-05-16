@@ -1,19 +1,55 @@
+#' Per-variable descriptive statistics (base R)
+#'
+#' One row per numeric variable: n, n_missing, mean, sd, median, q1,
+#' q3, min, max. No easystats dependency.
+#'
+#' @param data A data frame.
+#' @param vars Numeric column names to summarise (default: all numeric).
+#' @return A tidy data frame.
+#' @export
+describe_numeric <- function(data, vars = NULL) {
+  if (is.null(vars) || length(vars) == 0) {
+    vars <- names(data)[vapply(data, is.numeric, logical(1L))]
+  }
+  vars <- intersect(vars, names(data))
+  vars <- vars[vapply(data[vars], is.numeric, logical(1L))]
+  if (length(vars) == 0L) {
+    return(data.frame(message = "Select numeric variable(s)",
+                      stringsAsFactors = FALSE))
+  }
+  rows <- lapply(vars, function(v) {
+    x <- data[[v]]
+    n_miss <- sum(is.na(x))
+    x <- x[!is.na(x)]
+    q <- if (length(x)) stats::quantile(x, c(0.25, 0.5, 0.75),
+                                        names = FALSE) else rep(NA_real_, 3)
+    data.frame(
+      variable  = v,
+      n         = length(x),
+      n_missing = n_miss,
+      mean      = if (length(x)) mean(x) else NA_real_,
+      sd        = if (length(x) > 1L) stats::sd(x) else NA_real_,
+      median    = q[2L],
+      q1        = q[1L],
+      q3        = q[3L],
+      min       = if (length(x)) min(x) else NA_real_,
+      max       = if (length(x)) max(x) else NA_real_,
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
+}
+
 #' Descriptives Block
 #'
-#' Wraps [parameters::describe_distribution()] as a transform block. Emits a
-#' tidy tibble with one row per selected variable: mean, SD, IQR, range,
-#' skewness, kurtosis, n, n_missing.
+#' Transform block wrapping [describe_numeric()]. Emits a tidy data
+#' frame (one row per variable) for the generic renderers.
 #'
 #' @param vars Numeric column names to summarise.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
-#'
 #' @return A `descriptives_block` transform block.
-#'
 #' @export
-new_descriptives_block <- function(
-  vars = character(),
-  ...
-) {
+new_descriptives_block <- function(vars = character(), ...) {
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {
@@ -48,13 +84,10 @@ new_descriptives_block <- function(
           expr = reactive({
             v <- r_vars()
             v <- v[nzchar(v)]
-            if (length(v) == 0) return(quote(NULL))
-            cols_str <- paste0("c(", paste0("'", v, "'", collapse = ", "), ")")
-            expr_text <- glue::glue(
-              "tibble::as_tibble(parameters::describe_distribution(",
-              "data[, {cols_str}, drop = FALSE]))"
+            bquote(
+              blockr.stats::describe_numeric(data, vars = .(v)),
+              list(v = v)
             )
-            parse(text = expr_text)[[1]]
           }),
           state = list(vars = r_vars)
         )
@@ -83,22 +116,4 @@ new_descriptives_block <- function(
     allow_empty_state = "vars",
     ...
   )
-}
-
-#' @export
-block_output.descriptives_block <- function(x, result, session) {
-  renderUI({
-    if (is.null(result) || nrow(result) == 0) {
-      return(htmltools::tags$em("Pick variables to compute descriptives."))
-    }
-    htmltools::tagList(
-      htmltools::tags$style(htmltools::HTML(parameters_block_css())),
-      htmltools::HTML(format_easystats_table(result))
-    )
-  })
-}
-
-#' @export
-block_ui.descriptives_block <- function(id, x, ...) {
-  tagList(uiOutput(NS(id, "result")))
 }
