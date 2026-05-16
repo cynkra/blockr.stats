@@ -29,7 +29,7 @@ names to test.}
 
 \item{method, alternative, variant, conf_level, null}{Test parameters.}
 
-\item{...}{Forwarded to \code{\link[=new_htest_block]{new_htest_block()}}.}
+\item{...}{Forwarded to the internal htest block constructor.}
 }
 \value{
 A block of class \code{stat_test_block}.

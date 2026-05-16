@@ -11,7 +11,7 @@
 #' @param groups Comparison group column name.
 #' @param by Column names for group-by stratification.
 #' @param method,alternative,variant,conf_level,null Test parameters.
-#' @param ... Forwarded to [new_htest_block()].
+#' @param ... Forwarded to the internal htest block constructor.
 #' @return A block of class `stat_test_block`.
 #' @export
 new_stat_test_block <- function(

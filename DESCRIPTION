@@ -35,6 +35,7 @@ Imports:
     tibble
 Suggests:
     blockr.extra,
+    car,
     gtsummary,
     palmerpenguins,
     testthat (>= 3.0.0)
