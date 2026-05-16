@@ -1,0 +1,193 @@
+---
+title: "blockr.stats: statistical blocks and their engine functions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{blockr.stats: statistical blocks and their engine functions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(blockr.stats)
+```
+
+## What this package is
+
+`blockr.stats` extends [blockr.core](https://github.com/blockr-org/blockr.core)
+with no-code statistical blocks. Every block does one thing and every block
+ends in the same place: a **tidy data frame** that blockr.core's generic
+renderers (drilldown table, coefficient plot, scatter, step curve) draw
+without any block-specific plotting code.
+
+The blocks cover an applied-statistics-basics *spine*
+
+* **Describe** -- per-variable summaries, frequency / cross tabulation
+* **Compare** -- adaptive significance tests, p-value adjustment, effect sizes
+* **Associate** -- pairwise correlation matrix
+* **Regress** -- `lm` / `glm` / `aov` model fitting and a generic broom adapter
+* **Nonparametric** -- folded into the adaptive test stack
+
+plus one **Advanced** tier -- survival (Kaplan-Meier, Cox, competing risks) --
+deliberately kept as a single separable cluster so it can later move to a
+dedicated domain package.
+
+This vignette walks through the *engine functions* behind the blocks. They are
+plain functions with no Shiny dependency, so you can use them directly, test
+them, and read them to understand what each block emits. In a board you would
+not call them by hand -- you would wire the corresponding `new_*_block()` into
+a blockr pipeline -- but the data frames are identical either way.
+
+## Architecture: model objects flow, broom adapts, renderers draw
+
+The key design decision is the **renderer boundary**. Two kinds of block exist:
+
+1. **Model-fitting blocks** (`new_model_block()`, `new_lm_block()`,
+   `new_survival_block()`) emit a *fitted model object* (an `lm`, `glm`,
+   `coxph`, `survfit`, `cuminc`). Their own preview is a generic `summary()`.
+2. **Tidying blocks** -- chiefly the **broom adapter**
+   (`new_broom_block()`) -- consume a fitted model upstream and emit a tidy
+   data frame.
+
+Everything that produces a table directly (`describe_numeric()`,
+`correlation_matrix()`, `effect_size()`, the adaptive tests) skips step 1 and
+emits tidy frames straight away. The result: no block carries plotting code.
+A coefficient plot is just the generic drilldown reading `estimate`,
+`conf.low`, `conf.high`; a survival curve is the generic step renderer reading
+`time`, `estimate`, `group`.
+
+```
+ data ─▶ [model block] ─▶ fitted object ─▶ [broom adapter] ─▶ tidy df ─▶ renderer
+ data ─▶ [describe / correlate / test / effect-size] ───────▶ tidy df ─▶ renderer
+```
+
+## Describe
+
+`describe_numeric()` returns one row per numeric variable -- `n`, `n_missing`,
+`mean`, `sd`, `median`, `q1`, `q3`, `min`, `max` -- in base R, no easystats
+dependency.
+
+```{r describe}
+describe_numeric(mtcars, vars = c("mpg", "hp", "wt"))
+```
+
+With `vars = NULL` (the default) it summarises every numeric column. This is
+the frame the **Descriptives** block emits.
+
+## Associate
+
+`correlation_matrix()` is the one matrix-valued step base R has no tidy verb
+for, so the function emits it *long* -- `var_x`, `var_y`, `r` -- which is
+exactly what a drilldown table or diverging-colour heatmap wants.
+
+```{r correlation}
+cm <- correlation_matrix(mtcars[, c("mpg", "hp", "wt", "qsec")],
+                         method = "pearson")
+head(cm, 8)
+```
+
+`method` accepts `"pearson"`, `"spearman"`, or `"kendall"`; `max_cols` caps
+the number of numeric columns so a wide frame cannot blow up into a huge
+pairwise product.
+
+## Regress: a model object, then the broom adapter
+
+Fit an ordinary model the normal way, then hand it to `broom_apply()` -- the
+single generic adapter that turns *any* fitted model into a tidy frame for the
+renderers.
+
+```{r broom-tidy}
+fit <- lm(mpg ~ wt + hp, data = mtcars)
+
+broom_apply(fit, output = "tidy", conf_int = TRUE)
+```
+
+`output = "tidy"` is the coefficient table (with `conf.low` / `conf.high` so
+the generic drilldown can draw a coefficient plot). The other two outputs:
+
+```{r broom-glance}
+broom_apply(fit, output = "glance")
+```
+
+```{r broom-augment}
+head(broom_apply(fit, output = "augment"))
+```
+
+With `qq = TRUE`, `augment` additionally gets `.qq_theoretical` /
+`.qq_sample`, so a QQ plot becomes a plain scatter -- again, no plotting code
+in the block:
+
+```{r broom-qq}
+head(broom_apply(fit, output = "augment", qq = TRUE)[,
+     c(".resid", ".qq_theoretical", ".qq_sample")])
+```
+
+This is why a single `new_broom_block()` serves `lm`, `glm`, `aov` and Cox
+models alike -- the renderer only ever sees a tidy frame.
+
+## Compare: effect sizes
+
+`effect_size()` consumes a fitted `lm`/`aov` and emits a tidy effect-size
+frame -- `term`, `measure`, `estimate`, `conf.low`, `conf.high` -- with **no
+interpretation labels** (the package does not editorialise "small/medium/
+large").
+
+```{r effect-size}
+aov_fit <- aov(mpg ~ factor(cyl), data = mtcars)
+
+effect_size(aov_fit, measure = "partial_eta2")
+```
+
+`measure` is one of `"eta2"`, `"partial_eta2"`, `"omega2"`, `"r2"`, `"d"`,
+`"g"`. The partial-eta-squared CI is obtained by inverting the noncentral F
+(`es_ncp_ci()`), returning `NA` bounds on non-convergence rather than
+erroring.
+
+## Advanced: survival
+
+`fit_survival()` is the Advanced-tier engine -- the single extraction seam to
+a future domain package. It returns the *fitted object* (`survfit`, `coxph`,
+or `cuminc`); the broom adapter tidies it downstream exactly like any other
+model.
+
+```{r survival-km}
+lung <- survival::lung
+# the helper expects event = 1, censor = 0; lung codes 2 = death, 1 = censor
+lung$dead <- lung$status - 1L
+
+km <- fit_survival(lung, type = "km",
+                   time_var = "time", event_var = "dead",
+                   group_var = "sex")
+class(km)
+```
+
+`tidy()` (broom's `survfit` method) turns the curve into long
+`time` / `estimate` / `strata` points -- a drilldown line+step:
+
+```{r survival-tidy}
+km_tidy <- broom::tidy(km)
+head(km_tidy[, c("time", "estimate", "n.risk", "strata")])
+```
+
+A Cox model flows the same way -- `fit_survival(type = "cox")` returns a
+`coxph`, and `broom_apply(cox, "tidy")` yields hazard ratios with CIs (a
+coefficient plot via the same generic renderer). Competing-risks
+(`type = "cif"`) returns a `cmprsk::cuminc` object; broom has no method for
+it, so the package ships `tidy.cuminc()`, emitting long
+`group` / `time` / `estimate` so cumulative-incidence curves render with the
+same step renderer as Kaplan-Meier.
+
+## Putting it together in a board
+
+In an interactive blockr board you would not call these functions directly.
+You would compose the registered blocks -- e.g. a data block, then
+`new_model_block()`, then `new_broom_block()`, then a generic plot block --
+and blockr.core would wire the reactive graph. The functions in this vignette
+are the *contract*: whatever a block produces is one of the frames shown
+above, which is what makes a single set of generic renderers enough for the
+whole package.
+
+```{r registry}
+# the blocks this package registers
+ls("package:blockr.stats", pattern = "^new_.*_block$")
+```
