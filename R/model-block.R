@@ -6,9 +6,6 @@
 #' augment) turns it into tidy frames for the generic renderers. The
 #' block's own preview is a generic `summary(model)`.
 #'
-#' The fit is committed via an explicit **Fit** action so an expensive
-#' model does not re-run on every input keystroke.
-#'
 #' @param model_type One of `"lm"`, `"logistic"`, `"poisson"`,
 #'   `"gamma"`, `"aov"`.
 #' @param response Response column (single).
@@ -73,23 +70,12 @@ new_model_block <- function(
         r_factors    <- reactiveVal(factors)
         r_intercept  <- reactiveVal(intercept)
         r_initialized <- reactiveVal(FALSE)
-        # committed snapshot — only this drives the (expensive) fit
-        r_commit <- reactiveVal(NULL)
 
         observeEvent(input$model_type, r_model_type(input$model_type))
         observeEvent(input$response,   r_response(input$response))
         observeEvent(input$predictors, r_predictors(input$predictors))
         observeEvent(input$factors,    r_factors(input$factors))
         observeEvent(input$intercept,  r_intercept(input$intercept))
-
-        do_commit <- function() {
-          r_commit(list(
-            mtype = r_model_type(), resp = r_response(),
-            covs = r_predictors(), facs = r_factors(),
-            intercept = isTRUE(r_intercept())
-          ))
-        }
-        observeEvent(input$fit, do_commit())
 
         numeric_cols <- function(d) {
           colnames(d)[vapply(d, is.numeric, logical(1))]
@@ -109,9 +95,6 @@ new_model_block <- function(
             updateSelectizeInput(session, "factors",
               choices = categorical_cols(d), selected = r_factors())
             r_initialized(TRUE)
-            # auto-fit once on load / restore so the block works
-            # without forcing a manual click
-            do_commit()
           }
         })
 
@@ -135,9 +118,8 @@ new_model_block <- function(
 
         list(
           expr = reactive({
-            s <- r_commit()
-            if (is.null(s)) return(quote(NULL))
-            build_expr(s$mtype, s$resp, s$covs, s$facs, s$intercept)
+            build_expr(r_model_type(), r_response(), r_predictors(),
+              r_factors(), isTRUE(r_intercept()))
           }),
           state = list(
             model_type = r_model_type,
@@ -159,7 +141,7 @@ new_model_block <- function(
             div(class = "block-section",
               div(class = "block-section-grid",
                 div(class = "block-help-text",
-                  "Pick a model type and variables, then press Fit."),
+                  "Pick a model type and variables."),
                 div(class = "block-input-wrapper",
                   style = "grid-column: 1 / -1;",
                   selectInput(NS(id, "model_type"), "Model type",
@@ -194,11 +176,7 @@ new_model_block <- function(
                       placeholder = "Pick factor predictors..."))),
                 div(class = "block-input-wrapper",
                   checkboxInput(NS(id, "intercept"),
-                    "Include intercept", value = intercept)),
-                div(class = "block-input-wrapper",
-                  style = "grid-column: 1 / -1;",
-                  actionButton(NS(id, "fit"), "Fit",
-                    class = "btn-primary", width = "100%"))
+                    "Include intercept", value = intercept))
               )
             )
           )
@@ -215,7 +193,7 @@ new_model_block <- function(
 block_output.model_block <- function(x, result, session) {
   renderPrint({
     if (is.null(result)) {
-      cat("Pick variables and press Fit.")
+      cat("Pick variables.")
     } else {
       summary(result)
     }

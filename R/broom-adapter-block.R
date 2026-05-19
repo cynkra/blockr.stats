@@ -49,7 +49,45 @@ broom_apply <- function(model, output = "tidy", conf_int = TRUE,
       )
     }
   )
-  as.data.frame(res)
+  res <- as.data.frame(res)
+  if (identical(output, "tidy")) res <- label_tidy_columns(res, model)
+  res
+}
+
+#' Attach human-readable `label` attributes to a tidy frame
+#'
+#' Generic renderers (drilldown chart/table axis titles) prefer a
+#' column's `label` attribute over its raw name. broom's tidy columns
+#' (`estimate`, `time`, `term`, ...) are terse and model-dependent, so
+#' we annotate them with context-aware labels keyed off the fitted
+#' model's class. Names are unchanged — only the attribute is added.
+#'
+#' @param df A tidy data frame from [broom_apply()].
+#' @param model The fitted model it came from.
+#' @return `df` with per-column `label` attributes.
+#' @keywords internal
+label_tidy_columns <- function(df, model) {
+  labs <- c(
+    term = "Term", estimate = "Estimate", std.error = "Std. error",
+    statistic = "Statistic", p.value = "p-value",
+    conf.low = "Lower CI", conf.high = "Upper CI",
+    time = "Time", n.risk = "At risk", n.event = "Events",
+    n.censor = "Censored", strata = "Group", group = "Group"
+  )
+  if (inherits(model, "survfit")) {
+    labs["estimate"] <- "Survival probability"
+    labs["time"] <- "Time (days)"
+  } else if (inherits(model, "cuminc")) {
+    labs["estimate"] <- "Cumulative incidence"
+    labs["time"] <- "Time (days)"
+  } else if (inherits(model, "coxph")) {
+    labs["estimate"] <- "log(Hazard ratio)"
+    labs["term"] <- "Comparison"
+  }
+  for (nm in intersect(names(df), names(labs))) {
+    attr(df[[nm]], "label") <- unname(labs[nm])
+  }
+  df
 }
 
 #' Broom Adapter Block
