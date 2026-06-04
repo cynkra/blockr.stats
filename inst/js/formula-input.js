@@ -97,55 +97,80 @@
       this.el.appendChild(gearHeader);
     }
 
-    // Equation pill: [response] ~ [predictors] inside the shared .blockr-row
-    // pill (bordered/rounded/gray) — same chrome as the filter block. The
-    // selects inside are borderless; the row provides the border, with a
-    // divider between response and predictors.
-    var row = document.createElement("div");
-    row.className = "blockr-row formula-row-pill";
-
-    var lhsWrap = document.createElement("div");
-    lhsWrap.className = "formula-lhs-wrap";
-    var respHost = document.createElement("div");
-    respHost.className = "formula-control";
-    lhsWrap.appendChild(respHost);
-
-    var rhsWrap = document.createElement("div");
-    rhsWrap.className = "blockr-row-content";
-    // Intercept as a click-through toggle button at the left of the RHS.
-    // (The v-bar divider already separates LHS from RHS — no tilde needed.)
-    this._iceptEl = document.createElement("button");
-    this._iceptEl.type = "button";
-    this._iceptEl.className = "formula-icept";
-    this._iceptEl.title = "Click to include or drop the intercept";
-    this._iceptEl.addEventListener("click", function (e) {
-      e.preventDefault();
-      self.intercept = !self.intercept;
-      self._renderIntercept();
-      self._sync();
-    });
     var predHost = document.createElement("div");
     predHost.className = "formula-control";
-    rhsWrap.appendChild(this._iceptEl);
-    rhsWrap.appendChild(predHost);
-
-    row.appendChild(lhsWrap);
-    row.appendChild(rhsWrap);
-    this.el.appendChild(row);
+    var ctxTarget; // element the right-click build-menu binds to
 
     if (this.responseMode === "surv") {
-      // Survival response: Surv( time , status ) — intercept is N/A
-      this._iceptEl.style.display = "none";
-      this._buildSurvLHS(respHost);
+      // Labeled fields (label ABOVE a bordered control), like the block's
+      // other controls ("Survival model", "Formula") — not an inline pill.
+      var mkField = function (labelText, wide) {
+        var f = document.createElement("div");
+        f.className = "formula-field" + (wide ? " formula-field--wide" : "");
+        var l = document.createElement("label");
+        l.className = "formula-field__label";
+        l.textContent = labelText;
+        var c = document.createElement("div");
+        c.className = "formula-control";
+        f.appendChild(l);
+        f.appendChild(c);
+        return { field: f, control: c };
+      };
+      var grid = document.createElement("div");
+      grid.className = "formula-surv-grid";
+      var timeF = mkField("Time");
+      var eventF = mkField("Event");
+      var predF = mkField("Predictors", true);
+      predF.control.appendChild(predHost);
+      grid.appendChild(timeF.field);
+      grid.appendChild(eventF.field);
+      grid.appendChild(predF.field);
+      this.el.appendChild(grid);
+      ctxTarget = predHost;
+
+      this._timeSelect = Blockr.Select.single(timeF.control, {
+        placeholder: "time column",
+        onChange: function (v) { self.response.time = v || ""; self._sync(); }
+      });
+      this._timeSelect.el.classList.add("blockr-select--bordered");
+      this._statusSelect = Blockr.Select.single(eventF.control, {
+        placeholder: "event column",
+        onChange: function (v) { self.response.event = v || ""; self._sync(); }
+      });
+      this._statusSelect.el.classList.add("blockr-select--bordered");
     } else {
+      // Equation pill: [response] ~ [predictors] inside a shared .blockr-row.
+      var row = document.createElement("div");
+      row.className = "blockr-row formula-row-pill";
+      var lhsWrap = document.createElement("div");
+      lhsWrap.className = "formula-lhs-wrap";
+      var respHost = document.createElement("div");
+      respHost.className = "formula-control";
+      lhsWrap.appendChild(respHost);
+      var rhsWrap = document.createElement("div");
+      rhsWrap.className = "blockr-row-content";
+      this._iceptEl = document.createElement("button");
+      this._iceptEl.type = "button";
+      this._iceptEl.className = "formula-icept";
+      this._iceptEl.title = "Click to include or drop the intercept";
+      this._iceptEl.addEventListener("click", function (e) {
+        e.preventDefault();
+        self.intercept = !self.intercept;
+        self._renderIntercept();
+        self._sync();
+      });
+      rhsWrap.appendChild(this._iceptEl);
+      rhsWrap.appendChild(predHost);
+      row.appendChild(lhsWrap);
+      row.appendChild(rhsWrap);
+      this.el.appendChild(row);
+      ctxTarget = rhsWrap;
       this._respSelect = Blockr.Select.single(respHost, {
         placeholder: "response…",
-        onChange: function (v) {
-          self.response = v || null;
-          self._sync();
-        }
+        onChange: function (v) { self.response = v || null; self._sync(); }
       });
     }
+    this._ctxTarget = ctxTarget;
 
     this._predSelect = Blockr.Select.multi(predHost, {
       placeholder: "add predictors…",
@@ -153,6 +178,9 @@
         self._onPredChange(sel || []);
       }
     });
+    if (this.responseMode === "surv") {
+      this._predSelect.el.classList.add("blockr-select--bordered");
+    }
 
     // Derived/advanced terms (interactions, transforms, splines, opaque,
     // random effects) render as colored chips INSIDE the predictors select
@@ -176,10 +204,12 @@
     this.el.appendChild(addRow);
 
     // Right-click anywhere on the predictors area opens the same menu.
-    rhsWrap.addEventListener("contextmenu", function (e) {
-      e.preventDefault();
-      self._openMenu(null, { x: e.clientX, y: e.clientY });
-    });
+    if (this._ctxTarget) {
+      this._ctxTarget.addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+        self._openMenu(null, { x: e.clientX, y: e.clientY });
+      });
+    }
 
     // (intercept is the inline 1/0 toggle at the left of the RHS, above)
 

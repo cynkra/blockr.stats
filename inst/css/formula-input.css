@@ -21,48 +21,37 @@
   padding-right: 8px;
 }
 
-/* Survival response: Surv( [time] , [status] ) in the pill's left side */
-.formula-input--surv .formula-lhs-wrap {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 230px;
-}
-
-.formula-surv {
+/* Survival: labeled fields (label ABOVE a bordered control) — Time, Event,
+   Predictors — matching the block's other labels. */
+.formula-surv-grid {
   display: flex;
-  align-items: center;
-  gap: 16px;
   flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-start;
 }
 
-/* inline label to the LEFT of each select (not stacked inside the input) */
-.formula-surv__field {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.formula-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 140px;
 }
 
-.formula-surv__label {
-  font-size: 0.75rem;
+.formula-field--wide {
+  flex: 1 1 100%;
+}
+
+.formula-field__label {
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--bs-secondary-color, #6c757d);
   margin: 0;
-  position: relative;
-  top: 1px; /* align label baseline with the select's value */
 }
 
-.formula-surv__sel {
-  min-width: 90px;
-}
-
-/* event-value input lives in the action row, revealed by the gear */
-.formula-event-adv {
-  margin-left: 6px;
-}
-
+/* event-value input lives in the gear-header, revealed by the gear */
 .formula-surv__adv-input {
-  margin-left: 8px;
-  width: 110px;
+  margin-right: 8px;
+  width: 120px;
   padding: 2px 6px;
   font-size: 0.78rem;
   border: 1px solid var(--bs-border-color, #dee2e6);
@@ -267,6 +256,15 @@
 .formula-advanced .formula-row__label {
   font-weight: 500;
   opacity: 0.85;
+}
+
+/* tighten the gap between the "Formula" label and its input box */
+.formula-advanced {
+  margin-bottom: 2px;
+}
+
+.formula-text-row {
+  margin-top: 0;
 }
 
 /* Build-menu trigger ("+ interaction / transform"), styled like the filter
