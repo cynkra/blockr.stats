@@ -223,33 +223,63 @@
   };
 
   // Survival LHS: Surv( [time] , [status] ) — two borderless selects in the pill
+  // Survival outcome: labeled Time + Event selects (not Surv(...) syntax).
+  // The "which value = event" detail is an advanced affordance, hidden by
+  // default (default = treat the column as 0/1).
   FormulaInput.prototype._buildSurvLHS = function (host) {
     var self = this;
     host.classList.add("formula-surv");
-    var open = document.createElement("span");
-    open.className = "formula-surv__fn";
-    open.textContent = "Surv(";
-    var timeHost = document.createElement("span");
-    timeHost.className = "formula-surv__sel";
-    var sep = document.createElement("span");
-    sep.className = "formula-surv__sep";
-    sep.textContent = ",";
-    var statusHost = document.createElement("span");
-    statusHost.className = "formula-surv__sel";
-    var close = document.createElement("span");
-    close.className = "formula-surv__fn";
-    close.textContent = ")";
-    host.appendChild(open);
-    host.appendChild(timeHost);
-    host.appendChild(sep);
-    host.appendChild(statusHost);
-    host.appendChild(close);
-    this._timeSelect = Blockr.Select.single(timeHost, {
-      placeholder: "time",
+
+    var mkField = function (labelText) {
+      var f = document.createElement("div");
+      f.className = "formula-surv__field";
+      var l = document.createElement("label");
+      l.className = "formula-surv__label";
+      l.textContent = labelText;
+      var sel = document.createElement("div");
+      sel.className = "formula-surv__sel";
+      f.appendChild(l);
+      f.appendChild(sel);
+      return { field: f, sel: sel };
+    };
+
+    var timeF = mkField("Time");
+    var eventF = mkField("Event");
+
+    // Advanced (rare): which value of the Event column counts as the event.
+    var advBtn = document.createElement("button");
+    advBtn.type = "button";
+    advBtn.className = "formula-surv__adv";
+    advBtn.innerHTML = Blockr.icons.gear;
+    advBtn.title = "Which value counts as the event (default: 1)";
+    this._eventLevelInput = document.createElement("input");
+    this._eventLevelInput.type = "text";
+    this._eventLevelInput.className = "formula-surv__adv-input";
+    this._eventLevelInput.placeholder = "event = …";
+    this._eventLevelInput.style.display = "none";
+    advBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      var inp = self._eventLevelInput;
+      var hidden = inp.style.display === "none";
+      inp.style.display = hidden ? "" : "none";
+      if (hidden) inp.focus();
+    });
+    this._eventLevelInput.addEventListener("input", function () {
+      self.response.eventLevel = self._eventLevelInput.value.trim() || null;
+      self._sync();
+    });
+    eventF.field.appendChild(advBtn);
+    eventF.field.appendChild(this._eventLevelInput);
+
+    host.appendChild(timeF.field);
+    host.appendChild(eventF.field);
+
+    this._timeSelect = Blockr.Select.single(timeF.sel, {
+      placeholder: "time column",
       onChange: function (v) { self.response.time = v || ""; self._sync(); }
     });
-    this._statusSelect = Blockr.Select.single(statusHost, {
-      placeholder: "status",
+    this._statusSelect = Blockr.Select.single(eventF.sel, {
+      placeholder: "event column",
       onChange: function (v) { self.response.event = v || ""; self._sync(); }
     });
   };
@@ -736,6 +766,11 @@
       }
       if (this._statusSelect) {
         this._statusSelect.setOptions(this._colOptions(), r.event || null);
+      }
+      if (this._eventLevelInput) {
+        var lvl = this.response.eventLevel;
+        this._eventLevelInput.value = lvl == null ? "" : String(lvl);
+        this._eventLevelInput.style.display = lvl == null ? "none" : "";
       }
     } else {
       var rv = typeof this.response === "string" ? this.response : null;

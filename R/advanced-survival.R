@@ -87,6 +87,34 @@ survival_state <- function(time_var, event_var, group_var) {
 #' `survfit`/`coxph`; CIF uses the non-formula [fit_survival()] `cuminc` path.
 #' @keywords internal
 #' @noRd
+#' Fit a survival model, returning `NULL` instead of erroring
+#'
+#' Wraps the fit in `tryCatch` so an invalid intermediate selection (e.g. a
+#' time/event pair with no non-missing observations, mid-interaction) yields a
+#' `NULL` placeholder preview rather than a hard error.
+#'
+#' @param type `"km"`, `"cox"`, or `"cif"`.
+#' @param formula Model formula (KM/Cox).
+#' @param data Data frame.
+#' @param time_var,event_var,group_var Columns (CIF path).
+#' @return The fitted object, or `NULL` on error.
+#' @export
+survival_fit_safe <- function(type, formula = NULL, data,
+                              time_var = NULL, event_var = NULL,
+                              group_var = NULL) {
+  tryCatch(
+    if (identical(type, "cif")) {
+      fit_survival(data, type = "cif", time_var = time_var,
+                   event_var = event_var, group_var = group_var)
+    } else if (identical(type, "cox")) {
+      survival::coxph(formula, data = data)
+    } else {
+      survival::survfit(formula, data = data)
+    },
+    error = function(e) NULL
+  )
+}
+
 build_survival_call <- function(type, state) {
   resp <- state$response
   if (is.null(resp) || is.null(resp$time) || !nzchar(resp$time) ||
@@ -99,8 +127,8 @@ build_survival_call <- function(type, state) {
     tl <- state$terms
     g <- if (length(tl)) tl[[1L]]$var else NULL
     return(blockr.core::bbquote(
-      blockr.stats::fit_survival(.(data), type = "cif", time_var = .(tv),
-        event_var = .(ev), group_var = .(g)),
+      blockr.stats::survival_fit_safe("cif", data = .(data),
+        time_var = .(tv), event_var = .(ev), group_var = .(g)),
       list(tv = tv, ev = ev, g = g)
     ))
   }
@@ -108,11 +136,10 @@ build_survival_call <- function(type, state) {
   if (is.null(f)) {
     return(quote(NULL))
   }
-  if (identical(type, "cox")) {
-    blockr.core::bbquote(survival::coxph(.(f), data = .(data)), list(f = f))
-  } else {
-    blockr.core::bbquote(survival::survfit(.(f), data = .(data)), list(f = f))
-  }
+  blockr.core::bbquote(
+    blockr.stats::survival_fit_safe(.(ty), formula = .(f), data = .(data)),
+    list(ty = type, f = f)
+  )
 }
 
 #' Survival Block (Advanced)
