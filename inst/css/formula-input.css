@@ -47,6 +47,8 @@
   font-weight: 600;
   color: var(--bs-secondary-color, #6c757d);
   margin: 0;
+  position: relative;
+  top: 1px; /* align label baseline with the select's value */
 }
 
 .formula-surv__sel {

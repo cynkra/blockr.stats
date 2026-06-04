@@ -17,12 +17,14 @@ board <- new_dock_board(
   blocks = blocks(
     data  = new_dataset_block(dataset = "mtcars", package = "datasets"),
     model = new_model_block(),
-    surv  = new_survival_block(type = "km", time_var = "mpg",
-                               event_var = "vs", group_var = "cyl")
+    # real survival data: NCCTG lung cancer (time, status 1=cens/2=dead, sex)
+    lung  = new_dataset_block(dataset = "lung", package = "survival"),
+    surv  = new_survival_block(type = "km", time_var = "time",
+                               event_var = "status", group_var = "sex")
   ),
   links = links(
     new_link(from = "data", to = "model", input = "data"),
-    new_link(from = "data", to = "surv", input = "data")
+    new_link(from = "lung", to = "surv", input = "data")
   )
 )
 

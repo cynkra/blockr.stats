@@ -66,6 +66,35 @@
     this.el.classList.add("formula-input");
     if (this.responseMode === "surv") {
       this.el.classList.add("formula-input--surv");
+
+      // Gear at top-right (blockr.dplyr .blockr-gear-header pattern): the rare
+      // "which value = event" control, revealed as a small inline input.
+      var gearHeader = document.createElement("div");
+      gearHeader.className = "blockr-gear-header formula-surv-gear";
+      this._eventLevelInput = document.createElement("input");
+      this._eventLevelInput.type = "text";
+      this._eventLevelInput.className = "formula-surv__adv-input";
+      this._eventLevelInput.placeholder = "event value = …";
+      this._eventLevelInput.style.display = "none";
+      this._eventLevelInput.addEventListener("input", function () {
+        self.response.eventLevel = self._eventLevelInput.value.trim() || null;
+        self._sync();
+      });
+      var gearBtn = document.createElement("button");
+      gearBtn.type = "button";
+      gearBtn.className = "blockr-gear-btn";
+      gearBtn.innerHTML = Blockr.icons.gear;
+      gearBtn.title = "Which value counts as the event (default: 1)";
+      gearBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var show = self._eventLevelInput.style.display === "none";
+        self._eventLevelInput.style.display = show ? "" : "none";
+        gearBtn.classList.toggle("blockr-gear-active", show);
+        if (show) self._eventLevelInput.focus();
+      });
+      gearHeader.appendChild(this._eventLevelInput);
+      gearHeader.appendChild(gearBtn);
+      this.el.appendChild(gearHeader);
     }
 
     // Equation pill: [response] ~ [predictors] inside the shared .blockr-row
@@ -144,34 +173,6 @@
       self._openMenu(self._addLink);
     });
     addRow.appendChild(this._addLink);
-
-    // Survival: the rare "which value = event" control lives in the action row
-    // (like blockr.dplyr's code icon), not inside the input.
-    if (this.responseMode === "surv") {
-      var evGear = document.createElement("span");
-      evGear.className = "blockr-add-link-expr formula-event-adv";
-      evGear.innerHTML = Blockr.icons.gear;
-      evGear.title = "Which value counts as the event (default: 1)";
-      this._eventLevelInput = document.createElement("input");
-      this._eventLevelInput.type = "text";
-      this._eventLevelInput.className = "formula-surv__adv-input";
-      this._eventLevelInput.placeholder = "event = …";
-      this._eventLevelInput.style.display = "none";
-      evGear.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var inp = self._eventLevelInput;
-        var hidden = inp.style.display === "none";
-        inp.style.display = hidden ? "" : "none";
-        if (hidden) inp.focus();
-      });
-      this._eventLevelInput.addEventListener("input", function () {
-        self.response.eventLevel = self._eventLevelInput.value.trim() || null;
-        self._sync();
-      });
-      addRow.appendChild(evGear);
-      addRow.appendChild(this._eventLevelInput);
-    }
-
     this.el.appendChild(addRow);
 
     // Right-click anywhere on the predictors area opens the same menu.
