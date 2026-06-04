@@ -144,6 +144,34 @@
       self._openMenu(self._addLink);
     });
     addRow.appendChild(this._addLink);
+
+    // Survival: the rare "which value = event" control lives in the action row
+    // (like blockr.dplyr's code icon), not inside the input.
+    if (this.responseMode === "surv") {
+      var evGear = document.createElement("span");
+      evGear.className = "blockr-add-link-expr formula-event-adv";
+      evGear.innerHTML = Blockr.icons.gear;
+      evGear.title = "Which value counts as the event (default: 1)";
+      this._eventLevelInput = document.createElement("input");
+      this._eventLevelInput.type = "text";
+      this._eventLevelInput.className = "formula-surv__adv-input";
+      this._eventLevelInput.placeholder = "event = …";
+      this._eventLevelInput.style.display = "none";
+      evGear.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var inp = self._eventLevelInput;
+        var hidden = inp.style.display === "none";
+        inp.style.display = hidden ? "" : "none";
+        if (hidden) inp.focus();
+      });
+      this._eventLevelInput.addEventListener("input", function () {
+        self.response.eventLevel = self._eventLevelInput.value.trim() || null;
+        self._sync();
+      });
+      addRow.appendChild(evGear);
+      addRow.appendChild(this._eventLevelInput);
+    }
+
     this.el.appendChild(addRow);
 
     // Right-click anywhere on the predictors area opens the same menu.
@@ -230,13 +258,14 @@
     var self = this;
     host.classList.add("formula-surv");
 
+    // Inline label to the LEFT of each select (not stacked inside the input).
     var mkField = function (labelText) {
-      var f = document.createElement("div");
+      var f = document.createElement("span");
       f.className = "formula-surv__field";
-      var l = document.createElement("label");
+      var l = document.createElement("span");
       l.className = "formula-surv__label";
       l.textContent = labelText;
-      var sel = document.createElement("div");
+      var sel = document.createElement("span");
       sel.className = "formula-surv__sel";
       f.appendChild(l);
       f.appendChild(sel);
@@ -245,32 +274,6 @@
 
     var timeF = mkField("Time");
     var eventF = mkField("Event");
-
-    // Advanced (rare): which value of the Event column counts as the event.
-    var advBtn = document.createElement("button");
-    advBtn.type = "button";
-    advBtn.className = "formula-surv__adv";
-    advBtn.innerHTML = Blockr.icons.gear;
-    advBtn.title = "Which value counts as the event (default: 1)";
-    this._eventLevelInput = document.createElement("input");
-    this._eventLevelInput.type = "text";
-    this._eventLevelInput.className = "formula-surv__adv-input";
-    this._eventLevelInput.placeholder = "event = …";
-    this._eventLevelInput.style.display = "none";
-    advBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      var inp = self._eventLevelInput;
-      var hidden = inp.style.display === "none";
-      inp.style.display = hidden ? "" : "none";
-      if (hidden) inp.focus();
-    });
-    this._eventLevelInput.addEventListener("input", function () {
-      self.response.eventLevel = self._eventLevelInput.value.trim() || null;
-      self._sync();
-    });
-    eventF.field.appendChild(advBtn);
-    eventF.field.appendChild(this._eventLevelInput);
-
     host.appendChild(timeF.field);
     host.appendChild(eventF.field);
 
