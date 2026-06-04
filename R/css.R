@@ -81,22 +81,48 @@ css_model_summary <- function() {
     }
     .smb-empty { padding: 16px; color: var(--blockr-color-text-muted, #9ca3af); }
 
+    /* visual <-> R-text switch (class-keyed radios, no server round-trip) */
+    .smb-radio { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+    .smb-switch { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .smb-seg {
+      cursor: pointer; user-select: none;
+      font-size: var(--blockr-font-size-xs, 0.75rem);
+      font-weight: var(--blockr-font-weight-medium, 500);
+      color: var(--blockr-grey-500, #6b7280);
+      padding: 2px 10px;
+      border: 1px solid var(--blockr-color-border, #e5e7eb);
+      transition: all 0.15s ease;
+    }
+    .smb-seg-v { border-radius: 4px 0 0 4px; border-right: none; }
+    .smb-seg-r { border-radius: 0 4px 4px 0; }
+    .smb-seg:hover { background: var(--blockr-grey-50, #f9fafb); }
+    .smb-radio-v:checked ~ .smb-switch .smb-seg-v,
+    .smb-radio-r:checked ~ .smb-switch .smb-seg-r {
+      background: var(--blockr-blue-600, #2563eb); color: #fff;
+      border-color: var(--blockr-blue-600, #2563eb);
+    }
+
+    .smb-rtext {
+      display: none; margin: 0; padding: 10px 12px;
+      background: var(--blockr-grey-50, #f9fafb); border-radius: 6px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+      font-size: var(--blockr-font-size-xs, 0.75rem);
+      color: var(--blockr-grey-700, #374151);
+      overflow-x: auto; white-space: pre;
+    }
+    .smb-radio-r:checked ~ .smb-visual { display: none; }
+    .smb-radio-r:checked ~ .smb-rtext { display: block; }
+
     /* headline */
     .smb-hl {
-      display: flex; align-items: flex-start; gap: 16px;
-      padding-bottom: 10px;
+      display: flex; align-items: center; gap: 16px;
+      padding-bottom: 8px;
     }
-    .smb-hl-main { min-width: 0; flex: 1 1 auto; }
-    .smb-hl-title {
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+    .smb-hl-kind {
+      min-width: 0; flex: 1 1 auto;
       font-size: var(--blockr-font-size-sm, 0.8125rem);
-      color: var(--blockr-color-text-primary, #111827);
+      color: var(--blockr-grey-600, #4b5563);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .smb-hl-sub {
-      font-size: var(--blockr-font-size-xs, 0.75rem);
-      color: var(--blockr-grey-500, #6b7280);
-      margin-top: 2px;
     }
     .smb-chip { flex: 0 0 auto; text-align: right; min-width: 64px; }
     .smb-chip-row { display: flex; align-items: baseline; gap: 5px; justify-content: flex-end; }

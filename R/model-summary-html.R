@@ -14,10 +14,11 @@
 #' @param digits Significant digits for numeric formatting.
 #' @return An [htmltools::tagList()].
 #' @noRd
-model_summary_html <- function(model, conf_level = 0.95, digits = 3) {
+model_summary_html <- function(model, conf_level = 0.95, digits = 3, id = NULL) {
   if (is.null(model)) {
     return(tags$div(class = "smb-card smb-empty", "Pick variables to fit a model."))
   }
+  if (is.null(id)) id <- paste0("smb-", basename(tempfile("")))
 
   tidy_df <- tryCatch(
     broom::tidy(model, conf.int = TRUE, conf.level = conf_level),
@@ -25,12 +26,25 @@ model_summary_html <- function(model, conf_level = 0.95, digits = 3) {
   )
   glance_df <- tryCatch(broom::glance(model), error = function(e) NULL)
 
-  tags$div(
-    class = "smb-card",
-    smb_headline(model, glance_df),
-    smb_forest(tidy_df),
-    smb_details(tidy_df, glance_df, model, digits)
-  )
+  rtext <- tryCatch({
+    out <- utils::capture.output(summary(model))
+    if (length(out) > 200L) out <- c(out[seq_len(200L)], "...")
+    paste(out, collapse = "\n")
+  }, error = function(e) "summary() not available")
+
+  # class-keyed radio toggle: visual (default) vs R text, no server round-trip
+  vid <- paste0(id, "-v"); rid <- paste0(id, "-r")
+  tags$div(class = "smb-card",
+    tags$input(type = "radio", name = id, id = vid, class = "smb-radio smb-radio-v",
+               checked = NA),
+    tags$input(type = "radio", name = id, id = rid, class = "smb-radio smb-radio-r"),
+    tags$div(class = "smb-switch",
+      tags$label(`for` = vid, class = "smb-seg smb-seg-v", "Visual"),
+      tags$label(`for` = rid, class = "smb-seg smb-seg-r", "R")),
+    tags$div(class = "smb-visual",
+      smb_headline(model, glance_df),
+      smb_forest(tidy_df)),
+    tags$pre(class = "smb-rtext", rtext))
 }
 
 # --- headline: kind . n + fit chip (formula lives in the block name) --------

@@ -15,13 +15,11 @@ suppressMessages({
 
 board <- new_dock_board(
   blocks = blocks(
-    data     = new_dataset_block(dataset = "mtcars", package = "datasets"),
-    model    = new_model_block(),
-    explorer = new_model_explorer_block()
+    data  = new_dataset_block(dataset = "mtcars", package = "datasets"),
+    model = new_model_block()
   ),
   links = links(
-    new_link(from = "data", to = "model", input = "data"),
-    new_link(from = "data", to = "explorer", input = "data")
+    new_link(from = "data", to = "model", input = "data")
   )
 )
 
