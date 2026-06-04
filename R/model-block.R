@@ -122,15 +122,14 @@ new_model_block <- function(
               div(
                 class = "block-section-grid",
                 div(
-                  class = "block-input-wrapper",
+                  class = "block-input-wrapper formula-model-type",
                   style = "grid-column: 1 / -1;",
                   shinyWidgets::radioGroupButtons(
                     NS(id, "model_type"),
                     label = "Model type",
                     choices = model_choices,
                     selected = model_type,
-                    size = "sm",
-                    status = "outline-primary"
+                    size = "sm"
                   )
                 ),
                 div(

@@ -39,6 +39,37 @@
 }
 
 /* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
+/* Model-type segmented buttons — subtle, like the Visual/R toggle (a touch
+   bigger). Light-blue active, muted gray inactive; content-width, not loud. */
+.formula-model-type .btn-group-container-sw {
+  width: auto;
+}
+
+.formula-model-type .btn.radiobtn {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: #fff;
+  color: var(--bs-secondary-color, #6c757d);
+  border-color: var(--blockr-color-border, #e5e7eb);
+  box-shadow: none;
+}
+
+.formula-model-type .btn.radiobtn:hover {
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--bs-body-color, #374151);
+}
+
+.formula-model-type .btn.radiobtn.active,
+.formula-model-type .btn.radiobtn:active,
+.formula-model-type .btn.radiobtn.focus,
+.formula-model-type input:checked + .btn.radiobtn {
+  background: #e7f1ff;
+  color: var(--blockr-color-primary, #2563eb);
+  border-color: #b6d4fe;
+  box-shadow: none;
+}
+
 /* Intercept: a click-through toggle button. Active = intercept included
    (default); --off = dropped (struck through, muted). */
 .formula-icept {
