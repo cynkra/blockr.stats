@@ -121,6 +121,8 @@ css_model_summary <- function() {
     }
     .smb-radio-r:checked ~ .smb-visual { display: none; }
     .smb-radio-r:checked ~ .smb-rtext { display: block; }
+    /* R-only card (no usable visual, e.g. KM/CIF): always show the summary */
+    .smb-rtext.smb-rtext-only { display: block; }
 
     /* headline */
     .smb-hl {

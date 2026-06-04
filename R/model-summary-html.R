@@ -35,6 +35,15 @@ model_summary_html <- function(model, conf_level = 0.95, id = NULL) {
     paste(out, collapse = "\n")
   }, error = function(e) "summary() not available")
 
+  forest <- smb_forest(tidy_df)
+
+  # No coefficient visual (e.g. KM / competing-risks: tidy() is curve points,
+  # and the curve itself is a downstream drilldown) -> just show R, no toggle.
+  if (is.null(forest)) {
+    return(tags$div(class = "smb-card",
+      tags$pre(class = "smb-rtext smb-rtext-only", rtext)))
+  }
+
   # class-keyed radio toggle: Visual (default) vs R text, no server round-trip
   vid <- paste0(id, "-v"); rid <- paste0(id, "-r")
   tags$div(class = "smb-card",
@@ -47,7 +56,7 @@ model_summary_html <- function(model, conf_level = 0.95, id = NULL) {
     # headline (kind, n, fit chip) belongs to the visual view only
     tags$div(class = "smb-visual",
       smb_headline(model, glance_df),
-      smb_forest(tidy_df)),
+      forest),
     tags$pre(class = "smb-rtext", rtext))
 }
 
