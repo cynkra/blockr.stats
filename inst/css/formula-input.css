@@ -1,0 +1,114 @@
+.formula-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.formula-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Equation pill: [response] ~ [predictors] inside the shared .blockr-row.
+   The row supplies the border/background; selects inside stay borderless. */
+.formula-lhs-wrap {
+  width: 150px;
+  min-width: 110px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
+  padding-right: 8px;
+}
+
+.formula-tilde {
+  flex: 0 0 auto;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 1.05rem;
+}
+
+.formula-row__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-control {
+  width: 100%;
+}
+
+.formula-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px;
+  border: 1px dashed var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+}
+
+.formula-chips-empty {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #adb5bd);
+  font-style: italic;
+}
+
+.formula-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-family: var(--bs-font-monospace, monospace);
+  background: var(--bs-tertiary-bg, #eef1f4);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.formula-chip--factor {
+  background: #e7f1ff;
+  border-color: #b6d4fe;
+}
+
+.formula-chip--interaction {
+  background: #fff3cd;
+  border-color: #ffe69c;
+}
+
+.formula-chip--poly,
+.formula-chip--spline,
+.formula-chip--transform {
+  background: #e8f7ef;
+  border-color: #b7e4c7;
+}
+
+.formula-chip--opaque,
+.formula-chip--bar {
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.formula-chip__remove {
+  display: inline-flex;
+  cursor: pointer;
+  color: var(--bs-secondary-color, #6c757d);
+  opacity: 0.6;
+}
+
+.formula-chip__remove:hover {
+  opacity: 1;
+  color: var(--bs-danger, #dc3545);
+}
+
+.formula-intercept {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.formula-advanced .formula-row__label {
+  font-weight: 500;
+  opacity: 0.85;
+}

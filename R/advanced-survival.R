@@ -165,13 +165,12 @@ new_survival_block <- function(type = "km", time_var = character(),
 
 #' @export
 block_output.survival_block <- function(x, result, session) {
-  renderPrint({
-    if (is.null(result)) cat("Pick time + status to fit.")
-    else summary(result)
+  renderUI({
+    tagList(css_model_summary(), model_summary_html(result))
   })
 }
 
 #' @export
 block_ui.survival_block <- function(id, x, ...) {
-  tagList(verbatimTextOutput(NS(id, "result")))
+  tagList(uiOutput(NS(id, "result")))
 }

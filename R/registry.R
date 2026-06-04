@@ -26,9 +26,9 @@ register_stats_blocks <- function() {
       "Survival"
     ),
     description = c(
-      "Fit a statistical model (lm / glm / aov). Returns the fitted model object for downstream broom adapters.",
+      "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
       "Fit a linear model with stats::lm(). Returns the fitted model object.",
-      "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns).",
+      "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
       "Per-variable summary statistics (n, mean, SD, median, quartiles, range).",
       "Frequency counts and proportions; one-way or two-way (crosstab).",
       "Pairwise correlation matrix (Pearson / Spearman / Kendall) in long tidy form.",

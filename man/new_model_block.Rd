@@ -6,24 +6,16 @@
 \usage{
 new_model_block(
   model_type = "lm",
-  response = character(),
-  predictors = character(),
-  factors = character(),
-  intercept = TRUE,
+  formula = list(response = NULL, intercept = TRUE, terms = list(), bars = list(), offset
+    = NULL, weights = NULL),
   ...
 )
 }
 \arguments{
-\item{model_type}{One of \code{"lm"}, \code{"logistic"}, \code{"poisson"},
-\code{"gamma"}, \code{"aov"}.}
+\item{model_type}{One of \code{"lm"}, \code{"logistic"}, \code{"poisson"}, \code{"gamma"}.}
 
-\item{response}{Response column (single).}
-
-\item{predictors}{Numeric predictor column names.}
-
-\item{factors}{Categorical predictor column names.}
-
-\item{intercept}{Logical, include intercept (default TRUE).}
+\item{formula}{Structured formula-input state: a list with \code{response},
+\code{intercept}, \code{terms}, \code{bars}, \code{offset}, \code{weights} (see \code{parse_formula()}).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -31,13 +23,15 @@ new_model_block(
 A transform block of class \code{model_block}.
 }
 \description{
-Fit a statistical model: linear (\code{lm}), generalized linear (\code{glm}:
-logistic / Poisson / Gamma), or ANOVA (\code{aov}). Returns the \strong{fitted
-model object}; downstream the broom adapter (tidy / glance /
-augment) turns it into tidy frames for the generic renderers. The
-block's own preview is a generic \code{summary(model)}.
+Fit a statistical model: linear (\code{lm}) or generalized linear (\code{glm}:
+logistic / Poisson / Gamma). The model formula is authored with the
+\strong{formula-input widget} (response, predictors, interactions, transforms,
+splines, intercept). Returns the \strong{fitted model object}; downstream the
+broom adapter (tidy / glance / augment / anova) turns it into tidy frames
+for the generic renderers. The block's own preview is a generic
+\code{summary(model)}.
 }
 \details{
-The fit is committed via an explicit \strong{Fit} action so an expensive
-model does not re-run on every input keystroke.
+ANOVA-as-model is not a model type here: it is the broom adapter's \code{anova}
+mode over an \code{lm} fit. (ANOVA-as-test lives in the adaptive test block.)
 }
