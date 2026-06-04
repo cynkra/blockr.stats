@@ -62,12 +62,26 @@
 
     var tilde = document.createElement("span");
     tilde.className = "formula-tilde";
-    tilde.textContent = "~";
+    tilde.innerHTML =
+      '<svg width="20" height="20" viewBox="0 0 18 18" fill="none" ' +
+      'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+      'stroke-linejoin="round"><path d="M2 11c1.4-3 3.4-3 4.9 0s3.5 3 4.9 0"/></svg>';
 
     var rhsWrap = document.createElement("div");
     rhsWrap.className = "blockr-row-content";
+    // Inline intercept toggle at the left of the RHS: the leading 1 (include)
+    // or 0 (drop) of the right-hand side.
+    this._iceptEl = document.createElement("span");
+    this._iceptEl.className = "formula-icept";
+    this._iceptEl.title = "Intercept: 1 = include, 0 = drop";
+    this._iceptEl.addEventListener("click", function () {
+      self.intercept = !self.intercept;
+      self._renderIntercept();
+      self._sync();
+    });
     var predHost = document.createElement("div");
     predHost.className = "formula-control";
+    rhsWrap.appendChild(this._iceptEl);
     rhsWrap.appendChild(predHost);
 
     row.appendChild(lhsWrap);
@@ -97,19 +111,30 @@
     this._chips.className = "formula-chips";
     this.el.appendChild(this._chips);
 
-    // Intercept
-    var intRow = document.createElement("label");
-    intRow.className = "formula-intercept";
-    this._intBox = document.createElement("input");
-    this._intBox.type = "checkbox";
-    this._intBox.checked = true;
-    this._intBox.addEventListener("change", function () {
-      self.intercept = self._intBox.checked;
-      self._sync();
+    // Visible affordance to open the build menu (interactions / transforms /
+    // splines). Styled like the filter block's "+ Add condition" link.
+    var addRow = document.createElement("div");
+    addRow.className = "blockr-add-row formula-add-row";
+    this._addLink = document.createElement("span");
+    this._addLink.className = "blockr-add-link formula-add-link";
+    this._addLink.innerHTML =
+      '<span class="blockr-add-icon">' +
+      Blockr.icons.plus +
+      "</span> interaction / transform";
+    this._addLink.addEventListener("click", function (e) {
+      e.stopPropagation();
+      self._openMenu(self._addLink);
     });
-    intRow.appendChild(this._intBox);
-    intRow.appendChild(document.createTextNode(" Include intercept"));
-    this.el.appendChild(intRow);
+    addRow.appendChild(this._addLink);
+    this.el.appendChild(addRow);
+
+    // Right-click anywhere on the predictors area opens the same menu.
+    rhsWrap.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      self._openMenu(null, { x: e.clientX, y: e.clientY });
+    });
+
+    // (intercept is the inline 1/0 toggle at the left of the RHS, above)
 
     // Advanced: raw formula text (round-trips through R)
     var advRow = mkRow("Formula");
@@ -129,6 +154,7 @@
       }
     });
 
+    this._renderIntercept();
     this.renderChips();
   };
 
@@ -147,6 +173,12 @@
     if (typeof this.response === "object" && this.response) return this.response;
     if (this._respSelect) return this._respSelect.getValue() || null;
     return this.response || null;
+  };
+
+  FormulaInput.prototype._renderIntercept = function () {
+    if (!this._iceptEl) return;
+    this._iceptEl.textContent = this.intercept ? "1" : "0";
+    this._iceptEl.classList.toggle("formula-icept--off", !this.intercept);
   };
 
   FormulaInput.prototype._isColTerm = function (t) {
@@ -224,6 +256,315 @@
     });
   };
 
+  // -- Build menu (interactions / transforms / splines) ----------------------
+
+  // Close any open menu and detach the outside-click / escape listeners.
+  FormulaInput.prototype._closeMenu = function () {
+    if (this._menu && this._menu.parentNode) {
+      this._menu.parentNode.removeChild(this._menu);
+    }
+    this._menu = null;
+    if (this._menuDismiss) {
+      document.removeEventListener("mousedown", this._menuDismiss, true);
+      document.removeEventListener("keydown", this._menuDismiss, true);
+      this._menuDismiss = null;
+    }
+  };
+
+  // Open the build menu. `anchor` (the link) positions it below the link;
+  // `at` ({x,y}) positions it at the cursor (right-click path).
+  FormulaInput.prototype._openMenu = function (anchor, at) {
+    var self = this;
+    this._closeMenu();
+
+    var menu = document.createElement("div");
+    menu.className = "formula-menu";
+    this._menu = menu;
+
+    this._renderMenuRoot(menu);
+
+    document.body.appendChild(menu);
+
+    // Position: anchored under the link, or at the cursor.
+    var top, left;
+    if (at) {
+      left = at.x;
+      top = at.y;
+    } else if (anchor) {
+      var r = anchor.getBoundingClientRect();
+      left = r.left;
+      top = r.bottom + 4;
+    } else {
+      left = 40;
+      top = 40;
+    }
+    // Keep within viewport.
+    var mw = menu.offsetWidth || 220;
+    var mh = menu.offsetHeight || 160;
+    if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+    if (top + mh > window.innerHeight - 8) top = window.innerHeight - mh - 8;
+    menu.style.left = Math.max(8, left) + "px";
+    menu.style.top = Math.max(8, top) + "px";
+
+    // Dismiss on outside click or Escape.
+    this._menuDismiss = function (e) {
+      if (e.type === "keydown") {
+        if (e.key === "Escape") self._closeMenu();
+        return;
+      }
+      if (self._menu && !self._menu.contains(e.target)) self._closeMenu();
+    };
+    document.addEventListener("mousedown", this._menuDismiss, true);
+    document.addEventListener("keydown", this._menuDismiss, true);
+  };
+
+  // Top-level item list.
+  FormulaInput.prototype._renderMenuRoot = function (menu) {
+    var self = this;
+    menu.innerHTML = "";
+    var items = [
+      { label: "Interaction…", fn: function () { self._panelInteraction(menu); } },
+      { label: "All 2-way", fn: function () { self._addAll2Way(); self._closeMenu(); } },
+      { label: "Transform…", fn: function () { self._panelTransform(menu); } },
+      { label: "Spline…", fn: function () { self._panelSpline(menu); } }
+    ];
+    items.forEach(function (it) {
+      var row = document.createElement("div");
+      row.className = "formula-menu__item";
+      row.textContent = it.label;
+      row.addEventListener("click", function (e) {
+        e.stopPropagation();
+        it.fn();
+      });
+      menu.appendChild(row);
+    });
+  };
+
+  // Sub-panel chrome: a back header + a confirm button row.
+  FormulaInput.prototype._menuPanel = function (menu, title) {
+    var self = this;
+    menu.innerHTML = "";
+    var head = document.createElement("div");
+    head.className = "formula-menu__head";
+    var back = document.createElement("span");
+    back.className = "formula-menu__back";
+    back.innerHTML = Blockr.icons.chevron;
+    back.addEventListener("click", function (e) {
+      e.stopPropagation();
+      self._renderMenuRoot(menu);
+    });
+    var ttl = document.createElement("span");
+    ttl.className = "formula-menu__title";
+    ttl.textContent = title;
+    head.appendChild(back);
+    head.appendChild(ttl);
+    menu.appendChild(head);
+
+    var body = document.createElement("div");
+    body.className = "formula-menu__body";
+    menu.appendChild(body);
+    return body;
+  };
+
+  FormulaInput.prototype._menuConfirm = function (menu, label, onConfirm) {
+    var self = this;
+    var foot = document.createElement("div");
+    foot.className = "formula-menu__foot";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "blockr-pill formula-menu__confirm";
+    btn.textContent = label || "Add";
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (onConfirm() !== false) self._closeMenu();
+    });
+    foot.appendChild(btn);
+    menu.appendChild(foot);
+    return btn;
+  };
+
+  // True when an interaction over exactly `vars` already exists.
+  FormulaInput.prototype._hasInteraction = function (vars) {
+    var key = vars.slice().sort().join(" ");
+    return this.terms.some(function (t) {
+      return (
+        t.kind === "interaction" &&
+        (t.vars || []).slice().sort().join(" ") === key
+      );
+    });
+  };
+
+  // All unordered pairs of current main/factor predictors.
+  FormulaInput.prototype._addAll2Way = function () {
+    var cols = this._colVars();
+    for (var i = 0; i < cols.length; i++) {
+      for (var j = i + 1; j < cols.length; j++) {
+        var vars = [cols[i], cols[j]];
+        if (!this._hasInteraction(vars)) {
+          this.terms.push({
+            kind: "interaction",
+            label: vars.join(":"),
+            vars: vars
+          });
+        }
+      }
+    }
+    this.renderChips();
+    this._sync();
+  };
+
+  // Interaction sub-panel: checkboxes over current predictors.
+  FormulaInput.prototype._panelInteraction = function (menu) {
+    var self = this;
+    var body = this._menuPanel(menu, "Interaction");
+    var cols = this._colVars();
+    if (cols.length < 2) {
+      var note = document.createElement("div");
+      note.className = "formula-menu__note";
+      note.textContent = "Add at least two predictors first.";
+      body.appendChild(note);
+      return;
+    }
+    var checks = [];
+    cols.forEach(function (name) {
+      var row = document.createElement("label");
+      row.className = "formula-menu__check";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = name;
+      row.appendChild(cb);
+      row.appendChild(document.createTextNode(" " + name));
+      body.appendChild(row);
+      checks.push(cb);
+    });
+    this._menuConfirm(menu, "Add interaction", function () {
+      var vars = checks
+        .filter(function (c) { return c.checked; })
+        .map(function (c) { return c.value; });
+      if (vars.length < 2) return false;
+      if (!self._hasInteraction(vars)) {
+        self.terms.push({
+          kind: "interaction",
+          label: vars.join(":"),
+          vars: vars
+        });
+        self.renderChips();
+        self._sync();
+      }
+      return true;
+    });
+  };
+
+  // Small native <select> helper for the panels.
+  FormulaInput.prototype._mkSelect = function (options) {
+    var sel = document.createElement("select");
+    sel.className = "formula-menu__select";
+    options.forEach(function (o) {
+      var opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      sel.appendChild(opt);
+    });
+    return sel;
+  };
+
+  // Transform sub-panel: column + function (log/sqrt/poly2/poly3).
+  FormulaInput.prototype._panelTransform = function (menu) {
+    var self = this;
+    var body = this._menuPanel(menu, "Transform");
+    if (!this.columns.length) {
+      var note = document.createElement("div");
+      note.className = "formula-menu__note";
+      note.textContent = "No columns available.";
+      body.appendChild(note);
+      return;
+    }
+    var colSel = this._mkSelect(
+      this.columns.map(function (c) {
+        return { value: c.name, label: c.name };
+      })
+    );
+    var fnSel = this._mkSelect([
+      { value: "log", label: "log" },
+      { value: "sqrt", label: "sqrt" },
+      { value: "poly2", label: "poly(2)" },
+      { value: "poly3", label: "poly(3)" }
+    ]);
+    body.appendChild(colSel);
+    body.appendChild(fnSel);
+    this._menuConfirm(menu, "Add transform", function () {
+      var v = colSel.value;
+      var f = fnSel.value;
+      if (!v) return false;
+      if (f === "poly2" || f === "poly3") {
+        var degree = f === "poly2" ? 2 : 3;
+        self.terms.push({
+          kind: "poly",
+          var: v,
+          degree: degree,
+          label: "poly(" + v + ", " + degree + ")"
+        });
+      } else {
+        self.terms.push({
+          kind: "transform",
+          fn: f,
+          var: v,
+          raw: f + "(" + v + ")",
+          label: f + "(" + v + ")"
+        });
+      }
+      self.renderChips();
+      self._sync();
+      return true;
+    });
+  };
+
+  // Spline sub-panel: column + ns|bs + df (3/4/5).
+  FormulaInput.prototype._panelSpline = function (menu) {
+    var self = this;
+    var body = this._menuPanel(menu, "Spline");
+    if (!this.columns.length) {
+      var note = document.createElement("div");
+      note.className = "formula-menu__note";
+      note.textContent = "No columns available.";
+      body.appendChild(note);
+      return;
+    }
+    var colSel = this._mkSelect(
+      this.columns.map(function (c) {
+        return { value: c.name, label: c.name };
+      })
+    );
+    var fnSel = this._mkSelect([
+      { value: "ns", label: "ns (natural)" },
+      { value: "bs", label: "bs (B-spline)" }
+    ]);
+    var dfSel = this._mkSelect([
+      { value: "3", label: "df 3" },
+      { value: "4", label: "df 4" },
+      { value: "5", label: "df 5" }
+    ]);
+    body.appendChild(colSel);
+    body.appendChild(fnSel);
+    body.appendChild(dfSel);
+    this._menuConfirm(menu, "Add spline", function () {
+      var v = colSel.value;
+      var f = fnSel.value;
+      var df = parseInt(dfSel.value, 10);
+      if (!v) return false;
+      self.terms.push({
+        kind: "spline",
+        fn: f,
+        var: v,
+        df: df,
+        label: f + "(" + v + ", " + df + ")"
+      });
+      self.renderChips();
+      self._sync();
+      return true;
+    });
+  };
+
   FormulaInput.prototype._currentFormulaText = function () {
     var lhs = responseText(this._responseValue());
     if (lhs == null) return "";
@@ -236,8 +577,10 @@
           return "(" + b.raw + ")";
         })
       );
-    var rhs = parts.length ? parts.join(" + ") : "1";
-    return lhs + " ~ " + (this.intercept ? "" : "0 + ") + rhs;
+    if (!parts.length) {
+      return lhs + " ~ " + (this.intercept ? "1" : "0");
+    }
+    return lhs + " ~ " + (this.intercept ? "" : "0 + ") + parts.join(" + ");
   };
 
   FormulaInput.prototype._compose = function () {
@@ -281,7 +624,7 @@
     var rv = typeof this.response === "string" ? this.response : null;
     this._respSelect.setOptions(this._colOptions(), rv);
     this._predSelect.setOptions(this._colOptions(), this._colVars());
-    this._intBox.checked = this.intercept;
+    this._renderIntercept();
     this.renderChips();
     if (this._text) this._text.setValue(this._currentFormulaText());
     // silent: do not fire callback

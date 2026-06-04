@@ -11,7 +11,8 @@ register_stats_blocks <- function() {
       "new_stat_test_block",
       "new_padjust_block",
       "new_effect_size_block",
-      "new_survival_block"
+      "new_survival_block",
+      "new_model_explorer_block"
     ),
     name = c(
       "Model",
@@ -23,7 +24,8 @@ register_stats_blocks <- function() {
       "Statistical Test",
       "P-Value Adjustment",
       "Effect Size",
-      "Survival"
+      "Survival",
+      "Model (Explorer)"
     ),
     description = c(
       "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
@@ -35,9 +37,11 @@ register_stats_blocks <- function() {
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
       "Adjust p-values for multiple comparisons via stats::p.adjust().",
       "Effect sizes: Cohen's d / Hedges' g (effsize), eta^2 / partial eta^2 / omega^2 / r^2 (base) with CIs.",
-      "Advanced: Kaplan-Meier / Cox PH / competing-risks (CIF). Returns the fitted survival model object."
+      "Advanced: Kaplan-Meier / Cox PH / competing-risks (CIF). Returns the fitted survival model object.",
+      "Experimental: regression (lm / glm) with a chip-selection + right-click-to-cross formula explorer. Returns the fitted model object."
     ),
     category = c(
+      "transform",
       "transform",
       "transform",
       "transform",
@@ -59,7 +63,8 @@ register_stats_blocks <- function() {
       "clipboard-check",
       "sliders",
       "rulers",
-      "activity"
+      "activity",
+      "calculator"
     ),
     package = utils::packageName(),
     overwrite = TRUE

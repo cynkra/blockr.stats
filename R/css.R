@@ -74,73 +74,59 @@ css_model_summary <- function() {
   tags$style(HTML(
     "
     .smb-card {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 32px;
+      padding: 12px 4px;
       font-size: var(--blockr-font-size-base, 0.875rem);
       color: var(--blockr-color-text-primary, #111827);
-      border: 1px solid var(--blockr-color-border, #e5e7eb);
-      border-radius: 6px;
-      overflow: hidden;
+      background: #fff;
     }
-    .smb-empty {
-      padding: 12px;
-      color: var(--blockr-color-text-muted, #9ca3af);
-    }
+    .smb-empty { padding: 16px; color: var(--blockr-color-text-muted, #9ca3af); }
 
-    .smb-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 4px 10px;
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
-      background: var(--blockr-grey-50, #f9fafb);
-    }
-    .smb-kind { font-weight: var(--blockr-font-weight-semibold, 600); }
-    .smb-formula {
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+    .smb-col { flex: 1 1 200px; min-width: 0; }
+    .smb-col-head {
       font-size: var(--blockr-font-size-xs, 0.75rem);
+      font-weight: var(--blockr-font-weight-semibold, 600);
       color: var(--blockr-grey-600, #4b5563);
-      background: transparent;
-      padding: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--blockr-color-border, #e5e7eb);
     }
-    .smb-n {
-      margin-left: auto;
-      font-size: var(--blockr-font-size-xs, 0.75rem);
-      color: var(--blockr-grey-500, #6b7280);
+    .smb-col-empty {
+      color: var(--blockr-grey-400, #9ca3af);
+      font-size: var(--blockr-font-size-sm, 0.8125rem);
+      padding: 6px 0;
     }
 
-    .smb-coef {
-      width: 100%;
-      border-collapse: collapse;
-      display: block;
-      overflow-x: auto;
-    }
-    .smb-coef th, .smb-coef td {
-      padding: 5px 12px;
-      text-align: right;
-      white-space: nowrap;
+    .smb-tbl { width: 100%; border-collapse: collapse; font-size: var(--blockr-font-size-sm, 0.8125rem); }
+    .smb-tbl td {
+      padding: 4px 8px;
       border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+      transition: background-color 0.15s ease;
     }
-    .smb-coef th {
-      font-size: var(--blockr-font-size-xs, 0.75rem);
-      font-weight: var(--blockr-font-weight-medium, 500);
-      color: var(--blockr-grey-500, #6b7280);
-    }
-    .smb-coef td.smb-term, .smb-coef th:first-child { text-align: left; }
-    .smb-coef td.smb-est { font-weight: var(--blockr-font-weight-semibold, 600); }
-    .smb-coef td.smb-p   { color: var(--blockr-grey-500, #6b7280); }
-    .smb-coef tbody tr:last-child td { border-bottom: none; }
+    .smb-tbl tr:hover td { background: var(--blockr-grey-50, #f9fafb); }
+    .smb-tbl tr:last-child td { border-bottom: none; }
+    .smb-tbl td:first-child { padding-left: 0; }
+    .smb-tbl td:last-child  { padding-right: 0; }
 
-    .smb-fit {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px 14px;
-      padding: 8px 12px;
-      border-top: 1px solid var(--blockr-color-border, #e5e7eb);
-      background: var(--blockr-grey-50, #f9fafb);
-      font-size: var(--blockr-font-size-xs, 0.75rem);
+    .smb-term, .smb-k { font-weight: var(--blockr-font-weight-medium, 500); }
+    .smb-est, .smb-v  { text-align: right; font-variant-numeric: tabular-nums; }
+    .smb-sig          { text-align: right; width: 1%; white-space: nowrap; }
+    .smb-test-h       { color: var(--blockr-grey-500, #6b7280); font-size: var(--blockr-font-size-xs, 0.75rem); }
+
+    .smb-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: #fff;
+      border-radius: 10px;
+      letter-spacing: 0.3px;
     }
-    .smb-pill-k { color: var(--blockr-grey-500, #6b7280); margin-right: 4px; }
-    .smb-pill-v { color: var(--blockr-grey-700, #374151); font-weight: var(--blockr-font-weight-medium, 500); }
     "
   ))
 }

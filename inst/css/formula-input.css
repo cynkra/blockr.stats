@@ -23,8 +23,51 @@
 
 .formula-tilde {
   flex: 0 0 auto;
-  color: var(--bs-secondary-color, #6c757d);
-  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--bs-secondary-color, #9ca3af);
+}
+
+.formula-tilde svg {
+  display: block;
+}
+
+/* Predictors fill the space beside the inline intercept toggle */
+.blockr-row-content > .formula-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
+.formula-icept {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 24px;
+  padding: 0 6px;
+  margin-right: 2px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--bs-secondary-color, #9ca3af);
+  cursor: pointer;
+  user-select: none;
+}
+
+.formula-icept:hover {
+  background: var(--bs-tertiary-bg, #eef1f4);
+}
+
+/* "0" = no intercept is the meaningful, emphasized state */
+.formula-icept--off {
+  color: var(--blockr-color-primary, #2563eb);
+  font-weight: 600;
+  border-color: var(--blockr-color-border, #e5e7eb);
+  background: var(--bs-tertiary-bg, #eef1f4);
 }
 
 .formula-row__label {
@@ -111,4 +154,112 @@
 .formula-advanced .formula-row__label {
   font-weight: 500;
   opacity: 0.85;
+}
+
+/* Build-menu trigger ("+ interaction / transform"), styled like the filter
+   block's "+ Add condition" link. */
+.formula-add-row {
+  margin-top: -2px;
+}
+
+.formula-add-link {
+  font-size: 0.8rem;
+}
+
+/* Floating build menu (interactions / transforms / splines). Rounded,
+   shadowed, appended to <body> and positioned in JS. */
+.formula-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  font-size: 0.85rem;
+}
+
+.formula-menu__item {
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.formula-menu__item:hover {
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--blockr-color-primary, #2563eb);
+}
+
+.formula-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  margin-bottom: 6px;
+}
+
+.formula-menu__back {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transform: rotate(90deg);
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-menu__back:hover {
+  color: var(--blockr-color-primary, #2563eb);
+}
+
+.formula-menu__title {
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-menu__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.formula-menu__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--bs-font-monospace, monospace);
+}
+
+.formula-menu__select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 5px;
+  background: var(--bs-body-bg, #fff);
+  font-size: 0.85rem;
+}
+
+.formula-menu__note {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-style: italic;
+  padding: 2px;
+}
+
+.formula-menu__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 6px 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.formula-menu__confirm {
+  cursor: pointer;
 }
