@@ -21,27 +21,49 @@
   padding-right: 8px;
 }
 
-/* Survival: labeled fields (label ABOVE a bordered control) — Time, Event,
-   Predictors — matching the block's other labels. */
-.formula-surv-grid {
+/* Survival: one-line pill (time + event left, predictors right) with column
+   headers (Time / Event / Predictors) ABOVE the segments, outside the box.
+   The header and the pill share segment widths + gap + padding, so the labels
+   line up over their segments. */
+.formula-surv-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px; /* match the pill's horizontal padding */
+  margin-bottom: 2px;
 }
 
-.formula-field {
+.formula-surv-pill {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 140px;
+  align-items: center;
+  gap: 8px;
 }
 
-.formula-field--wide {
-  flex: 1 1 100%;
+.formula-seg {
+  min-width: 0;
+}
+
+.formula-seg--time,
+.formula-seg--event {
+  flex: 0 0 132px;
+}
+
+.formula-seg--pred {
+  flex: 1 1 auto;
+}
+
+.formula-seg-divider {
+  flex: 0 0 1px;
+  align-self: stretch;
+}
+
+.formula-surv-pill .formula-seg-divider {
+  border-left: 1px solid var(--blockr-color-border, #e5e7eb);
+  margin: 3px 0;
 }
 
 .formula-field__label {
+  display: block;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--bs-secondary-color, #6c757d);

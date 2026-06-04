@@ -102,42 +102,54 @@
     var ctxTarget; // element the right-click build-menu binds to
 
     if (this.responseMode === "surv") {
-      // Labeled fields (label ABOVE a bordered control), like the block's
-      // other controls ("Survival model", "Formula") — not an inline pill.
-      var mkField = function (labelText, wide) {
-        var f = document.createElement("div");
-        f.className = "formula-field" + (wide ? " formula-field--wide" : "");
+      // One-line pill (time + event left, predictors right), with the labels
+      // Time/Event/Predictors as column headers ABOVE their segments, outside
+      // the box. Header + pill share the same segment widths so they align.
+      var seg = function (cls) {
+        var d = document.createElement("div");
+        d.className = "formula-seg " + cls;
+        return d;
+      };
+      var headLabel = function (cls, text) {
+        var d = seg(cls);
         var l = document.createElement("label");
         l.className = "formula-field__label";
-        l.textContent = labelText;
-        var c = document.createElement("div");
-        c.className = "formula-control";
-        f.appendChild(l);
-        f.appendChild(c);
-        return { field: f, control: c };
+        l.textContent = text;
+        d.appendChild(l);
+        return d;
       };
-      var grid = document.createElement("div");
-      grid.className = "formula-surv-grid";
-      var timeF = mkField("Time");
-      var eventF = mkField("Event");
-      var predF = mkField("Predictors", true);
-      predF.control.appendChild(predHost);
-      grid.appendChild(timeF.field);
-      grid.appendChild(eventF.field);
-      grid.appendChild(predF.field);
-      this.el.appendChild(grid);
-      ctxTarget = predHost;
 
-      this._timeSelect = Blockr.Select.single(timeF.control, {
-        placeholder: "time column",
+      // header row (labels), above the pill
+      var head = document.createElement("div");
+      head.className = "formula-surv-head";
+      head.appendChild(headLabel("formula-seg--time", "Time"));
+      head.appendChild(headLabel("formula-seg--event", "Event"));
+      head.appendChild(seg("formula-seg-divider"));
+      head.appendChild(headLabel("formula-seg--pred", "Predictors"));
+      this.el.appendChild(head);
+
+      // the single bordered pill, segmented to match the header
+      var spill = document.createElement("div");
+      spill.className = "blockr-row formula-row-pill formula-surv-pill";
+      var timeSeg = seg("formula-seg--time");
+      var eventSeg = seg("formula-seg--event");
+      var predSeg = seg("formula-seg--pred blockr-row-content");
+      predSeg.appendChild(predHost);
+      spill.appendChild(timeSeg);
+      spill.appendChild(eventSeg);
+      spill.appendChild(seg("formula-seg-divider"));
+      spill.appendChild(predSeg);
+      this.el.appendChild(spill);
+      ctxTarget = predSeg;
+
+      this._timeSelect = Blockr.Select.single(timeSeg, {
+        placeholder: "time…",
         onChange: function (v) { self.response.time = v || ""; self._sync(); }
       });
-      this._timeSelect.el.classList.add("blockr-select--bordered");
-      this._statusSelect = Blockr.Select.single(eventF.control, {
-        placeholder: "event column",
+      this._statusSelect = Blockr.Select.single(eventSeg, {
+        placeholder: "event…",
         onChange: function (v) { self.response.event = v || ""; self._sync(); }
       });
-      this._statusSelect.el.classList.add("blockr-select--bordered");
     } else {
       // Equation pill: [response] ~ [predictors] inside a shared .blockr-row.
       var row = document.createElement("div");
@@ -178,9 +190,6 @@
         self._onPredChange(sel || []);
       }
     });
-    if (this.responseMode === "surv") {
-      this._predSelect.el.classList.add("blockr-select--bordered");
-    }
 
     // Derived/advanced terms (interactions, transforms, splines, opaque,
     // random effects) render as colored chips INSIDE the predictors select
