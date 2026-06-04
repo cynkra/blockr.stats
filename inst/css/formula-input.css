@@ -30,7 +30,11 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px; /* match the pill's horizontal padding */
-  margin-bottom: 2px;
+  margin-bottom: 0.25rem; /* standard .blockr-label gap */
+}
+
+.formula-surv-head .blockr-label {
+  margin-bottom: 0; /* the head row provides the gap, not each label */
 }
 
 .formula-surv-pill {
@@ -101,6 +105,15 @@
 /* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
 /* Model-type segmented buttons — subtle, like the Visual/R toggle (a touch
    bigger). Light-blue active, muted gray inactive; content-width, not loud. */
+/* the radioGroupButtons label ("Model type" / "Survival model") matches the
+   canonical .blockr-label font, like every other label */
+.formula-model-type .control-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--blockr-grey-500, #6b7280);
+  margin-bottom: 0.25rem;
+}
+
 .formula-model-type .btn-group-container-sw {
   width: auto;
 }
@@ -281,9 +294,9 @@
   opacity: 0.85;
 }
 
-/* tighten the gap between the "Formula" label and its input box */
+/* the Formula label uses .blockr-label; its 0.25rem bottom margin is the gap */
 .formula-advanced {
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 .formula-text-row {

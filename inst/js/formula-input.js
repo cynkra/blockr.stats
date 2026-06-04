@@ -113,7 +113,7 @@
       var headLabel = function (cls, text) {
         var d = seg(cls);
         var l = document.createElement("label");
-        l.className = "formula-field__label";
+        l.className = "blockr-label";
         l.textContent = text;
         d.appendChild(l);
         return d;
@@ -907,7 +907,7 @@
     var row = document.createElement("div");
     row.className = "formula-row";
     var l = document.createElement("label");
-    l.className = "formula-row__label";
+    l.className = "blockr-label";
     l.textContent = labelText;
     row.appendChild(l);
     return row;
