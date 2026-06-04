@@ -60,21 +60,16 @@
     respHost.className = "formula-control";
     lhsWrap.appendChild(respHost);
 
-    var tilde = document.createElement("span");
-    tilde.className = "formula-tilde";
-    tilde.innerHTML =
-      '<svg width="20" height="20" viewBox="0 0 18 18" fill="none" ' +
-      'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
-      'stroke-linejoin="round"><path d="M2 11c1.4-3 3.4-3 4.9 0s3.5 3 4.9 0"/></svg>';
-
     var rhsWrap = document.createElement("div");
     rhsWrap.className = "blockr-row-content";
-    // Inline intercept toggle at the left of the RHS: the leading 1 (include)
-    // or 0 (drop) of the right-hand side.
-    this._iceptEl = document.createElement("span");
+    // Intercept as a click-through toggle button at the left of the RHS.
+    // (The v-bar divider already separates LHS from RHS — no tilde needed.)
+    this._iceptEl = document.createElement("button");
+    this._iceptEl.type = "button";
     this._iceptEl.className = "formula-icept";
-    this._iceptEl.title = "Intercept: 1 = include, 0 = drop";
-    this._iceptEl.addEventListener("click", function () {
+    this._iceptEl.title = "Click to include or drop the intercept";
+    this._iceptEl.addEventListener("click", function (e) {
+      e.preventDefault();
       self.intercept = !self.intercept;
       self._renderIntercept();
       self._sync();
@@ -85,7 +80,6 @@
     rhsWrap.appendChild(predHost);
 
     row.appendChild(lhsWrap);
-    row.appendChild(tilde);
     row.appendChild(rhsWrap);
     this.el.appendChild(row);
 
@@ -104,12 +98,9 @@
       }
     });
 
-    // Secondary strip: derived/advanced terms that are not plain columns
-    // (interactions, transforms, splines, opaque, random effects). Comes from
-    // the formula field; hidden when empty.
-    this._chips = document.createElement("div");
-    this._chips.className = "formula-chips";
-    this.el.appendChild(this._chips);
+    // Derived/advanced terms (interactions, transforms, splines, opaque,
+    // random effects) render as colored chips INSIDE the predictors select
+    // (see renderChips), alongside the column chips.
 
     // Visible affordance to open the build menu (interactions / transforms /
     // splines). Styled like the filter block's "+ Add condition" link.
@@ -177,7 +168,7 @@
 
   FormulaInput.prototype._renderIntercept = function () {
     if (!this._iceptEl) return;
-    this._iceptEl.textContent = this.intercept ? "1" : "0";
+    this._iceptEl.textContent = "intercept";
     this._iceptEl.classList.toggle("formula-icept--off", !this.intercept);
   };
 
@@ -214,36 +205,42 @@
   // Plain column predictors live inside the multi-select, not here.
   FormulaInput.prototype.renderChips = function () {
     var self = this;
-    this._chips.innerHTML = "";
-    var all = this.terms
+    var tags =
+      this._predSelect &&
+      this._predSelect.el &&
+      this._predSelect.el.querySelector(".blockr-select__tags");
+    if (!tags) return;
+
+    // Clear previously injected derived chips (the select owns the column ones)
+    var old = tags.querySelectorAll(".formula-tag--derived");
+    for (var i = 0; i < old.length; i++) {
+      old[i].parentNode.removeChild(old[i]);
+    }
+
+    var derived = this.terms
       .filter(function (t) { return !self._isColTerm(t); })
-      .map(function (t) {
-        return { kind: "term", t: t, label: t.label, k: t.kind };
-      })
+      .map(function (t) { return { kind: t.kind, label: t.label, t: t }; })
       .concat(
         this.bars.map(function (b) {
-          return { kind: "bar", b: b, label: "(" + b.raw + ")", k: "bar" };
+          return { kind: "bar", label: "(" + b.raw + ")", b: b };
         })
       );
 
-    if (all.length === 0) {
-      this._chips.style.display = "none";
-      return;
-    }
-    this._chips.style.display = "";
-
-    all.forEach(function (item) {
+    derived.forEach(function (item) {
       var chip = document.createElement("span");
-      chip.className = "formula-chip formula-chip--" + item.k;
-      var txt = document.createElement("span");
-      txt.className = "formula-chip__label";
-      txt.textContent = item.label;
-      chip.appendChild(txt);
-      var rm = document.createElement("span");
-      rm.className = "formula-chip__remove";
-      rm.innerHTML = Blockr.icons.x;
-      rm.addEventListener("click", function () {
-        if (item.kind === "bar") {
+      chip.className =
+        "blockr-select__tag formula-tag--derived formula-tag--" + item.kind;
+      var lbl = document.createElement("span");
+      lbl.className = "blockr-select__tag-label";
+      lbl.textContent = item.label;
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "blockr-select__tag-remove";
+      rm.setAttribute("tabindex", "-1");
+      rm.innerHTML = Blockr.icons.remove;
+      rm.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (item.b) {
           self.bars = self.bars.filter(function (b) { return b !== item.b; });
         } else {
           self.terms = self.terms.filter(function (t) { return t !== item.t; });
@@ -251,8 +248,12 @@
         self.renderChips();
         self._sync();
       });
+      chip.appendChild(lbl);
       chip.appendChild(rm);
-      self._chips.appendChild(chip);
+      // place right after the column chips, before the search input
+      var search = tags.querySelector(".blockr-select__search");
+      if (search) tags.insertBefore(chip, search);
+      else tags.appendChild(chip);
     });
   };
 
@@ -641,6 +642,7 @@
     var rv = typeof this.response === "string" ? this.response : null;
     this._respSelect.setOptions(opts, rv);
     this._predSelect.setOptions(opts, this._colVars());
+    this.renderChips();
     if (this._text)
       this._text.setColumns(
         this.columns.map(function (c) {

@@ -39,35 +39,69 @@
 }
 
 /* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
+/* Intercept: a click-through toggle button. Active = intercept included
+   (default); --off = dropped (struck through, muted). */
 .formula-icept {
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 24px;
-  padding: 0 6px;
-  margin-right: 2px;
+  appearance: none;
+  margin-right: 6px;
+  padding: 2px 8px;
   border-radius: 5px;
-  border: 1px solid transparent;
-  font-family: var(--bs-font-monospace, monospace);
-  font-size: 0.9rem;
-  line-height: 1;
-  color: var(--bs-secondary-color, #9ca3af);
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--bs-body-color, #374151);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: nowrap;
   cursor: pointer;
   user-select: none;
 }
 
 .formula-icept:hover {
-  background: var(--bs-tertiary-bg, #eef1f4);
+  border-color: var(--blockr-color-primary, #2563eb);
 }
 
-/* "0" = no intercept is the meaningful, emphasized state */
 .formula-icept--off {
-  color: var(--blockr-color-primary, #2563eb);
-  font-weight: 600;
-  border-color: var(--blockr-color-border, #e5e7eb);
-  background: var(--bs-tertiary-bg, #eef1f4);
+  background: transparent;
+  color: var(--bs-secondary-color, #9ca3af);
+  text-decoration: line-through;
+}
+
+/* Derived terms (interactions / transforms / splines / opaque / random
+   effects) rendered as chips inside the predictors select — slightly
+   different colors so they read as "not a plain column". */
+.formula-tag--derived {
+  gap: 4px;
+}
+
+.formula-tag--interaction {
+  background: #fff3cd;
+  border-color: #ffe69c;
+}
+
+.formula-tag--poly,
+.formula-tag--spline,
+.formula-tag--transform {
+  background: #e8f7ef;
+  border-color: #b7e4c7;
+}
+
+.formula-tag--opaque,
+.formula-tag--bar {
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.formula-tag__remove {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.formula-tag__remove:hover {
+  opacity: 1;
+  color: var(--blockr-color-danger, #dc3545);
 }
 
 .formula-row__label {

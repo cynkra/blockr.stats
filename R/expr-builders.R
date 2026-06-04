@@ -25,7 +25,15 @@ make_model_formula <- function(state) {
   terms_list <- if (is.null(state$terms)) list() else state$terms
   bars_list  <- if (is.null(state$bars)) list() else state$bars
 
-  labels <- vapply(terms_list, function(t) t$label, character(1))
+  labels <- vapply(terms_list, function(t) {
+    lbl <- t$label
+    # ns()/bs() live in the splines package (not attached): emit prefixed so the
+    # fit can find them. Covers both menu- and text-added spline terms.
+    if (identical(t$kind, "spline")) {
+      lbl <- sub("^(ns|bs)\\(", "splines::\\1(", lbl)
+    }
+    lbl
+  }, character(1))
   bars   <- vapply(bars_list, function(b) sprintf("(%s)", b$raw), character(1))
   rhs    <- c(labels, bars)
 
