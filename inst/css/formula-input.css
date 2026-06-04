@@ -1,0 +1,419 @@
+.formula-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.formula-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Equation pill: [response] ~ [predictors] inside the shared .blockr-row.
+   The row supplies the border/background; selects inside stay borderless. */
+.formula-lhs-wrap {
+  width: 150px;
+  min-width: 110px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
+  padding-right: 8px;
+}
+
+/* Survival: one-line pill (time + event left, predictors right) with column
+   headers (Time / Event / Predictors) ABOVE the segments, outside the box.
+   The header and the pill share segment widths + gap + padding, so the labels
+   line up over their segments. */
+.formula-surv-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px; /* match the pill's horizontal padding */
+  margin-bottom: 2px;
+  line-height: 1; /* no leading below the label text -> tight gap to the pill */
+}
+
+.formula-surv-head .blockr-label {
+  margin-bottom: 0; /* the head row provides the gap, not each label */
+  line-height: 1;
+}
+
+.formula-surv-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formula-seg {
+  min-width: 0;
+}
+
+.formula-seg--time,
+.formula-seg--event {
+  flex: 0 0 132px;
+}
+
+.formula-seg--pred {
+  flex: 1 1 auto;
+}
+
+.formula-seg-divider {
+  flex: 0 0 1px;
+  align-self: stretch;
+}
+
+.formula-surv-pill .formula-seg-divider {
+  border-left: 1px solid var(--blockr-color-border, #e5e7eb);
+  margin: 3px 0;
+}
+
+.formula-field__label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--bs-secondary-color, #6c757d);
+  opacity: 0.85;
+  margin: 0;
+}
+
+/* event-value input lives in the gear-header, revealed by the gear */
+.formula-surv__adv-input {
+  margin-right: 8px;
+  width: 120px;
+  padding: 2px 6px;
+  font-size: 0.78rem;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 5px;
+}
+
+.formula-tilde {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--bs-secondary-color, #9ca3af);
+}
+
+.formula-tilde svg {
+  display: block;
+}
+
+/* Predictors fill the space beside the inline intercept toggle */
+.blockr-row-content > .formula-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
+/* Model-type segmented buttons — subtle, like the Visual/R toggle (a touch
+   bigger). Light-blue active, muted gray inactive; content-width, not loud. */
+/* the radioGroupButtons label ("Model type" / "Survival model") matches the
+   canonical .blockr-label font, like every other label */
+.formula-model-type .control-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--blockr-grey-500, #6b7280);
+  margin-bottom: 0.25rem;
+}
+
+.formula-model-type .btn-group-container-sw {
+  width: auto;
+}
+
+.formula-model-type .btn.radiobtn {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: #fff;
+  color: var(--bs-secondary-color, #6c757d);
+  border-color: var(--blockr-color-border, #e5e7eb);
+  box-shadow: none;
+}
+
+.formula-model-type .btn.radiobtn:hover {
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--bs-body-color, #374151);
+}
+
+.formula-model-type .btn.radiobtn.active,
+.formula-model-type .btn.radiobtn:active,
+.formula-model-type .btn.radiobtn.focus,
+.formula-model-type input:checked + .btn.radiobtn {
+  background: #e7f1ff;
+  color: var(--blockr-color-primary, #2563eb);
+  border-color: #b6d4fe;
+  box-shadow: none;
+}
+
+/* Intercept: a click-through toggle button. Active = intercept included
+   (default); --off = dropped (struck through, muted). */
+.formula-icept {
+  flex: 0 0 auto;
+  appearance: none;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--blockr-color-border, #e5e7eb);
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--bs-body-color, #374151);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.formula-icept:hover {
+  border-color: var(--blockr-color-primary, #2563eb);
+}
+
+.formula-icept--off {
+  background: transparent;
+  color: var(--bs-secondary-color, #9ca3af);
+  text-decoration: line-through;
+}
+
+/* Derived terms (interactions / transforms / splines / opaque / random
+   effects) rendered as chips inside the predictors select — slightly
+   different colors so they read as "not a plain column". */
+.formula-tag--derived {
+  gap: 4px;
+}
+
+.formula-tag--interaction {
+  background: #fff3cd;
+  border-color: #ffe69c;
+}
+
+.formula-tag--poly,
+.formula-tag--spline,
+.formula-tag--transform {
+  background: #e8f7ef;
+  border-color: #b7e4c7;
+}
+
+.formula-tag--opaque,
+.formula-tag--bar {
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.formula-tag__remove {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.formula-tag__remove:hover {
+  opacity: 1;
+  color: var(--blockr-color-danger, #dc3545);
+}
+
+.formula-row__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-control {
+  width: 100%;
+}
+
+.formula-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px;
+  border: 1px dashed var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+}
+
+.formula-chips-empty {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #adb5bd);
+  font-style: italic;
+}
+
+.formula-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-family: var(--bs-font-monospace, monospace);
+  background: var(--bs-tertiary-bg, #eef1f4);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.formula-chip--factor {
+  background: #e7f1ff;
+  border-color: #b6d4fe;
+}
+
+.formula-chip--interaction {
+  background: #fff3cd;
+  border-color: #ffe69c;
+}
+
+.formula-chip--poly,
+.formula-chip--spline,
+.formula-chip--transform {
+  background: #e8f7ef;
+  border-color: #b7e4c7;
+}
+
+.formula-chip--opaque,
+.formula-chip--bar {
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.formula-chip__remove {
+  display: inline-flex;
+  cursor: pointer;
+  color: var(--bs-secondary-color, #6c757d);
+  opacity: 0.6;
+}
+
+.formula-chip__remove:hover {
+  opacity: 1;
+  color: var(--bs-danger, #dc3545);
+}
+
+.formula-intercept {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.formula-advanced .formula-row__label {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* the Formula label uses .blockr-label; tighten its gap like the surv header */
+.formula-advanced {
+  margin-bottom: 0;
+}
+
+.formula-advanced .blockr-label {
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.formula-text-row {
+  margin-top: 0;
+}
+
+/* Build-menu trigger ("+ interaction / transform"), styled like the filter
+   block's "+ Add condition" link. */
+.formula-add-row {
+  margin-top: -2px;
+}
+
+.formula-add-link {
+  font-size: 0.8rem;
+}
+
+/* Floating build menu (interactions / transforms / splines). Rounded,
+   shadowed, appended to <body> and positioned in JS. */
+.formula-menu {
+  position: fixed;
+  z-index: 2000;
+  min-width: 200px;
+  padding: 4px;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
+  font-size: 0.85rem;
+}
+
+.formula-menu__item {
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.formula-menu__item:hover {
+  background: var(--bs-tertiary-bg, #eef1f4);
+  color: var(--blockr-color-primary, #2563eb);
+}
+
+.formula-menu__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  margin-bottom: 6px;
+}
+
+.formula-menu__back {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transform: rotate(90deg);
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-menu__back:hover {
+  color: var(--blockr-color-primary, #2563eb);
+}
+
+.formula-menu__title {
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.formula-menu__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.formula-menu__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+  font-family: var(--bs-font-monospace, monospace);
+}
+
+.formula-menu__select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 5px;
+  background: var(--bs-body-bg, #fff);
+  font-size: 0.85rem;
+}
+
+.formula-menu__note {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-style: italic;
+  padding: 2px;
+}
+
+.formula-menu__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 6px 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.formula-menu__confirm {
+  cursor: pointer;
+}

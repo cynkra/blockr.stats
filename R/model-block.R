@@ -1,132 +1,59 @@
 #' Model Block
 #'
-#' Fit a statistical model: linear (`lm`), generalized linear (`glm`:
-#' logistic / Poisson / Gamma), or ANOVA (`aov`). Returns the **fitted
-#' model object**; downstream the broom adapter (tidy / glance /
-#' augment) turns it into tidy frames for the generic renderers. The
-#' block's own preview is a generic `summary(model)`.
+#' Fit a statistical model: linear (`lm`) or generalized linear (`glm`:
+#' logistic / Poisson / Gamma). The model formula is authored with the
+#' **formula-input widget** (response, predictors, interactions, transforms,
+#' splines, intercept). Returns the **fitted model object**; downstream the
+#' broom adapter (tidy / glance / augment / anova) turns it into tidy frames
+#' for the generic renderers. The block's own preview is a generic
+#' `summary(model)`.
 #'
-#' @param model_type One of `"lm"`, `"logistic"`, `"poisson"`,
-#'   `"gamma"`, `"aov"`.
-#' @param response Response column (single).
-#' @param predictors Numeric predictor column names.
-#' @param factors Categorical predictor column names.
-#' @param intercept Logical, include intercept (default TRUE).
+#' ANOVA-as-model is not a model type here: it is the broom adapter's `anova`
+#' mode over an `lm` fit. (ANOVA-as-test lives in the adaptive test block.)
+#'
+#' @param model_type One of `"lm"`, `"logistic"`, `"poisson"`, `"gamma"`.
+#' @param formula Structured formula-input state: a list with `response`,
+#'   `intercept`, `terms`, `bars`, `offset`, `weights` (see `parse_formula()`).
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `model_block`.
 #' @export
 new_model_block <- function(
   model_type = "lm",
-  response = character(),
-  predictors = character(),
-  factors = character(),
-  intercept = TRUE,
+  formula = list(
+    response = NULL, intercept = TRUE,
+    terms = list(), bars = list(), offset = NULL, weights = NULL
+  ),
   ...
 ) {
   model_choices <- c(
     "Linear (lm)"    = "lm",
     "Logistic (glm)" = "logistic",
     "Poisson (glm)"  = "poisson",
-    "Gamma (glm)"    = "gamma",
-    "ANOVA (aov)"    = "aov"
+    "Gamma (glm)"    = "gamma"
   )
-
-  build_expr <- function(mtype, resp, covs, facs, incl_intercept) {
-    if (is.null(resp) || length(resp) == 0 || !nzchar(resp)) {
-      return(quote(NULL))
-    }
-    all_preds <- c(covs, facs)
-    all_preds <- all_preds[nzchar(all_preds)]
-    resp_term <- paste0("`", resp, "`")
-    if (length(all_preds) == 0) {
-      if (!incl_intercept) return(quote(NULL))
-      formula_str <- paste0(resp_term, " ~ 1")
-    } else {
-      pred_str <- paste0("`", all_preds, "`", collapse = " + ")
-      formula_str <- paste0(resp_term,
-        if (incl_intercept) " ~ " else " ~ 0 + ", pred_str)
-    }
-    expr_text <- switch(
-      mtype,
-      "lm"       = glue::glue("stats::lm({formula_str}, data = data)"),
-      "logistic" = glue::glue(
-        "stats::glm({formula_str}, data = data, family = stats::binomial())"),
-      "poisson"  = glue::glue(
-        "stats::glm({formula_str}, data = data, family = stats::poisson())"),
-      "gamma"    = glue::glue(
-        "stats::glm({formula_str}, data = data, family = stats::Gamma())"),
-      "aov"      = glue::glue("stats::aov({formula_str}, data = data)"),
-      glue::glue("stats::lm({formula_str}, data = data)")
-    )
-    parse(text = expr_text)[[1]]
-  }
 
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {
         r_model_type <- reactiveVal(model_type)
-        r_response   <- reactiveVal(response)
-        r_predictors <- reactiveVal(predictors)
-        r_factors    <- reactiveVal(factors)
-        r_intercept  <- reactiveVal(intercept)
-        r_initialized <- reactiveVal(FALSE)
-
         observeEvent(input$model_type, r_model_type(input$model_type))
-        observeEvent(input$response,   r_response(input$response))
-        observeEvent(input$predictors, r_predictors(input$predictors))
-        observeEvent(input$factors,    r_factors(input$factors))
-        observeEvent(input$intercept,  r_intercept(input$intercept))
 
-        numeric_cols <- function(d) {
-          colnames(d)[vapply(d, is.numeric, logical(1))]
-        }
-        categorical_cols <- function(d) {
-          colnames(d)[vapply(d, function(x) is.factor(x) ||
-            is.character(x), logical(1))]
-        }
-
-        observe({
-          if (!r_initialized() && length(colnames(data())) > 0) {
-            d <- data()
-            updateSelectizeInput(session, "response",
-              choices = colnames(d), selected = r_response())
-            updateSelectizeInput(session, "predictors",
-              choices = numeric_cols(d), selected = r_predictors())
-            updateSelectizeInput(session, "factors",
-              choices = categorical_cols(d), selected = r_factors())
-            r_initialized(TRUE)
-          }
-        })
-
-        observeEvent(colnames(data()), {
-          if (r_initialized()) {
-            req(data())
-            d <- data()
-            num <- numeric_cols(d); cat <- categorical_cols(d)
-            all <- colnames(d)
-            r_response(intersect(r_response(), all))
-            r_predictors(intersect(r_predictors(), num))
-            r_factors(intersect(r_factors(), cat))
-            updateSelectizeInput(session, "response",
-              choices = all, selected = r_response())
-            updateSelectizeInput(session, "predictors",
-              choices = num, selected = r_predictors())
-            updateSelectizeInput(session, "factors",
-              choices = cat, selected = r_factors())
-          }
-        }, ignoreNULL = FALSE)
+        # Shared formula-input widget wiring (columns / parse / JS<->R sync)
+        r_state <- formula_input_server(
+          input, output, session, data, formula
+        )
 
         list(
           expr = reactive({
-            build_expr(r_model_type(), r_response(), r_predictors(),
-              r_factors(), isTRUE(r_intercept()))
+            f <- make_model_formula(r_state())
+            if (is.null(f)) {
+              return(quote(NULL))
+            }
+            build_model_call(r_model_type(), f)
           }),
           state = list(
             model_type = r_model_type,
-            response   = r_response,
-            predictors = r_predictors,
-            factors    = r_factors,
-            intercept  = r_intercept
+            formula = r_state
           )
         )
       })
@@ -137,46 +64,28 @@ new_model_block <- function(
         css_single_column("model"),
         div(
           class = "block-container model-block-container",
-          div(class = "block-form-grid",
-            div(class = "block-section",
-              div(class = "block-section-grid",
-                div(class = "block-help-text",
-                  "Pick a model type and variables."),
-                div(class = "block-input-wrapper",
+          div(
+            class = "block-form-grid",
+            div(
+              class = "block-section",
+              div(
+                class = "block-section-grid",
+                div(
+                  class = "block-input-wrapper formula-model-type",
                   style = "grid-column: 1 / -1;",
-                  selectInput(NS(id, "model_type"), "Model type",
-                    choices = model_choices, selected = model_type,
-                    width = "100%")),
-                div(class = "block-input-wrapper",
+                  shinyWidgets::radioGroupButtons(
+                    NS(id, "model_type"),
+                    label = "Model type",
+                    choices = model_choices,
+                    selected = model_type,
+                    size = "sm"
+                  )
+                ),
+                div(
+                  class = "block-input-wrapper",
                   style = "grid-column: 1 / -1;",
-                  selectizeInput(NS(id, "response"),
-                    "Dependent variable (Y)", choices = response,
-                    selected = response, multiple = FALSE,
-                    width = "100%",
-                    options = list(placeholder = "Pick the response..."))),
-                div(class = "block-input-wrapper",
-                  style = "grid-column: 1 / -1;",
-                  selectizeInput(NS(id, "predictors"),
-                    "Covariates (numeric predictors)",
-                    choices = predictors, selected = predictors,
-                    multiple = TRUE, width = "100%",
-                    options = list(
-                      plugins = list("drag_drop", "remove_button"),
-                      persist = FALSE,
-                      placeholder = "Pick numeric predictors..."))),
-                div(class = "block-input-wrapper",
-                  style = "grid-column: 1 / -1;",
-                  selectizeInput(NS(id, "factors"),
-                    "Factors (categorical predictors)",
-                    choices = factors, selected = factors,
-                    multiple = TRUE, width = "100%",
-                    options = list(
-                      plugins = list("drag_drop", "remove_button"),
-                      persist = FALSE,
-                      placeholder = "Pick factor predictors..."))),
-                div(class = "block-input-wrapper",
-                  checkboxInput(NS(id, "intercept"),
-                    "Include intercept", value = intercept))
+                  formula_input_ui(id)
+                )
               )
             )
           )
@@ -184,23 +93,21 @@ new_model_block <- function(
       )
     },
     class = "model_block",
-    allow_empty_state = c("response", "predictors", "factors"),
+    expr_type = "bquoted",
+    external_ctrl = TRUE,
+    allow_empty_state = "formula",
     ...
   )
 }
 
 #' @export
 block_output.model_block <- function(x, result, session) {
-  renderPrint({
-    if (is.null(result)) {
-      cat("Pick variables.")
-    } else {
-      summary(result)
-    }
+  renderUI({
+    tagList(css_model_summary(), model_summary_html(result))
   })
 }
 
 #' @export
 block_ui.model_block <- function(id, x, ...) {
-  tagList(verbatimTextOutput(NS(id, "result")))
+  tagList(uiOutput(NS(id, "result")))
 }

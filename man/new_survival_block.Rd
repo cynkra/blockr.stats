@@ -13,8 +13,12 @@ new_survival_block(
 )
 }
 \arguments{
-\item{type, time_var, event_var, group_var}{Forwarded to
-\code{\link[=fit_survival]{fit_survival()}}.}
+\item{type}{\code{"km"}, \code{"cox"}, or \code{"cif"}.}
+
+\item{time_var, event_var}{Follow-up time and event/status columns
+(event coded 1 = event). Map to the \code{Surv(time, event)} response.}
+
+\item{group_var}{Optional grouping/covariate column (the RHS).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -22,9 +26,8 @@ new_survival_block(
 A transform block of class \code{survival_block}.
 }
 \description{
-KM / Cox / competing-risks. Returns the fitted model object; the
-block's preview is a generic \code{summary()}. Feed downstream into the
-broom adapter: \code{tidy(survfit)} -> curve points (drilldown
-line+step), \code{tidy(coxph)} -> HRs (drilldown coef plot),
-\code{tidy(cuminc)} -> cumulative-incidence curves.
+KM / Cox / competing-risks, authored with the \strong{formula-input widget} in
+survival mode (\code{Surv(time, event) ~ ...}). Returns the fitted model object;
+feed downstream into the broom adapter: \code{tidy(survfit)} -> curve points,
+\code{tidy(coxph)} -> HRs, \code{tidy(cuminc)} -> cumulative-incidence curves.
 }

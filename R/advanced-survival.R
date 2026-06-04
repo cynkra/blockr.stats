@@ -62,95 +62,172 @@ tidy.cuminc <- function(x, ...) {
   do.call(rbind, rows)
 }
 
+#' Build the formula-input widget state from survival constructor args
+#' @keywords internal
+#' @noRd
+survival_state <- function(time_var, event_var, group_var) {
+  tv <- if (length(time_var)) time_var[[1L]] else ""
+  ev <- if (length(event_var)) event_var[[1L]] else ""
+  g <- if (length(group_var) && nzchar(group_var[[1L]])) group_var[[1L]] else NULL
+  list(
+    response = list(fn = "Surv", time = tv, event = ev, eventLevel = NULL),
+    intercept = TRUE,
+    terms = if (is.null(g)) list() else {
+      list(list(kind = "factor", label = g, var = g))
+    },
+    bars = list(),
+    offset = NULL,
+    weights = NULL
+  )
+}
+
+#' Build the bquoted survival fit call from the widget state
+#'
+#' KM/Cox go through [make_model_formula()] (`survival::Surv(...) ~ rhs`) into
+#' `survfit`/`coxph`; CIF uses the non-formula [fit_survival()] `cuminc` path.
+#' @keywords internal
+#' @noRd
+#' Fit a survival model, returning `NULL` instead of erroring
+#'
+#' Wraps the fit in `tryCatch` so an invalid intermediate selection (e.g. a
+#' time/event pair with no non-missing observations, mid-interaction) yields a
+#' `NULL` placeholder preview rather than a hard error.
+#'
+#' @param type `"km"`, `"cox"`, or `"cif"`.
+#' @param formula Model formula (KM/Cox).
+#' @param data Data frame.
+#' @param time_var,event_var,group_var Columns (CIF path).
+#' @return The fitted object, or `NULL` on error.
+#' @export
+survival_fit_safe <- function(type, formula = NULL, data,
+                              time_var = NULL, event_var = NULL,
+                              group_var = NULL) {
+  tryCatch(
+    if (identical(type, "cif")) {
+      fit_survival(data, type = "cif", time_var = time_var,
+                   event_var = event_var, group_var = group_var)
+    } else if (identical(type, "cox")) {
+      survival::coxph(formula, data = data)
+    } else {
+      survival::survfit(formula, data = data)
+    },
+    error = function(e) NULL
+  )
+}
+
+build_survival_call <- function(type, state) {
+  resp <- state$response
+  if (is.null(resp) || is.null(resp$time) || !nzchar(resp$time) ||
+      is.null(resp$event) || !nzchar(resp$event)) {
+    return(quote(NULL))
+  }
+  if (identical(type, "cif")) {
+    tv <- resp$time
+    ev <- resp$event
+    tl <- state$terms
+    g <- if (length(tl)) tl[[1L]]$var else NULL
+    return(blockr.core::bbquote(
+      blockr.stats::survival_fit_safe("cif", data = .(data),
+        time_var = .(tv), event_var = .(ev), group_var = .(g)),
+      list(tv = tv, ev = ev, g = g)
+    ))
+  }
+  f <- make_model_formula(state)
+  if (is.null(f)) {
+    return(quote(NULL))
+  }
+  blockr.core::bbquote(
+    blockr.stats::survival_fit_safe(.(ty), formula = .(f), data = .(data)),
+    list(ty = type, f = f)
+  )
+}
+
 #' Survival Block (Advanced)
 #'
-#' KM / Cox / competing-risks. Returns the fitted model object; the
-#' block's preview is a generic `summary()`. Feed downstream into the
-#' broom adapter: `tidy(survfit)` -> curve points (drilldown
-#' line+step), `tidy(coxph)` -> HRs (drilldown coef plot),
-#' `tidy(cuminc)` -> cumulative-incidence curves.
+#' KM / Cox / competing-risks, authored with the **formula-input widget** in
+#' survival mode (`Surv(time, event) ~ ...`). Returns the fitted model object;
+#' feed downstream into the broom adapter: `tidy(survfit)` -> curve points,
+#' `tidy(coxph)` -> HRs, `tidy(cuminc)` -> cumulative-incidence curves.
 #'
-#' @param type,time_var,event_var,group_var Forwarded to
-#'   [fit_survival()].
+#' @param type `"km"`, `"cox"`, or `"cif"`.
+#' @param time_var,event_var Follow-up time and event/status columns
+#'   (event coded 1 = event). Map to the `Surv(time, event)` response.
+#' @param group_var Optional grouping/covariate column (the RHS).
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `survival_block`.
 #' @export
 new_survival_block <- function(type = "km", time_var = character(),
                                event_var = character(),
                                group_var = character(), ...) {
+  type_choices <- c(
+    "Kaplan-Meier"    = "km",
+    "Cox PH"          = "cox",
+    "Competing risks" = "cif"
+  )
+  init_state <- survival_state(time_var, event_var, group_var)
+
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {
-        r_type  <- reactiveVal(type)
-        r_time  <- reactiveVal(time_var)
-        r_event <- reactiveVal(event_var)
-        r_group <- reactiveVal(group_var)
-        r_init  <- reactiveVal(FALSE)
+        r_type <- reactiveVal(type)
+        observeEvent(input$surv_type, r_type(input$surv_type))
 
-        observeEvent(input$type, r_type(input$type))
-        observeEvent(input$time_var, r_time(input$time_var))
-        observeEvent(input$event_var, r_event(input$event_var))
-        observeEvent(input$group_var,
-          r_group(if (is.null(input$group_var)) "" else input$group_var))
-
-        observe({
-          if (!r_init() && length(colnames(data())) > 0) {
-            d <- data()
-            num <- colnames(d)[vapply(d, is.numeric, logical(1))]
-            all <- colnames(d)
-            updateSelectizeInput(session, "time_var",
-              choices = num, selected = r_time())
-            updateSelectizeInput(session, "event_var",
-              choices = all, selected = r_event())
-            updateSelectizeInput(session, "group_var",
-              choices = c("(none)" = "", stats::setNames(all, all)),
-              selected = r_group())
-            r_init(TRUE)
-          }
-        })
+        # Shared formula-input widget, in Surv(time, event) response mode
+        r_state <- formula_input_server(
+          input, output, session, data, init_state, response_mode = "surv"
+        )
 
         list(
-          expr = reactive({
-            tv <- r_time(); ev <- r_event()
-            if (is.null(tv) || !nzchar(tv) || is.null(ev) ||
-                !nzchar(ev)) return(quote(NULL))
-            g <- r_group()
-            g <- if (is.null(g) || !nzchar(g)) NULL else g
-            bquote(
-              blockr.stats::fit_survival(data, type = .(ty),
-                time_var = .(tv), event_var = .(ev),
-                group_var = .(g)),
-              list(ty = r_type(), tv = tv, ev = ev, g = g)
-            )
-          }),
+          expr = reactive(build_survival_call(r_type(), r_state())),
           state = list(
-            type = r_type, time_var = r_time,
-            event_var = r_event, group_var = r_group
+            type = r_type,
+            time_var = reactive({
+              t <- r_state()$response$time
+              if (is.null(t) || !nzchar(t)) character() else t
+            }),
+            event_var = reactive({
+              e <- r_state()$response$event
+              if (is.null(e) || !nzchar(e)) character() else e
+            }),
+            group_var = reactive({
+              tl <- r_state()$terms
+              if (length(tl)) tl[[1L]]$var else character()
+            })
           )
         )
       })
     },
     ui = function(id) {
-      ns <- NS(id)
       tagList(
+        css_responsive_grid(),
+        css_single_column("model"),
         div(
-          class = "block-container",
-          selectInput(ns("type"), "Survival model",
-            choices = c("Kaplan-Meier" = "km", "Cox PH" = "cox",
-                        "Competing risks (CIF)" = "cif"),
-            selected = type, width = "100%"),
-          selectizeInput(ns("time_var"), "Time",
-            choices = time_var, selected = time_var,
-            multiple = FALSE, width = "100%",
-            options = list(placeholder = "Follow-up time column...")),
-          selectizeInput(ns("event_var"), "Status / event",
-            choices = event_var, selected = event_var,
-            multiple = FALSE, width = "100%",
-            options = list(
-              placeholder = "1 = event, 0 = censor (CIF: cause codes)")),
-          selectizeInput(ns("group_var"), "Group (optional)",
-            choices = c("(none)" = "", stats::setNames(group_var, group_var)),
-            selected = group_var, multiple = FALSE, width = "100%")
+          class = "block-container model-block-container",
+          div(
+            class = "block-form-grid",
+            div(
+              class = "block-section",
+              div(
+                class = "block-section-grid",
+                div(
+                  class = "block-input-wrapper formula-model-type",
+                  style = "grid-column: 1 / -1;",
+                  shinyWidgets::radioGroupButtons(
+                    NS(id, "surv_type"),
+                    label = "Survival model",
+                    choices = type_choices,
+                    selected = type,
+                    size = "sm"
+                  )
+                ),
+                div(
+                  class = "block-input-wrapper",
+                  style = "grid-column: 1 / -1;",
+                  formula_input_ui(id, response_mode = "surv")
+                )
+              )
+            )
+          )
         )
       )
     },
@@ -158,6 +235,7 @@ new_survival_block <- function(type = "km", time_var = character(),
       if (!is.data.frame(data)) stop("Input must be a data frame")
     },
     class = "survival_block",
+    expr_type = "bquoted",
     allow_empty_state = c("time_var", "event_var", "group_var"),
     ...
   )
@@ -165,13 +243,12 @@ new_survival_block <- function(type = "km", time_var = character(),
 
 #' @export
 block_output.survival_block <- function(x, result, session) {
-  renderPrint({
-    if (is.null(result)) cat("Pick time + status to fit.")
-    else summary(result)
+  renderUI({
+    tagList(css_model_summary(), model_summary_html(result))
   })
 }
 
 #' @export
 block_ui.survival_block <- function(id, x, ...) {
-  tagList(verbatimTextOutput(NS(id, "result")))
+  tagList(uiOutput(NS(id, "result")))
 }
