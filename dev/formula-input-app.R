@@ -16,10 +16,13 @@ suppressMessages({
 board <- new_dock_board(
   blocks = blocks(
     data  = new_dataset_block(dataset = "mtcars", package = "datasets"),
-    model = new_model_block()
+    model = new_model_block(),
+    surv  = new_survival_block(type = "km", time_var = "mpg",
+                               event_var = "vs", group_var = "cyl")
   ),
   links = links(
-    new_link(from = "data", to = "model", input = "data")
+    new_link(from = "data", to = "model", input = "data"),
+    new_link(from = "data", to = "surv", input = "data")
   )
 )
 

@@ -209,7 +209,6 @@ new_survival_block <- function(type = "km", time_var = character(),
     },
     class = "survival_block",
     expr_type = "bquoted",
-    external_ctrl = TRUE,
     allow_empty_state = c("time_var", "event_var", "group_var"),
     ...
   )

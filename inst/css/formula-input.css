@@ -21,6 +21,32 @@
   padding-right: 8px;
 }
 
+/* Survival response: Surv( [time] , [status] ) in the pill's left side */
+.formula-input--surv .formula-lhs-wrap {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 230px;
+}
+
+.formula-surv {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.85rem;
+}
+
+.formula-surv__fn,
+.formula-surv__sep {
+  color: var(--bs-secondary-color, #9ca3af);
+}
+
+.formula-surv__sel {
+  display: inline-flex;
+  min-width: 84px;
+}
+
 .formula-tilde {
   flex: 0 0 auto;
   display: inline-flex;

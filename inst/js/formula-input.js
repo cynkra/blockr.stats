@@ -21,6 +21,10 @@
     if (typeof resp === "object" && resp.fn === "cbind") {
       return "cbind(" + (resp.args || []).join(", ") + ")";
     }
+    if (typeof resp === "object" && resp.fn === "Surv") {
+      if (!resp.time || !resp.event) return null;
+      return "Surv(" + resp.time + ", " + resp.event + ")";
+    }
     return resp;
   };
 
@@ -42,7 +46,11 @@
 
     this.columns = [];
     this.colMeta = {};
-    this.response = null;
+    this.responseMode = el.dataset.responseMode || "single";
+    this.response =
+      this.responseMode === "surv"
+        ? { fn: "Surv", time: "", event: "", eventLevel: null }
+        : null;
     this.intercept = true;
     this.terms = [];
     this.bars = [];
@@ -56,6 +64,9 @@
     var self = this;
     this.el.innerHTML = "";
     this.el.classList.add("formula-input");
+    if (this.responseMode === "surv") {
+      this.el.classList.add("formula-input--surv");
+    }
 
     // Equation pill: [response] ~ [predictors] inside the shared .blockr-row
     // pill (bordered/rounded/gray) — same chrome as the filter block. The
@@ -93,13 +104,19 @@
     row.appendChild(rhsWrap);
     this.el.appendChild(row);
 
-    this._respSelect = Blockr.Select.single(respHost, {
-      placeholder: "response…",
-      onChange: function (v) {
-        self.response = v || null;
-        self._sync();
-      }
-    });
+    if (this.responseMode === "surv") {
+      // Survival response: Surv( time , status ) — intercept is N/A
+      this._iceptEl.style.display = "none";
+      this._buildSurvLHS(respHost);
+    } else {
+      this._respSelect = Blockr.Select.single(respHost, {
+        placeholder: "response…",
+        onChange: function (v) {
+          self.response = v || null;
+          self._sync();
+        }
+      });
+    }
 
     this._predSelect = Blockr.Select.multi(predHost, {
       placeholder: "add predictors…",
@@ -191,9 +208,50 @@
   // Response select auto-shows its first option; read the live value so state
   // never diverges from what the user sees.
   FormulaInput.prototype._responseValue = function () {
+    if (this.responseMode === "surv") {
+      var t = this._timeSelect ? this._timeSelect.getValue() || "" : "";
+      var e = this._statusSelect ? this._statusSelect.getValue() || "" : "";
+      if (!t || !e) return null;
+      return {
+        fn: "Surv", time: t, event: e,
+        eventLevel: (this.response && this.response.eventLevel) || null
+      };
+    }
     if (typeof this.response === "object" && this.response) return this.response;
     if (this._respSelect) return this._respSelect.getValue() || null;
     return this.response || null;
+  };
+
+  // Survival LHS: Surv( [time] , [status] ) — two borderless selects in the pill
+  FormulaInput.prototype._buildSurvLHS = function (host) {
+    var self = this;
+    host.classList.add("formula-surv");
+    var open = document.createElement("span");
+    open.className = "formula-surv__fn";
+    open.textContent = "Surv(";
+    var timeHost = document.createElement("span");
+    timeHost.className = "formula-surv__sel";
+    var sep = document.createElement("span");
+    sep.className = "formula-surv__sep";
+    sep.textContent = ",";
+    var statusHost = document.createElement("span");
+    statusHost.className = "formula-surv__sel";
+    var close = document.createElement("span");
+    close.className = "formula-surv__fn";
+    close.textContent = ")";
+    host.appendChild(open);
+    host.appendChild(timeHost);
+    host.appendChild(sep);
+    host.appendChild(statusHost);
+    host.appendChild(close);
+    this._timeSelect = Blockr.Select.single(timeHost, {
+      placeholder: "time",
+      onChange: function (v) { self.response.time = v || ""; self._sync(); }
+    });
+    this._statusSelect = Blockr.Select.single(statusHost, {
+      placeholder: "status",
+      onChange: function (v) { self.response.event = v || ""; self._sync(); }
+    });
   };
 
   FormulaInput.prototype._renderIntercept = function () {
@@ -667,8 +725,22 @@
     this.offset = state.offset || null;
     this.weights = state.weights || null;
 
-    var rv = typeof this.response === "string" ? this.response : null;
-    this._respSelect.setOptions(this._colOptions(), rv);
+    if (this.responseMode === "surv") {
+      var r = this.response || {};
+      this.response = {
+        fn: "Surv", time: r.time || "", event: r.event || "",
+        eventLevel: r.eventLevel || null
+      };
+      if (this._timeSelect) {
+        this._timeSelect.setOptions(this._colOptions(), r.time || null);
+      }
+      if (this._statusSelect) {
+        this._statusSelect.setOptions(this._colOptions(), r.event || null);
+      }
+    } else {
+      var rv = typeof this.response === "string" ? this.response : null;
+      this._respSelect.setOptions(this._colOptions(), rv);
+    }
     this._predSelect.setOptions(this._colOptions(), this._colVars());
     this._renderIntercept();
     this.renderChips();
@@ -687,8 +759,14 @@
       self.colMeta[c.name] = c;
     });
     var opts = this._colOptions();
-    var rv = typeof this.response === "string" ? this.response : null;
-    this._respSelect.setOptions(opts, rv);
+    if (this.responseMode === "surv") {
+      var r = this.response || {};
+      if (this._timeSelect) this._timeSelect.setOptions(opts, r.time || null);
+      if (this._statusSelect) this._statusSelect.setOptions(opts, r.event || null);
+    } else {
+      var rv = typeof this.response === "string" ? this.response : null;
+      this._respSelect.setOptions(opts, rv);
+    }
     this._predSelect.setOptions(opts, this._colVars());
     this.renderChips();
     if (this._text)
