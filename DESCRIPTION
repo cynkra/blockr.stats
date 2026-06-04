@@ -1,6 +1,6 @@
 Package: blockr.stats
 Title: Statistical Blocks for blockr
-Version: 0.0.1.9010
+Version: 0.0.1.9012
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
@@ -20,6 +20,7 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     shiny,
+    shinyWidgets,
     blockr.core (>= 0.1.1),
     blockr.dplyr,
     broom,

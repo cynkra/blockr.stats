@@ -24,6 +24,16 @@
     return resp;
   };
 
+  // Function autocomplete for the formula text editor (same shape as the
+  // filter block's expression categories).
+  var FORMULA_FUNCS = {
+    transform: ["I", "log", "log2", "log10", "sqrt", "exp", "scale"],
+    polynomial: ["poly"],
+    spline: ["ns", "bs"],
+    factor: ["factor", "ordered", "relevel", "interaction"],
+    response: ["cbind"]
+  };
+
   function FormulaInput(el) {
     this.el = el;
     this._callback = null;
@@ -127,23 +137,43 @@
 
     // (intercept is the inline 1/0 toggle at the left of the RHS, above)
 
-    // Advanced: raw formula text (round-trips through R)
+    // Formula: raw text with autocomplete + confirm button — same code editor
+    // and chrome as the filter block's expression row.
     var advRow = mkRow("Formula");
     advRow.classList.add("formula-advanced");
-    var textHost = document.createElement("div");
-    textHost.className = "formula-control";
-    advRow.appendChild(textHost);
     this.el.appendChild(advRow);
-    this._text = Blockr.Input.create(textHost, {
-      placeholder: "y ~ x1 + x2 + x1:x2 …",
-      onConfirm: function (t) {
-        if (t && t.indexOf("~") !== -1) {
-          Shiny.setInputValue(self.el.id + "_parse_request", t, {
-            priority: "event"
-          });
-        }
+
+    var fRow = document.createElement("div");
+    fRow.className = "blockr-row formula-text-row";
+    var codeHost = document.createElement("div");
+    codeHost.className = "blockr-row-content";
+    fRow.appendChild(codeHost);
+
+    this._textConfirm = document.createElement("button");
+    this._textConfirm.type = "button";
+    this._textConfirm.className = "blockr-expr-confirm";
+    this._textConfirm.innerHTML = "Enter ↵";
+    this._textConfirm.title = "Apply formula";
+    var doConfirm = function () {
+      var t = self._text.getValue();
+      if (t && t.indexOf("~") !== -1) {
+        self._setConfirmed(true);
+        Shiny.setInputValue(self.el.id + "_parse_request", t, {
+          priority: "event"
+        });
       }
+    };
+    this._textConfirm.addEventListener("click", doConfirm);
+
+    this._text = Blockr.Input.create(codeHost, {
+      placeholder: "y ~ x1 + x2 + x1:x2 …",
+      columns: this.columns.map(function (c) { return c.name; }),
+      categories: FORMULA_FUNCS,
+      onChange: function () { self._setConfirmed(false); },
+      onConfirm: doConfirm
     });
+    fRow.appendChild(this._textConfirm);
+    this.el.appendChild(fRow);
 
     this._renderIntercept();
     this.renderChips();
@@ -170,6 +200,18 @@
     if (!this._iceptEl) return;
     this._iceptEl.textContent = "intercept";
     this._iceptEl.classList.toggle("formula-icept--off", !this.intercept);
+  };
+
+  FormulaInput.prototype._setConfirmed = function (yes) {
+    var b = this._textConfirm;
+    if (!b) return;
+    if (yes) {
+      b.classList.add("confirmed");
+      b.innerHTML = Blockr.icons.confirm;
+    } else {
+      b.classList.remove("confirmed");
+      b.innerHTML = "Enter ↵";
+    }
   };
 
   FormulaInput.prototype._isColTerm = function (t) {
@@ -596,7 +638,10 @@
   };
 
   FormulaInput.prototype._sync = function () {
-    if (this._text) this._text.setValue(this._currentFormulaText());
+    if (this._text) {
+      this._text.setValue(this._currentFormulaText());
+      this._setConfirmed(true);
+    }
     this._autoSubmit();
   };
 
@@ -627,7 +672,10 @@
     this._predSelect.setOptions(this._colOptions(), this._colVars());
     this._renderIntercept();
     this.renderChips();
-    if (this._text) this._text.setValue(this._currentFormulaText());
+    if (this._text) {
+      this._text.setValue(this._currentFormulaText());
+      this._setConfirmed(true);
+    }
     // silent: do not fire callback
   };
 
