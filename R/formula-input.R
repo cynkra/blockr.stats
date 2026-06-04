@@ -30,9 +30,11 @@ formula_input_dep <- function() {
 #' formula-input dependency, then the namespaced container the JS binds to.
 #'
 #' @param id Module id (namespace).
+#' @param response_mode `"single"` (one response column) or `"surv"`
+#'   (a `Surv(time, event)` response, for the survival block).
 #' @return A UI tagList.
 #' @export
-formula_input_ui <- function(id) {
+formula_input_ui <- function(id, response_mode = "single") {
   htmltools::tagList(
     blockr.dplyr::blockr_core_js_dep(),
     blockr.dplyr::blockr_blocks_css_dep(),
@@ -41,9 +43,78 @@ formula_input_ui <- function(id) {
     formula_input_dep(),
     shiny::div(
       id = shiny::NS(id, "formula_input"),
-      class = "formula-input-container"
+      class = "formula-input-container",
+      `data-response-mode` = response_mode
     )
   )
+}
+
+#' Wire the formula-input widget's server side
+#'
+#' Call inside a block's `moduleServer`. Sets up typed-column metadata push,
+#' the text-parse round-trip, and JS<->R state sync, returning the widget state
+#' reactiveVal. Shared by `new_model_block` and `new_survival_block`.
+#'
+#' @param input,output,session The block module's reactive context.
+#' @param data Reactive data frame.
+#' @param state Initial widget state.
+#' @param response_mode `"single"` or `"surv"`.
+#' @return A `reactiveVal` holding the widget state.
+#' @keywords internal
+#' @noRd
+formula_input_server <- function(input, output, session, data, state,
+                                 response_mode = "single") {
+  ns <- session$ns
+  r_state <- shiny::reactiveVal(state)
+  self_write <- new.env(parent = emptyenv())
+  self_write$active <- FALSE
+
+  shiny::observeEvent(data(), {
+    session$sendCustomMessage(
+      "formula-columns",
+      list(
+        id = ns("formula_input"),
+        columns = build_formula_columns(data()),
+        responseMode = response_mode
+      )
+    )
+  })
+
+  shiny::observeEvent(input$formula_input_parse_request, {
+    parsed <- parse_formula(
+      input$formula_input_parse_request,
+      formula_col_types(data())
+    )
+    parsed$offset <- r_state()$offset
+    parsed$weights <- r_state()$weights
+    self_write$active <- TRUE
+    r_state(parsed)
+    session$sendCustomMessage(
+      "formula-update",
+      list(id = ns("formula_input"), state = normalize_formula_for_js(parsed))
+    )
+  })
+
+  shiny::observeEvent(input$formula_input, {
+    self_write$active <- TRUE
+    r_state(input$formula_input)
+  })
+
+  shiny::observeEvent(r_state(), {
+    if (self_write$active) {
+      self_write$active <- FALSE
+    } else {
+      session$sendCustomMessage(
+        "formula-update",
+        list(
+          id = ns("formula_input"),
+          state = normalize_formula_for_js(r_state())
+        )
+      )
+    }
+  })
+
+  r_state
 }
 
 #' Lightweight typed-column summary for the formula-input JS

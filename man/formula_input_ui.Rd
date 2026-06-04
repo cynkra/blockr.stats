@@ -4,10 +4,13 @@
 \alias{formula_input_ui}
 \title{Formula-input widget: UI container}
 \usage{
-formula_input_ui(id)
+formula_input_ui(id, response_mode = "single")
 }
 \arguments{
 \item{id}{Module id (namespace).}
+
+\item{response_mode}{\code{"single"} (one response column) or \code{"surv"}
+(a \code{Surv(time, event)} response, for the survival block).}
 }
 \value{
 A UI tagList.

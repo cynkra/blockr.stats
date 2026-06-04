@@ -94,13 +94,44 @@ parse_response <- function(lhs) {
   if (is.name(lhs)) {
     return(as.character(lhs))
   }
-  if (is.call(lhs) && identical(as.character(lhs[[1L]]), "cbind")) {
-    return(list(
-      fn = "cbind",
-      args = vapply(as.list(lhs)[-1L], deparse1, character(1))
-    ))
+  if (is.call(lhs)) {
+    fname <- response_call_name(lhs[[1L]])
+    if (identical(fname, "cbind")) {
+      return(list(
+        fn = "cbind",
+        args = vapply(as.list(lhs)[-1L], deparse1, character(1))
+      ))
+    }
+    if (identical(fname, "Surv")) {
+      a <- as.list(lhs)[-1L]
+      return(list(
+        fn = "Surv",
+        time = if (length(a) >= 1L) deparse1(a[[1L]]) else "",
+        event = if (length(a) >= 2L) deparse1(a[[2L]]) else ""
+      ))
+    }
   }
   deparse1(lhs)
+}
+
+#' Function name from a call head: `Surv` or `survival::Surv` -> "Surv"
+#' @keywords internal
+#' @noRd
+response_call_name <- function(head) {
+  if (is.name(head)) {
+    return(as.character(head))
+  }
+  if (is.call(head) && identical(as.character(head[[1L]]), "::")) {
+    return(as.character(head[[3L]]))
+  }
+  NA_character_
+}
+
+#' Backtick a column name if it is not a syntactic R name
+#' @keywords internal
+#' @noRd
+bt <- function(x) {
+  if (grepl("^[A-Za-z.][A-Za-z0-9._]*$", x)) x else paste0("`", x, "`")
 }
 
 #' Render a response descriptor back to formula-LHS text
@@ -112,6 +143,22 @@ response_to_text <- function(response) {
   }
   if (is.list(response) && identical(response$fn, "cbind")) {
     return(paste0("cbind(", paste(response$args, collapse = ", "), ")"))
+  }
+  if (is.list(response) && identical(response$fn, "Surv")) {
+    if (is.null(response$time) || !nzchar(response$time)) {
+      return(NULL)
+    }
+    ev <- response$event
+    if (is.null(ev) || !nzchar(ev)) {
+      return(NULL)
+    }
+    lvl <- response$eventLevel
+    ev_txt <- if (!is.null(lvl) && nzchar(as.character(lvl))) {
+      sprintf("%s == %s", bt(ev), lvl)
+    } else {
+      bt(ev)
+    }
+    return(sprintf("survival::Surv(%s, %s)", bt(response$time), ev_txt))
   }
   as.character(response)
 }

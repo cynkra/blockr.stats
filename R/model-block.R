@@ -35,64 +35,13 @@ new_model_block <- function(
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {
-        ns <- session$ns
         r_model_type <- reactiveVal(model_type)
-        r_state <- reactiveVal(formula)
-
-        # Bidirectional sync guard (prevents R -> JS -> R loops)
-        self_write <- new.env(parent = emptyenv())
-        self_write$active <- FALSE
-
         observeEvent(input$model_type, r_model_type(input$model_type))
 
-        # Typed column metadata -> JS, on data change
-        observeEvent(data(), {
-          session$sendCustomMessage(
-            "formula-columns",
-            list(
-              id = ns("formula_input"),
-              columns = build_formula_columns(data())
-            )
-          )
-        })
-
-        # Text-mode: JS sends raw formula text -> R parses -> normalized state
-        observeEvent(input$formula_input_parse_request, {
-          parsed <- parse_formula(
-            input$formula_input_parse_request,
-            formula_col_types(data())
-          )
-          # role boxes are not parsed from the RHS; keep the current values
-          parsed$offset <- r_state()$offset
-          parsed$weights <- r_state()$weights
-          self_write$active <- TRUE
-          r_state(parsed)
-          session$sendCustomMessage(
-            "formula-update",
-            list(id = ns("formula_input"), state = normalize_formula_for_js(parsed))
-          )
-        })
-
-        # JS -> R: builder changed the model
-        observeEvent(input$formula_input, {
-          self_write$active <- TRUE
-          r_state(input$formula_input)
-        })
-
-        # R -> JS: external/programmatic state change
-        observeEvent(r_state(), {
-          if (self_write$active) {
-            self_write$active <- FALSE
-          } else {
-            session$sendCustomMessage(
-              "formula-update",
-              list(
-                id = ns("formula_input"),
-                state = normalize_formula_for_js(r_state())
-              )
-            )
-          }
-        })
+        # Shared formula-input widget wiring (columns / parse / JS<->R sync)
+        r_state <- formula_input_server(
+          input, output, session, data, formula
+        )
 
         list(
           expr = reactive({
