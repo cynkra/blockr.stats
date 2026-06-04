@@ -83,30 +83,27 @@ css_model_summary <- function() {
 
     /* visual <-> R-text switch: discrete .blockr-pill toggle, no server round-trip */
     .smb-radio { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+    /* segmented button group, matching radioGroupButtons(outline-primary) */
     .smb-switch { display: flex; justify-content: flex-end; margin-bottom: 8px; }
     .smb-seg {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 2px 8px; height: 24px; min-width: 28px;
+      padding: 2px 10px; height: 24px; min-width: 30px;
       font-size: 11px; font-weight: var(--blockr-font-weight-medium, 500);
-      color: var(--blockr-grey-500, #6b7280);
-      background: var(--blockr-grey-50, #f9fafb);
-      border: 1px solid var(--blockr-grey-200, #e5e7eb);
+      color: var(--blockr-color-primary, #2563eb);
+      background: transparent;
+      border: 1px solid var(--blockr-color-primary, #2563eb);
       cursor: pointer; user-select: none; white-space: nowrap;
-      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease;
     }
     /* connected segments: one control, rounded only on the outer edges */
     .smb-seg-v { border-radius: 4px 0 0 4px; }
     .smb-seg-r { border-radius: 0 4px 4px 0; border-left: none; }
-    .smb-seg:hover {
-      background: var(--blockr-grey-100, #f3f4f6);
-      border-color: var(--blockr-grey-300, #d1d5db);
-      color: var(--blockr-grey-600, #4b5563);
-    }
+    .smb-seg:hover { background: rgba(37, 99, 235, 0.08); }
+    /* active segment: filled primary (btn-outline-primary active state) */
     .smb-radio-v:checked ~ .smb-switch .smb-seg-v,
     .smb-radio-r:checked ~ .smb-switch .smb-seg-r {
-      color: var(--blockr-color-primary, #2563eb);
-      background: rgba(37, 99, 235, 0.08);
-      border-color: rgba(37, 99, 235, 0.2);
+      background: var(--blockr-color-primary, #2563eb);
+      color: #fff;
     }
 
     .smb-rtext {
