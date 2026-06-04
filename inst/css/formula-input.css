@@ -30,7 +30,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px; /* match the pill's horizontal padding */
-  margin-bottom: 0.25rem; /* standard .blockr-label gap */
+  margin-bottom: 1px;
 }
 
 .formula-surv-head .blockr-label {
@@ -41,6 +41,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* shorter than the default .blockr-row (42px) so the value sits close to
+     the label above — matching the "Survival model" buttons' tightness */
+  min-height: 34px;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .formula-seg {
