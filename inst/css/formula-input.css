@@ -64,9 +64,10 @@
 
 .formula-field__label {
   display: block;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--bs-secondary-color, #6c757d);
+  opacity: 0.85;
   margin: 0;
 }
 

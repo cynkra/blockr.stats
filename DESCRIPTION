@@ -1,6 +1,6 @@
 Package: blockr.stats
 Title: Statistical Blocks for blockr
-Version: 0.0.1.9020
+Version: 0.0.1.9021
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
