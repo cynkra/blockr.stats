@@ -30,22 +30,19 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px; /* match the pill's horizontal padding */
-  margin-bottom: 1px;
+  margin-bottom: 2px;
+  line-height: 1; /* no leading below the label text -> tight gap to the pill */
 }
 
 .formula-surv-head .blockr-label {
   margin-bottom: 0; /* the head row provides the gap, not each label */
+  line-height: 1;
 }
 
 .formula-surv-pill {
   display: flex;
   align-items: center;
   gap: 8px;
-  /* shorter than the default .blockr-row (42px) so the value sits close to
-     the label above — matching the "Survival model" buttons' tightness */
-  min-height: 34px;
-  padding-top: 2px;
-  padding-bottom: 2px;
 }
 
 .formula-seg {
