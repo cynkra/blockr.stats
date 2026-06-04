@@ -296,9 +296,14 @@
   opacity: 0.85;
 }
 
-/* the Formula label uses .blockr-label; its 0.25rem bottom margin is the gap */
+/* the Formula label uses .blockr-label; tighten its gap like the surv header */
 .formula-advanced {
   margin-bottom: 0;
+}
+
+.formula-advanced .blockr-label {
+  line-height: 1;
+  margin-bottom: 2px;
 }
 
 .formula-text-row {
