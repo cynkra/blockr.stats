@@ -228,6 +228,10 @@ new_stat_test_block <- function(
           by_cols <- r_by_selection()
           fn <- get(cfg$test_fn, envir = asNamespace("blockr.stats"),
                     mode = "function")
+          # NOTE: unlike the other blocks, this expr inlines the stratified_eval
+          # and test-fn objects rather than emitting standard R. Deliberate /
+          # accepted for now (adaptive dispatch over ~15 tests is awkward to
+          # render as plain code); revisit if/when these tests see real use.
           strat_fn <- stratified_eval
           bquote({
             .(strat_fn)(data, by_cols = .(by_cols), fn = .(fn),
