@@ -1,6 +1,6 @@
 Package: blockr.stats
 Title: Statistical Blocks for blockr
-Version: 0.0.1.9025
+Version: 0.1.0
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
@@ -8,7 +8,7 @@ Authors@R:
              email = "christoph@cynkra.com",
              comment = c(ORCID = "0000-0002-7192-7044")))
 Description: Extends 'blockr.core' with no-code statistical blocks: the
-    applied-stats-basics spine (describe, compare, associate, regress,
+    applied-stats-basics spine (describe, compare, regress,
     nonparametric) plus an advanced tier (survival). Blocks fit models
     and tests and emit tidy data frames consumed by generic renderers.
 URL: https://github.com/blockr-org/blockr.stats
@@ -29,16 +29,14 @@ Imports:
     effsize,
     glue,
     htmltools,
-    knitr,
     moments,
     nortest,
     stats,
     survival,
     tibble
 Suggests:
-    blockr.extra,
     car,
-    gtsummary,
+    knitr,
     palmerpenguins,
     rmarkdown,
     testthat (>= 3.0.0)

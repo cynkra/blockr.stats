@@ -19,3 +19,12 @@ Transform block wrapping \code{\link[=effect_size]{effect_size()}}. Consumes a f
 emits a tidy effect-size frame (no interpretation labels) for the
 generic renderers.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(
+    new_effect_size_block(measure = "partial_eta2"),
+    data = list(data = aov(mpg ~ factor(cyl), mtcars))
+  )
+}
+}

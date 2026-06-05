@@ -10,6 +10,9 @@
 #' @param vars Categorical column name(s).
 #' @param by Optional second categorical column (crosstab).
 #' @return A long tidy data frame.
+#' @examples
+#' tabulate_freq(warpbreaks, vars = "wool")
+#' tabulate_freq(warpbreaks, vars = "wool", by = "tension")
 #' @export
 tabulate_freq <- function(data, vars, by = NULL) {
   vars <- intersect(vars[nzchar(vars)], names(data))
@@ -41,6 +44,9 @@ tabulate_freq <- function(data, vars, by = NULL) {
   do.call(rbind, out)
 }
 
+# NOTE (under review): usefulness debated. Convenience block; one-way counts
+# overlap dplyr `count()`. Only the two-way crosstab (feeding chi-square) is
+# awkward to do otherwise. Kept for now; candidate for removal.
 #' Frequencies Block
 #'
 #' Transform block wrapping [tabulate_freq()]. One-way counts, or a
@@ -51,6 +57,11 @@ tabulate_freq <- function(data, vars, by = NULL) {
 #' @param by Optional second categorical column (crosstab).
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A `frequencies_block` transform block.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(new_frequencies_block(), data = list(data = warpbreaks))
+#' }
 #' @export
 new_frequencies_block <- function(vars = character(), by = "", ...) {
   new_transform_block(

@@ -40,3 +40,9 @@ category and test; the parameter UI adapts to the chosen test.
 Optional group-by stratification. Pure stock-Shiny r-driven block
 (no shinyWidgets / shinyjs) — the adaptive UI is a \code{renderUI}.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(new_stat_test_block(), data = list(data = mtcars))
+}
+}

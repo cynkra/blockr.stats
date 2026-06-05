@@ -13,6 +13,10 @@
 #' @param conf_level Confidence level (default 0.95).
 #' @param qq Logical, add QQ columns to `augment` (default FALSE).
 #' @return A tidy `data.frame`.
+#' @examples
+#' fit <- lm(mpg ~ wt + hp, data = mtcars)
+#' broom_apply(fit, output = "tidy")
+#' broom_apply(fit, output = "glance")
 #' @export
 broom_apply <- function(model, output = "tidy", conf_int = TRUE,
                         conf_level = 0.95, qq = FALSE) {
@@ -105,6 +109,14 @@ label_tidy_columns <- function(df, model) {
 #' @param conf_int,conf_level,qq Forwarded to [broom_apply()].
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `broom_block`.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(
+#'     new_broom_block(output = "tidy"),
+#'     data = list(data = lm(mpg ~ wt + hp, mtcars))
+#'   )
+#' }
 #' @export
 new_broom_block <- function(output = "tidy", conf_int = TRUE,
                             conf_level = 0.95, qq = FALSE, ...) {

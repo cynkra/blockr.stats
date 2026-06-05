@@ -24,3 +24,10 @@ Takes a data frame as input and adds \code{p.adjusted} and
 \code{p.adjust.method} columns to the result. Auto-detects the p-value
 column based on common naming patterns.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  pvals <- data.frame(term = letters[1:5], p.value = c(.01, .04, .2, .5, .9))
+  serve(new_padjust_block(), data = list(data = pvals))
+}
+}

@@ -18,3 +18,6 @@ A tidy data frame.
 One row per numeric variable: n, n_missing, mean, sd, median, q1,
 q3, min, max. No easystats dependency.
 }
+\examples{
+describe_numeric(mtcars, vars = c("mpg", "hp", "wt"))
+}

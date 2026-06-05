@@ -1,7 +1,7 @@
 #' Build a model formula from the structured formula-input state
 #'
 #' Assembles a `response ~ rhs` formula from the structured model produced by
-#' [parse_formula()] / the formula-input widget. Core terms and opaque/bar
+#' `parse_formula()` / the formula-input widget. Core terms and opaque/bar
 #' terms are emitted by their stored labels; the intercept is handled via
 #' [stats::reformulate()]'s `intercept` argument. Returns `NULL` when there is
 #' no response (so the consuming block can pass through / emit `NULL`).
@@ -9,7 +9,7 @@
 #' Offset and weights are NOT part of the formula — they are role-box state
 #' passed as arguments to the fitting call by the consuming model block.
 #'
-#' @param state Structured formula model (see [parse_formula()]).
+#' @param state Structured formula model (see `parse_formula()`).
 #' @return A `formula`, or `NULL`.
 #' @keywords internal
 #' @noRd
@@ -56,7 +56,7 @@ make_model_formula <- function(state) {
 #' role-box UI (the widget's JS layer).
 #'
 #' @param model_type One of `"lm"`, `"logistic"`, `"poisson"`, `"gamma"`.
-#' @param f A `formula` (from [make_model_formula()]).
+#' @param f A `formula` (from `make_model_formula()`).
 #' @keywords internal
 #' @noRd
 build_model_call <- function(model_type, f) {

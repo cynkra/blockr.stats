@@ -28,15 +28,6 @@ test_that("tabulate_freq one-way and two-way", {
   expect_equal(sum(tw$n), 3L)
 })
 
-test_that("correlation_matrix is long with var_x/var_y/r", {
-  out <- correlation_matrix(mtcars)
-  expect_setequal(names(out), c("var_x", "var_y", "r"))
-  diag <- out[out$var_x == out$var_y, ]
-  expect_true(all(abs(diag$r - 1) < 1e-8))
-  expect_true("message" %in%
-    names(correlation_matrix(data.frame(a = 1:3))))
-})
-
 test_that("broom_apply tidy/glance/augment + qq", {
   m <- lm(mpg ~ wt + hp, mtcars)
   ti <- broom_apply(m, "tidy")

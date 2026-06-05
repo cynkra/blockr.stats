@@ -31,3 +31,9 @@ survival mode (\code{Surv(time, event) ~ ...}). Returns the fitted model object;
 feed downstream into the broom adapter: \code{tidy(survfit)} -> curve points,
 \code{tidy(coxph)} -> HRs, \code{tidy(cuminc)} -> cumulative-incidence curves.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(new_survival_block(type = "km"), data = list(data = survival::lung))
+}
+}

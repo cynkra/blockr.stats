@@ -13,6 +13,11 @@
 #' @param method,alternative,variant,conf_level,null Test parameters.
 #' @param ... Forwarded to the internal htest block constructor.
 #' @return A block of class `stat_test_block`.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(new_stat_test_block(), data = list(data = mtcars))
+#' }
 #' @export
 new_stat_test_block <- function(
   type        = "normality",

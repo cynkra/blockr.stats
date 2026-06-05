@@ -21,3 +21,9 @@ Transform block wrapping \code{\link[=tabulate_freq]{tabulate_freq()}}. One-way 
 two-way crosstab when a \code{by} variable is chosen. Emits a tidy data
 frame for the generic renderers.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(new_frequencies_block(), data = list(data = warpbreaks))
+}
+}

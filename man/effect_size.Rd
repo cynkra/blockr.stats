@@ -21,3 +21,7 @@ Tidy data frame: \verb{term, measure, estimate, conf.low, conf.high}. No interpr
 \description{
 Effect sizes from a fitted model (base R + effsize)
 }
+\examples{
+fit <- aov(mpg ~ factor(cyl), data = mtcars)
+effect_size(fit, measure = "partial_eta2")
+}

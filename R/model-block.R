@@ -16,6 +16,11 @@
 #'   `intercept`, `terms`, `bars`, `offset`, `weights` (see `parse_formula()`).
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `model_block`.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(new_model_block(model_type = "lm"), data = list(data = mtcars))
+#' }
 #' @export
 new_model_block <- function(
   model_type = "lm",

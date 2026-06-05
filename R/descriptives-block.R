@@ -6,6 +6,8 @@
 #' @param data A data frame.
 #' @param vars Numeric column names to summarise (default: all numeric).
 #' @return A tidy data frame.
+#' @examples
+#' describe_numeric(mtcars, vars = c("mpg", "hp", "wt"))
 #' @export
 describe_numeric <- function(data, vars = NULL) {
   if (is.null(vars) || length(vars) == 0) {
@@ -40,6 +42,9 @@ describe_numeric <- function(data, vars = NULL) {
   do.call(rbind, rows)
 }
 
+# NOTE (under review): usefulness debated. Convenience block; its per-variable
+# summary largely overlaps dplyr `summarise(across(where(is.numeric), ...))`.
+# Kept for now as a common first-step block; candidate for removal.
 #' Descriptives Block
 #'
 #' Transform block wrapping [describe_numeric()]. Emits a tidy data
@@ -48,6 +53,11 @@ describe_numeric <- function(data, vars = NULL) {
 #' @param vars Numeric column names to summarise.
 #' @param ... Forwarded to [blockr.core::new_transform_block()].
 #' @return A `descriptives_block` transform block.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(new_descriptives_block(), data = list(data = mtcars))
+#' }
 #' @export
 new_descriptives_block <- function(vars = character(), ...) {
   new_transform_block(

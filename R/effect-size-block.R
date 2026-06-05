@@ -8,7 +8,8 @@
 #' @param df1,df2 Numerator / denominator df.
 #' @param conf Confidence level.
 #' @return Named list `low`, `high` (partial eta^2 scale).
-#' @export
+#' @keywords internal
+#' @noRd
 es_ncp_ci <- function(Fval, df1, df2, conf = 0.95) {
   na <- list(low = NA_real_, high = NA_real_)
   if (!is.finite(Fval) || Fval <= 0) return(na)
@@ -37,6 +38,9 @@ es_ncp_ci <- function(Fval, df1, df2, conf = 0.95) {
 #' @param conf_level Confidence level.
 #' @return Tidy data frame: `term, measure, estimate, conf.low,
 #'   conf.high`. No interpretation labels.
+#' @examples
+#' fit <- aov(mpg ~ factor(cyl), data = mtcars)
+#' effect_size(fit, measure = "partial_eta2")
 #' @export
 effect_size <- function(model, measure = "partial_eta2",
                         conf_level = 0.95) {
@@ -108,6 +112,9 @@ effect_size <- function(model, measure = "partial_eta2",
   do.call(rbind, out)
 }
 
+# NOTE (under review): usefulness debated. Niche block, only meaningful
+# immediately after an ANOVA/lm fit; the weakest of the spine blocks.
+# Kept for now; candidate for removal.
 #' Effect Size Block
 #'
 #' Transform block wrapping [effect_size()]. Consumes a fitted model,
@@ -117,6 +124,14 @@ effect_size <- function(model, measure = "partial_eta2",
 #' @param measure,conf_level Forwarded to [effect_size()].
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `effect_size_block`.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(
+#'     new_effect_size_block(measure = "partial_eta2"),
+#'     data = list(data = aov(mpg ~ factor(cyl), mtcars))
+#'   )
+#' }
 #' @export
 new_effect_size_block <- function(measure = "partial_eta2",
                                   conf_level = 0.95, ...) {

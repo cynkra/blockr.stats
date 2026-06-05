@@ -6,7 +6,7 @@
 \alias{blockr.stats-package}
 \title{blockr.stats: Statistical Blocks for blockr}
 \description{
-Extends 'blockr.core' with no-code statistical blocks: the applied-stats-basics spine (describe, compare, associate, regress, nonparametric) plus an advanced tier (survival). Blocks fit models and tests and emit tidy data frames consumed by generic renderers.
+Extends 'blockr.core' with no-code statistical blocks: the applied-stats-basics spine (describe, compare, regress, nonparametric) plus an advanced tier (survival). Blocks fit models and tests and emit tidy data frames consumed by generic renderers.
 }
 \seealso{
 Useful links:

@@ -1,3 +1,6 @@
+# Placeholders inside bquote()/bbquote() call templates, not real bindings.
+utils::globalVariables(c("data", "ty"))
+
 .onLoad <- function(libname, pkgname) {
   # nocov start
 

@@ -23,3 +23,7 @@ is set): per variable -> level x by_level contingency in long form
 renderers; the two-way form also feeds the chi-square test of
 independence.
 }
+\examples{
+tabulate_freq(warpbreaks, vars = "wool")
+tabulate_freq(warpbreaks, vars = "wool", by = "tension")
+}

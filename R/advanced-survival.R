@@ -1,9 +1,8 @@
-#' Fit a survival model
+#' Fit a survival model (low-level engine for the CIF path)
 #'
-#' The Advanced-tier survival family (one separable cluster — the
-#' single extraction seam to a future domain package). Returns the
-#' fitted object; downstream the broom adapter tidies it for the
-#' generic renderers.
+#' Internal worker behind `survival_fit_safe()`. KM/Cox go through the
+#' formula path in `survival_fit_safe()`; this handles the non-formula
+#' competing-risks (`cif`) case.
 #'
 #' @param data A data frame.
 #' @param type `"km"` (Kaplan-Meier), `"cox"` (Cox PH), `"cif"`
@@ -13,7 +12,8 @@
 #'   CIF: 0 = censor, 1.. = competing causes.
 #' @param group_var Optional grouping column.
 #' @return A `survfit` / `coxph` / `cuminc` object.
-#' @export
+#' @keywords internal
+#' @noRd
 fit_survival <- function(data, type = "km", time_var, event_var,
                          group_var = NULL) {
   stopifnot(is.data.frame(data))
@@ -81,12 +81,6 @@ survival_state <- function(time_var, event_var, group_var) {
   )
 }
 
-#' Build the bquoted survival fit call from the widget state
-#'
-#' KM/Cox go through [make_model_formula()] (`survival::Surv(...) ~ rhs`) into
-#' `survfit`/`coxph`; CIF uses the non-formula [fit_survival()] `cuminc` path.
-#' @keywords internal
-#' @noRd
 #' Fit a survival model, returning `NULL` instead of erroring
 #'
 #' Wraps the fit in `tryCatch` so an invalid intermediate selection (e.g. a
@@ -98,6 +92,12 @@ survival_state <- function(time_var, event_var, group_var) {
 #' @param data Data frame.
 #' @param time_var,event_var,group_var Columns (CIF path).
 #' @return The fitted object, or `NULL` on error.
+#' @examples
+#' survival_fit_safe(
+#'   "km",
+#'   formula = survival::Surv(time, status) ~ sex,
+#'   data = survival::lung
+#' )
 #' @export
 survival_fit_safe <- function(type, formula = NULL, data,
                               time_var = NULL, event_var = NULL,
@@ -115,6 +115,12 @@ survival_fit_safe <- function(type, formula = NULL, data,
   )
 }
 
+#' Build the bquoted survival fit call from the widget state
+#'
+#' KM/Cox go through `make_model_formula()` (`survival::Surv(...) ~ rhs`) into
+#' `survfit`/`coxph`; CIF uses the non-formula `fit_survival()` `cuminc` path.
+#' @keywords internal
+#' @noRd
 build_survival_call <- function(type, state) {
   resp <- state$response
   if (is.null(resp) || is.null(resp$time) || !nzchar(resp$time) ||
@@ -155,6 +161,11 @@ build_survival_call <- function(type, state) {
 #' @param group_var Optional grouping/covariate column (the RHS).
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `survival_block`.
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   serve(new_survival_block(type = "km"), data = list(data = survival::lung))
+#' }
 #' @export
 new_survival_block <- function(type = "km", time_var = character(),
                                event_var = character(),

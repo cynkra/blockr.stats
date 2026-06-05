@@ -35,3 +35,9 @@ for the generic renderers. The block's own preview is a generic
 ANOVA-as-model is not a model type here: it is the broom adapter's \code{anova}
 mode over an \code{lm} fit. (ANOVA-as-test lives in the adaptive test block.)
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(new_model_block(model_type = "lm"), data = list(data = mtcars))
+}
+}

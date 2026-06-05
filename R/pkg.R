@@ -8,7 +8,6 @@
 #' @importFrom stats lm anova residuals fitted sd shapiro.test ks.test bartlett.test as.formula na.omit
 #' @importFrom utils head
 #' @importFrom htmltools tagList tags HTML
-#' @importFrom knitr kable
 #' @importFrom tibble as_tibble tibble
 NULL
 

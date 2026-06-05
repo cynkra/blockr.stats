@@ -12,6 +12,12 @@
 #'
 #' @return A htest block object of class \code{padjust_block}.
 #'
+#' @examples
+#' if (interactive()) {
+#'   library(blockr.core)
+#'   pvals <- data.frame(term = letters[1:5], p.value = c(.01, .04, .2, .5, .9))
+#'   serve(new_padjust_block(), data = list(data = pvals))
+#' }
 #' @export
 new_padjust_block <- function(
   pcol   = character(),
@@ -73,7 +79,10 @@ new_padjust_block <- function(
       r_pcol   <- reactiveVal(pcol)
       r_method <- reactiveVal(method)
 
-      observeEvent(input$pcol, r_pcol(input$pcol), ignoreNULL = FALSE)
+      # ignoreInit so the constructor's `pcol` seed survives the initial
+      # NULL input; later user edits (including clears) still propagate.
+      observeEvent(input$pcol, r_pcol(input$pcol),
+                   ignoreNULL = FALSE, ignoreInit = TRUE)
       observeEvent(input$method, r_method(input$method))
 
       observeEvent(colnames(data()), {

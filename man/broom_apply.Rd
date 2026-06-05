@@ -34,3 +34,8 @@ data frame for the generic renderers. \code{tidy} -> coefficient table
 \code{qq = TRUE} the augmented frame also gets \code{.qq_theoretical} /
 \code{.qq_sample} so a QQ plot is a plain scatter.
 }
+\examples{
+fit <- lm(mpg ~ wt + hp, data = mtcars)
+broom_apply(fit, output = "tidy")
+broom_apply(fit, output = "glance")
+}

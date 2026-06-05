@@ -1,6 +1,6 @@
 # blockr.stats
 
-Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr): descriptives, frequencies, correlation, an adaptive test family, linear and generalized linear models, effect sizes, and survival analysis. Every block emits tidy data frames and stays canonical R underneath, aimed at no-code statistical workflows.
+Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr): descriptives, frequencies, an adaptive test family, linear and generalized linear models, effect sizes, and survival analysis. Every block emits tidy data frames and stays canonical R underneath, aimed at no-code statistical workflows.
 
 ## Installation
 
@@ -15,11 +15,9 @@ Runtime dependencies are all on CRAN: `broom`, `survival`, `cmprsk`, `effsize`, 
 | Block | Wraps | Notes |
 |---|---|---|
 | `new_model_block()` | `stats::lm`, `stats::glm`, `stats::aov` | Adaptive: pick `model_type` (`lm`, `glm` logistic/poisson, `aov`); role pickers adapt. |
-| `new_lm_block()` | `stats::lm` | Linear-only convenience constructor. |
 | `new_broom_block()` | `broom::tidy`, `broom::glance`, `broom::augment` | Generic adapter: turns any fitted model into a tidy / glance / augment frame. |
 | `new_descriptives_block()` | base `stats` + `moments` | Per-variable mean / SD / quantiles / skew / kurtosis. |
 | `new_frequencies_block()` | `table()` | Counts and proportions for categorical columns, optional `by`. |
-| `new_correlation_matrix_block()` | `stats::cor` | Pairwise correlation matrix (Pearson / Spearman / Kendall). |
 | `new_stat_test_block()` | `stats` test family | Adaptive `type`: one-sample / paired / two-sample t, Wilcoxon, one-way ANOVA, Kruskal-Wallis, chi-square independence, correlation, normality, homogeneity. |
 | `new_padjust_block()` | `stats::p.adjust` | Multiple-comparison p-value adjustment. |
 | `new_effect_size_block()` | `effsize`, `stats::aov` | Partial eta² / omega² and related effect sizes. |
@@ -42,7 +40,7 @@ Open `http://localhost:3838`.
 ## Workflow
 
 ```
-data ──► descriptives / frequencies / correlation_matrix
+data ──► descriptives / frequencies
 data ──► stat_test ──► padjust
 data ──► model ──┬──► broom (tidy / glance / augment)
                  └──► effect_size

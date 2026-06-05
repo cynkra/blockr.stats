@@ -64,7 +64,7 @@ css_responsive_grid <- function() {
 
 #' Model summary card CSS
 #'
-#' Styles the generic HTML model card ([model_summary_html()]). Uses
+#' Styles the generic HTML model card (`model_summary_html()`). Uses
 #' `--blockr-*` design tokens with literal fallbacks so the card also
 #' renders standalone (e.g. in the dev preview harness).
 #'

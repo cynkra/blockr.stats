@@ -33,3 +33,12 @@ the renderer boundary — feed it to the generic drilldown chart/table
 (Future Advanced "woven" option: a robust/clustered \code{se}/\code{vcov}
 path on \code{tidy} via \code{sandwich}/\code{lmtest} — not implemented in v1.)
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(
+    new_broom_block(output = "tidy"),
+    data = list(data = lm(mpg ~ wt + hp, mtcars))
+  )
+}
+}

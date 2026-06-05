@@ -18,3 +18,9 @@ A \code{descriptives_block} transform block.
 Transform block wrapping \code{\link[=describe_numeric]{describe_numeric()}}. Emits a tidy data
 frame (one row per variable) for the generic renderers.
 }
+\examples{
+if (interactive()) {
+  library(blockr.core)
+  serve(new_descriptives_block(), data = list(data = mtcars))
+}
+}

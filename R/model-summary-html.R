@@ -5,7 +5,7 @@
 #' (model kind, n) + fit-quality chip and a coefficient **forest plot**
 #' (estimate dot + CI whisker, reference line at 0, coloured by sign /
 #' significance). The R side is the raw `summary()` text. Deliberately
-#' minimal — richer views (coefficient tables, fit indices, diagnostics)
+#' minimal -- richer views (coefficient tables, fit indices, diagnostics)
 #' are separate downstream blocks (broom adapter + drilldown renderers),
 #' not crammed into the preview.
 #'
@@ -65,7 +65,7 @@ smb_headline <- function(model, glance_df) {
   n <- tryCatch(stats::nobs(model), error = function(e) NULL)
   label <- smb_model_kind(model)
   if (is.numeric(n) && length(n) == 1L && is.finite(n)) {
-    label <- paste0(label, " · ", n, " obs")
+    label <- paste0(label, " \u00b7 ", n, " obs")
   }
   tags$div(class = "smb-hl",
     tags$div(class = "smb-hl-kind", label),
@@ -88,13 +88,13 @@ smb_model_kind <- function(model) {
 smb_fit_chip <- function(glance_df, model) {
   g <- function(nm) if (!is.null(glance_df) && nm %in% names(glance_df)) glance_df[[nm]][1] else NULL
   spec <- NULL
-  # one fit measure only; adjusted R² preferred over raw R² for lm
-  if (!is.null(g("adj.r.squared")))    spec <- list("adj. R²", g("adj.r.squared"), g("adj.r.squared"))
-  else if (!is.null(g("r.squared")))   spec <- list("R²", g("r.squared"), g("r.squared"))
+  # one fit measure only; adjusted R\u00b2 preferred over raw R\u00b2 for lm
+  if (!is.null(g("adj.r.squared")))    spec <- list("adj. R\u00b2", g("adj.r.squared"), g("adj.r.squared"))
+  else if (!is.null(g("r.squared")))   spec <- list("R\u00b2", g("r.squared"), g("r.squared"))
   else if (!is.null(g("concordance"))) spec <- list("C", g("concordance"), g("concordance"))
   else if (!is.null(g("deviance")) && !is.null(g("null.deviance"))) {
     pr2 <- 1 - g("deviance") / g("null.deviance")
-    spec <- list("pseudo-R²", pr2, pr2)
+    spec <- list("pseudo-R\u00b2", pr2, pr2)
   } else if (!is.null(g("AIC")))       spec <- list("AIC", g("AIC"), NA)
 
   if (is.null(spec)) return(NULL)

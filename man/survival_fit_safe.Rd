@@ -2,7 +2,7 @@
 % Please edit documentation in R/advanced-survival.R
 \name{survival_fit_safe}
 \alias{survival_fit_safe}
-\title{Build the bquoted survival fit call from the widget state}
+\title{Fit a survival model, returning \code{NULL} instead of erroring}
 \usage{
 survival_fit_safe(
   type,
@@ -26,7 +26,14 @@ survival_fit_safe(
 The fitted object, or \code{NULL} on error.
 }
 \description{
-KM/Cox go through \code{\link[=make_model_formula]{make_model_formula()}} (\code{survival::Surv(...) ~ rhs}) into
-\code{survfit}/\code{coxph}; CIF uses the non-formula \code{\link[=fit_survival]{fit_survival()}} \code{cuminc} path.
+Wraps the fit in \code{tryCatch} so an invalid intermediate selection (e.g. a
+time/event pair with no non-missing observations, mid-interaction) yields a
+\code{NULL} placeholder preview rather than a hard error.
 }
-\keyword{internal}
+\examples{
+survival_fit_safe(
+  "km",
+  formula = survival::Surv(time, status) ~ sex,
+  data = survival::lung
+)
+}
