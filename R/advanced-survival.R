@@ -1,47 +1,3 @@
-#' Fit a survival model (low-level engine for the CIF path)
-#'
-#' Internal worker behind `survival_fit_safe()`. KM/Cox go through the
-#' formula path in `survival_fit_safe()`; this handles the non-formula
-#' competing-risks (`cif`) case.
-#'
-#' @param data A data frame.
-#' @param type `"km"` (Kaplan-Meier), `"cox"` (Cox PH), `"cif"`
-#'   (competing risks / cumulative incidence).
-#' @param time_var Follow-up time column.
-#' @param event_var Status column. KM/Cox: 1 = event, 0 = censor.
-#'   CIF: 0 = censor, 1.. = competing causes.
-#' @param group_var Optional grouping column.
-#' @return A `survfit` / `coxph` / `cuminc` object.
-#' @keywords internal
-#' @noRd
-fit_survival <- function(data, type = "km", time_var, event_var,
-                         group_var = NULL) {
-  stopifnot(is.data.frame(data))
-  has_grp <- !is.null(group_var) && length(group_var) == 1L &&
-    nzchar(group_var) && group_var %in% names(data)
-  tm <- data[[time_var]]
-  ev <- data[[event_var]]
-  if (identical(type, "cif")) {
-    grp <- if (has_grp) as.character(data[[group_var]]) else
-      rep("all", length(tm))
-    keep <- !is.na(tm) & !is.na(ev) & !is.na(grp)
-    return(cmprsk::cuminc(ftime = tm[keep],
-                          fstatus = as.numeric(ev[keep]),
-                          group = grp[keep]))
-  }
-  rhs <- if (has_grp) paste0("`", group_var, "`") else "1"
-  form <- stats::as.formula(
-    sprintf("survival::Surv(`%s`, `%s`) ~ %s",
-            time_var, event_var, rhs)
-  )
-  if (identical(type, "cox")) {
-    if (!has_grp) stop("Cox needs a grouping/covariate.")
-    survival::coxph(form, data = data)
-  } else {
-    survival::survfit(form, data = data)
-  }
-}
-
 #' Tidy a cmprsk::cuminc object (broom has no method)
 #'
 #' Long form: `group`, `time`, `estimate` (cumulative incidence) so it
@@ -81,44 +37,12 @@ survival_state <- function(time_var, event_var, group_var) {
   )
 }
 
-#' Fit a survival model, returning `NULL` instead of erroring
+#' Build the survival fit expression from the widget state
 #'
-#' Wraps the fit in `tryCatch` so an invalid intermediate selection (e.g. a
-#' time/event pair with no non-missing observations, mid-interaction) yields a
-#' `NULL` placeholder preview rather than a hard error.
-#'
-#' @param type `"km"`, `"cox"`, or `"cif"`.
-#' @param formula Model formula (KM/Cox).
-#' @param data Data frame.
-#' @param time_var,event_var,group_var Columns (CIF path).
-#' @return The fitted object, or `NULL` on error.
-#' @examples
-#' survival_fit_safe(
-#'   "km",
-#'   formula = survival::Surv(time, status) ~ sex,
-#'   data = survival::lung
-#' )
-#' @export
-survival_fit_safe <- function(type, formula = NULL, data,
-                              time_var = NULL, event_var = NULL,
-                              group_var = NULL) {
-  tryCatch(
-    if (identical(type, "cif")) {
-      fit_survival(data, type = "cif", time_var = time_var,
-                   event_var = event_var, group_var = group_var)
-    } else if (identical(type, "cox")) {
-      survival::coxph(formula, data = data)
-    } else {
-      survival::survfit(formula, data = data)
-    },
-    error = function(e) NULL
-  )
-}
-
-#' Build the bquoted survival fit call from the widget state
-#'
-#' KM/Cox go through `make_model_formula()` (`survival::Surv(...) ~ rhs`) into
-#' `survfit`/`coxph`; CIF uses the non-formula `fit_survival()` `cuminc` path.
+#' Emits standard R: KM/Cox go through `make_model_formula()`
+#' (`survival::Surv(...) ~ rhs`) into `survival::survfit()` / `coxph()`; CIF
+#' emits an inline `cmprsk::cuminc()` call with NA-filtering. No blockr.stats
+#' function appears in the generated code.
 #' @keywords internal
 #' @noRd
 build_survival_call <- function(type, state) {
@@ -132,20 +56,29 @@ build_survival_call <- function(type, state) {
     ev <- resp$event
     tl <- state$terms
     g <- if (length(tl)) tl[[1L]]$var else NULL
-    return(blockr.core::bbquote(
-      blockr.stats::survival_fit_safe("cif", data = .(data),
-        time_var = .(tv), event_var = .(ev), group_var = .(g)),
-      list(tv = tv, ev = ev, g = g)
-    ))
+    grp_expr <- if (is.null(g)) {
+      quote(rep("all", nrow(data)))
+    } else {
+      bquote(as.character(data[[.(g)]]), list(g = g))
+    }
+    return(bquote({
+      ftime <- data[[.(tv)]]
+      fstatus <- as.numeric(data[[.(ev)]])
+      grp <- .(ge)
+      keep <- !is.na(ftime) & !is.na(fstatus) & !is.na(grp)
+      cmprsk::cuminc(ftime = ftime[keep], fstatus = fstatus[keep],
+                     group = grp[keep])
+    }, list(tv = tv, ev = ev, ge = grp_expr)))
   }
   f <- make_model_formula(state)
   if (is.null(f)) {
     return(quote(NULL))
   }
-  blockr.core::bbquote(
-    blockr.stats::survival_fit_safe(.(ty), formula = .(f), data = .(data)),
-    list(ty = type, f = f)
-  )
+  if (identical(type, "cox")) {
+    bquote(survival::coxph(.(f), data = data), list(f = f))
+  } else {
+    bquote(survival::survfit(.(f), data = data), list(f = f))
+  }
 }
 
 #' Survival Block (Advanced)

@@ -15,7 +15,9 @@ new_broom_block(
 \arguments{
 \item{output}{One of \code{"tidy"}, \code{"glance"}, \code{"augment"}.}
 
-\item{conf_int, conf_level, qq}{Forwarded to \code{\link[=broom_apply]{broom_apply()}}.}
+\item{conf_int, conf_level}{Add CIs to \code{tidy} (default \code{TRUE}, \code{0.95}).}
+
+\item{qq}{Logical, add QQ columns to \code{augment} (default \code{FALSE}).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -24,14 +26,17 @@ A transform block of class \code{broom_block}.
 }
 \description{
 Transform block: takes a fitted model (upstream) and emits a tidy
-data frame via \code{\link[=broom_apply]{broom_apply()}}. One block, three outputs
+data frame via standard \code{broom} verbs. One block, three outputs
 (\code{tidy}/\code{glance}/\code{augment}) selectable in the UI. The tidy frame is
-the renderer boundary — feed it to the generic drilldown chart/table
+the renderer boundary -- feed it to the generic drilldown chart/table
 (coef plot, glance table, residual/QQ scatter).
 }
 \details{
-(Future Advanced "woven" option: a robust/clustered \code{se}/\code{vcov}
-path on \code{tidy} via \code{sandwich}/\code{lmtest} — not implemented in v1.)
+The generated expression is plain \code{broom::tidy()} / \code{glance()} /
+\code{augment()} with the conveniences inlined: a \code{conf.int} fallback,
+optional QQ columns on \code{augment}, and model-aware column \code{label}
+attributes the renderers display. No blockr.stats function appears in
+the generated code.
 }
 \examples{
 if (interactive()) {

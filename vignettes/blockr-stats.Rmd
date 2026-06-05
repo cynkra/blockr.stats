@@ -35,11 +35,14 @@ plus one **Advanced** tier -- survival (Kaplan-Meier, Cox, competing risks) --
 deliberately kept as a single separable cluster so it can later move to a
 dedicated domain package.
 
-This vignette walks through the *engine functions* behind the blocks. They are
-plain functions with no Shiny dependency, so you can use them directly, test
-them, and read them to understand what each block emits. In a board you would
-not call them by hand -- you would wire the corresponding `new_*_block()` into
-a blockr pipeline -- but the data frames are identical either way.
+Most blocks emit **standard R** -- `stats::lm()`, `survival::survfit()`,
+`broom::tidy()`, and so on -- so a generated pipeline reads as ordinary code
+you could run without blockr loaded. A couple of blocks (`describe_numeric()`,
+`effect_size()`) wrap a small bespoke computation; this vignette shows those
+plain functions directly, since reading them is the quickest way to see what
+the block emits. In a board you would not call them by hand -- you would wire
+the corresponding `new_*_block()` into a pipeline -- but the data frames are
+identical either way.
 
 ## Architecture: model objects flow, broom adapts, renderers draw
 
@@ -79,38 +82,34 @@ the frame the **Descriptives** block emits.
 
 ## Regress: a model object, then the broom adapter
 
-Fit an ordinary model the normal way, then hand it to `broom_apply()` -- the
-single generic adapter that turns *any* fitted model into a tidy frame for the
-renderers.
+Fit an ordinary model the normal way; the broom adapter block then emits
+**standard `broom` code** -- `broom::tidy()` / `glance()` / `augment()` -- to
+turn *any* fitted model into a tidy frame for the renderers.
 
 ```{r broom-tidy}
 fit <- lm(mpg ~ wt + hp, data = mtcars)
 
-broom_apply(fit, output = "tidy", conf_int = TRUE)
+broom::tidy(fit, conf.int = TRUE)
 ```
 
 `output = "tidy"` is the coefficient table (with `conf.low` / `conf.high` so
 the generic drilldown can draw a coefficient plot). The other two outputs:
 
 ```{r broom-glance}
-broom_apply(fit, output = "glance")
+broom::glance(fit)
 ```
 
 ```{r broom-augment}
-head(broom_apply(fit, output = "augment"))
+head(broom::augment(fit))
 ```
 
-With `qq = TRUE`, `augment` additionally gets `.qq_theoretical` /
-`.qq_sample`, so a QQ plot becomes a plain scatter -- again, no plotting code
-in the block:
-
-```{r broom-qq}
-head(broom_apply(fit, output = "augment", qq = TRUE)[,
-     c(".resid", ".qq_theoretical", ".qq_sample")])
-```
-
-This is why a single `new_broom_block()` serves `lm`, `glm`, `aov` and Cox
-models alike -- the renderer only ever sees a tidy frame.
+The block inlines a couple of conveniences into the generated expression
+without leaving standard R: when QQ columns are switched on, `augment` gains
+`.qq_theoretical` / `.qq_sample` (from `stats::qqnorm()`) so a QQ plot becomes
+a plain scatter; and the `tidy` frame gets model-aware column `label`
+attributes the renderers display. This is why a single `new_broom_block()`
+serves `lm`, `glm`, `aov`, Cox and competing-risks alike -- the renderer only
+ever sees a tidy frame.
 
 ## Compare: effect sizes
 
@@ -132,19 +131,17 @@ erroring.
 
 ## Advanced: survival
 
-`survival_fit_safe()` is the Advanced-tier engine. It returns the *fitted
-object* (`survfit`, `coxph`, or `cuminc`), or `NULL` on an invalid
-intermediate selection rather than erroring; the broom adapter tidies it
-downstream exactly like any other model.
+The survival block emits **standard R** -- `survival::survfit()` / `coxph()`
+for Kaplan-Meier and Cox, and an inline `cmprsk::cuminc()` for competing
+risks. The broom adapter tidies the fitted object downstream like any other
+model.
 
 ```{r survival-km}
 lung <- survival::lung
-# the helper expects event = 1, censor = 0; lung codes 2 = death, 1 = censor
+# event = 1, censor = 0; lung codes 2 = death, 1 = censor
 lung$dead <- lung$status - 1L
 
-km <- survival_fit_safe("km",
-                        formula = survival::Surv(time, dead) ~ sex,
-                        data = lung)
+km <- survival::survfit(survival::Surv(time, dead) ~ sex, data = lung)
 class(km)
 ```
 
@@ -156,11 +153,10 @@ km_tidy <- broom::tidy(km)
 head(km_tidy[, c("time", "estimate", "n.risk", "strata")])
 ```
 
-A Cox model flows the same way -- `survival_fit_safe("cox", ...)` returns a
-`coxph`, and `broom_apply(cox, "tidy")` yields hazard ratios with CIs (a
-coefficient plot via the same generic renderer). Competing-risks
-(`type = "cif"`) returns a `cmprsk::cuminc` object; broom has no method for
-it, so the package ships `tidy.cuminc()`, emitting long
+A Cox model flows the same way -- `survival::coxph(...)` returns a `coxph`, and
+the broom adapter's `tidy` yields hazard ratios with CIs (a coefficient plot
+via the same generic renderer). Competing-risks emits `cmprsk::cuminc(...)`;
+broom has no method for it, so the package ships `tidy.cuminc()`, emitting long
 `group` / `time` / `estimate` so cumulative-incidence curves render with the
 same step renderer as Kaplan-Meier.
 

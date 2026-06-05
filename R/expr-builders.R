@@ -71,3 +71,70 @@ build_model_call <- function(model_type, f) {
     blockr.core::bbquote(stats::lm(.(f), data = .(data)), list(f = f))
   )
 }
+
+#' Build the standard-R broom expression for the selected output
+#'
+#' Emits plain `broom::tidy()` / `glance()` / `augment()` with the broom
+#' block's conveniences inlined (CI fallback, optional QQ columns, model-aware
+#' column `label` attributes). No blockr.stats function appears in the result.
+#'
+#' @param output One of `"tidy"`, `"glance"`, `"augment"`.
+#' @param conf_int,conf_level CI controls for `tidy`.
+#' @param qq Add QQ columns to `augment`.
+#' @return A language object using only `broom` / base R.
+#' @keywords internal
+#' @noRd
+build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
+                             qq = FALSE) {
+  switch(
+    output,
+    glance = bquote(as.data.frame(broom::glance(data))),
+    augment = if (isTRUE(qq)) {
+      bquote({
+        out <- as.data.frame(broom::augment(data))
+        if (".std.resid" %in% names(out)) {
+          qn <- stats::qqnorm(out$.std.resid, plot.it = FALSE)
+          out$.qq_theoretical <- qn$x
+          out$.qq_sample <- qn$y
+        }
+        out
+      })
+    } else {
+      bquote(as.data.frame(broom::augment(data)))
+    },
+    {
+      tidy_call <- if (isTRUE(conf_int)) {
+        bquote(broom::tidy(data, conf.int = TRUE, conf.level = .(cl)),
+               list(cl = conf_level))
+      } else {
+        quote(broom::tidy(data))
+      }
+      bquote({
+        out <- as.data.frame(
+          tryCatch(.(tc), error = function(e) broom::tidy(data))
+        )
+        labs <- c(
+          term = "Term", estimate = "Estimate", std.error = "Std. error",
+          statistic = "Statistic", p.value = "p-value",
+          conf.low = "Lower CI", conf.high = "Upper CI",
+          time = "Time", n.risk = "At risk", n.event = "Events",
+          n.censor = "Censored", strata = "Group", group = "Group"
+        )
+        if (inherits(data, "survfit")) {
+          labs["estimate"] <- "Survival probability"
+          labs["time"] <- "Time (days)"
+        } else if (inherits(data, "cuminc")) {
+          labs["estimate"] <- "Cumulative incidence"
+          labs["time"] <- "Time (days)"
+        } else if (inherits(data, "coxph")) {
+          labs["estimate"] <- "log(Hazard ratio)"
+          labs["term"] <- "Comparison"
+        }
+        for (nm in intersect(names(out), names(labs))) {
+          attr(out[[nm]], "label") <- unname(labs[nm])
+        }
+        out
+      }, list(tc = tidy_call))
+    }
+  )
+}

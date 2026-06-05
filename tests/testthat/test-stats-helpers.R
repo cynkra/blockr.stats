@@ -28,15 +28,16 @@ test_that("tabulate_freq one-way and two-way", {
   expect_equal(sum(tw$n), 3L)
 })
 
-test_that("broom_apply tidy/glance/augment + qq", {
+test_that("build_broom_call emits standard broom code with extras inlined", {
   m <- lm(mpg ~ wt + hp, mtcars)
-  ti <- broom_apply(m, "tidy")
+  run <- function(call) eval(call, list(data = m))
+  ti <- run(build_broom_call("tidy", conf_int = TRUE))
   expect_true(all(c("term", "estimate", "conf.low") %in% names(ti)))
-  gl <- broom_apply(m, "glance")
+  expect_equal(attr(ti$estimate, "label"), "Estimate")
+  gl <- run(build_broom_call("glance"))
   expect_equal(nrow(gl), 1L)
-  ag <- broom_apply(m, "augment", qq = TRUE)
+  ag <- run(build_broom_call("augment", qq = TRUE))
   expect_true(all(c(".qq_theoretical", ".qq_sample") %in% names(ag)))
-  expect_true("message" %in% names(broom_apply(NULL)))
 })
 
 test_that("es_ncp_ci brackets the estimate and is NA-safe", {
@@ -62,25 +63,12 @@ test_that("effect_size eta2/partial_eta2/omega2/d/r2", {
   expect_equal(r2$measure, "r2")
 })
 
-test_that("fit_survival returns the right objects", {
-  d <- survival::lung
-  expect_s3_class(fit_survival(d, "km", "time", "status", "sex"),
-                  "survfit")
-  expect_s3_class(fit_survival(d, "cox", "time", "status", "sex"),
-                  "coxph")
-  set.seed(1)
-  cf <- data.frame(ft = rexp(80, .1),
-                   fs = sample(0:2, 80, TRUE),
-                   g = sample(c("A", "B"), 80, TRUE))
-  expect_s3_class(fit_survival(cf, "cif", "ft", "fs", "g"), "cuminc")
-})
-
 test_that("tidy.cuminc is long group/time/estimate", {
   set.seed(2)
   cf <- data.frame(ft = rexp(60, .1),
                    fs = sample(0:1, 60, TRUE),
                    g = sample(c("A", "B"), 60, TRUE))
-  ci <- fit_survival(cf, "cif", "ft", "fs", "g")
+  ci <- cmprsk::cuminc(ftime = cf$ft, fstatus = cf$fs, group = cf$g)
   td <- tidy.cuminc(ci)
   expect_setequal(names(td), c("group", "time", "estimate"))
   expect_gt(nrow(td), 0)
