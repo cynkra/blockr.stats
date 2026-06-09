@@ -6,16 +6,22 @@
 \usage{
 new_model_block(
   model_type = "lm",
-  formula = list(response = NULL, intercept = TRUE, terms = list(), bars = list(), offset
-    = NULL, weights = NULL),
+  formula = "",
+  weights = NULL,
+  offset = NULL,
   ...
 )
 }
 \arguments{
 \item{model_type}{One of \code{"lm"}, \code{"logistic"}, \code{"poisson"}, \code{"gamma"}.}
 
-\item{formula}{Structured formula-input state: a list with \code{response},
-\code{intercept}, \code{terms}, \code{bars}, \code{offset}, \code{weights} (see \code{parse_formula()}).}
+\item{formula}{Model formula as a plain string, e.g. \code{"mpg ~ hp + wt"}
+(response on the left; \code{+} additive, \code{*} interaction, \code{:} interaction-only).
+The visual formula-input widget keeps an internal AST seeded from this
+string; the block's state round-trips as the string.}
+
+\item{weights, offset}{Optional column-name strings used as the fit's case
+weights / model offset (or \code{NULL} to omit).}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }
@@ -38,6 +44,9 @@ mode over an \code{lm} fit. (ANOVA-as-test lives in the adaptive test block.)
 \examples{
 if (interactive()) {
   library(blockr.core)
-  serve(new_model_block(model_type = "lm"), data = list(data = mtcars))
+  serve(
+    new_model_block(model_type = "lm", formula = "mpg ~ hp + wt"),
+    data = list(data = mtcars)
+  )
 }
 }

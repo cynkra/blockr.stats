@@ -51,6 +51,48 @@ register_stats_blocks <- function() {
       "rulers",
       "activity"
     ),
+    arguments = list(
+      # new_model_block: flat, fully AI-accessible surface.
+      structure(
+        c(
+          model_type = paste(
+            "Model family: one of 'lm' (linear, continuous outcome),",
+            "'logistic' (binary 0/1 outcome), 'poisson' (counts),",
+            "'gamma' (positive continuous)."
+          ),
+          formula = paste(
+            "Model formula as a string, e.g. 'mpg ~ hp + wt'. Response on the",
+            "left of ~, predictors on the right: '+' adds terms, '*' is a full",
+            "interaction (main effects + product), ':' is interaction-only."
+          ),
+          weights = paste(
+            "Optional: a column name to use as case weights. Omit unless the",
+            "task explicitly calls for weighting."
+          ),
+          offset = paste(
+            "Optional: a column name to use as a model offset (e.g. log",
+            "exposure for a Poisson rate). Omit unless explicitly needed."
+          )
+        ),
+        examples = list(
+          model_type = "lm",
+          formula = "mpg ~ hp + wt"
+        ),
+        prompt = paste(
+          "Fit a regression model. Pick model_type for the outcome",
+          "(lm/logistic/poisson/gamma) and write formula as a string:",
+          "'response ~ predictor1 + predictor2'. weights and offset are",
+          "optional column names; leave them out unless the request needs them."
+        )
+      ),
+      NULL, # new_broom_block
+      NULL, # new_descriptives_block
+      NULL, # new_frequencies_block
+      NULL, # new_stat_test_block
+      NULL, # new_padjust_block
+      NULL, # new_effect_size_block
+      NULL  # new_survival_block
+    ),
     package = utils::packageName(),
     overwrite = TRUE
   )

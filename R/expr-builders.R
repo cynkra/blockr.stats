@@ -52,15 +52,17 @@ make_model_formula <- function(state) {
 #' Build the bquoted fitting call for a model type
 #'
 #' Splices the formula `f` as a value and leaves `.(data)` for blockr.core to
-#' resolve (`expr_type = "bquoted"`). Weights/offset wiring is deferred to the
-#' role-box UI (the widget's JS layer).
+#' resolve (`expr_type = "bquoted"`). `weights` / `offset`, when supplied, are
+#' column names spliced in as bare symbols (resolved in the data frame by the
+#' fitting function).
 #'
 #' @param model_type One of `"lm"`, `"logistic"`, `"poisson"`, `"gamma"`.
 #' @param f A `formula` (from `make_model_formula()`).
+#' @param weights,offset Optional column-name strings (or `NULL`).
 #' @keywords internal
 #' @noRd
-build_model_call <- function(model_type, f) {
-  switch(
+build_model_call <- function(model_type, f, weights = NULL, offset = NULL) {
+  call <- switch(
     model_type,
     logistic = blockr.core::bbquote(
       stats::glm(.(f), data = .(data), family = stats::binomial()), list(f = f)),
@@ -70,6 +72,57 @@ build_model_call <- function(model_type, f) {
       stats::glm(.(f), data = .(data), family = stats::Gamma()), list(f = f)),
     blockr.core::bbquote(stats::lm(.(f), data = .(data)), list(f = f))
   )
+  if (!is.null(weights) && is.character(weights) && nzchar(weights)) {
+    call[["weights"]] <- as.name(weights)
+  }
+  if (!is.null(offset) && is.character(offset) && nzchar(offset)) {
+    call[["offset"]] <- as.name(offset)
+  }
+  call
+}
+
+#' Parse a formula string into the structured formula-input model, safely
+#'
+#' The model block authors its formula as a plain STRING (`"mpg ~ hp + wt"`) so
+#' that humans and the AI assistant write it natively; the visual formula-input
+#' widget keeps a structured AST internally. This seeds that AST from the string,
+#' tolerating empty / invalid input by returning an empty (pass-through) model.
+#' A list is passed through unchanged (defensive: an already-parsed AST).
+#'
+#' @param text A formula string, an empty string, or an AST list.
+#' @return A structured formula model (see `parse_formula()`).
+#' @keywords internal
+#' @noRd
+parse_formula_safe <- function(text) {
+  empty <- list(
+    response = NULL, intercept = TRUE,
+    terms = list(), bars = list(), offset = NULL, weights = NULL
+  )
+  if (is.list(text)) {
+    return(text)
+  }
+  if (is.null(text) || !is.character(text) || !nzchar(trimws(text[1L]))) {
+    return(empty)
+  }
+  tryCatch(parse_formula(text), error = function(e) empty)
+}
+
+#' Project the structured formula-input model back to a formula string
+#'
+#' The inverse of [parse_formula_safe()]: turns the widget's AST into the plain
+#' string that the block exposes as state. Returns `""` when there is no usable
+#' formula (no response), so the state field stays an empty-string sentinel.
+#'
+#' @param state Structured formula model (see `parse_formula()`).
+#' @return A length-1 character (possibly `""`).
+#' @keywords internal
+#' @noRd
+formula_ast_to_text <- function(state) {
+  f <- tryCatch(make_model_formula(state), error = function(e) NULL)
+  if (is.null(f)) {
+    return("")
+  }
+  paste(trimws(deparse(f)), collapse = " ")
 }
 
 #' Build the standard-R broom expression for the selected output
