@@ -41,17 +41,17 @@ board <- new_dock_board(
             block_name = "Linear model"),
 
     # marginal: response vs a predictor, by group, with lm smoother
-    marg = new_drilldown_chart_block(
+    marg = new_chart_block(
              chart_type = "scatter", x = "flipper_length_mm",
              y = "body_mass_g", color = "species", series = "species",
              smoother = "lm", block_name = "Marginal: mass vs flipper"),
 
     # augment (+qq) -> residual diagnostics
     aug   = new_broom_block(output = "augment", qq = TRUE),
-    resid = new_drilldown_chart_block(
+    resid = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess", block_name = "Residuals vs fitted"),
-    qq    = new_drilldown_chart_block(
+    qq    = new_chart_block(
               chart_type = "scatter", x = ".qq_theoretical",
               y = ".qq_sample", block_name = "Normal Q-Q")
   ),

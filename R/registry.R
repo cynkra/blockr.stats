@@ -6,6 +6,7 @@ register_stats_blocks <- function() {
       "new_broom_block",
       "new_descriptives_block",
       "new_frequencies_block",
+      "new_correlate_block",
       "new_stat_test_block",
       "new_padjust_block",
       "new_effect_size_block",
@@ -16,6 +17,7 @@ register_stats_blocks <- function() {
       "Broom Adapter",
       "Descriptives",
       "Frequencies",
+      "Correlate",
       "Statistical Test",
       "P-Value Adjustment",
       "Effect Size",
@@ -26,12 +28,14 @@ register_stats_blocks <- function() {
       "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
       "Per-variable summary statistics (n, mean, SD, median, quartiles, range).",
       "Frequency counts and proportions; one-way or two-way (crosstab).",
+      "Pairwise correlation matrix of numeric columns (pearson / spearman / kendall) as a tidy `var` + per-variable frame; renders as a heatmap table.",
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
       "Adjust p-values for multiple comparisons via stats::p.adjust().",
       "Effect sizes: Cohen's d / Hedges' g (effsize), eta^2 / partial eta^2 / omega^2 / r^2 (base) with CIs.",
       "Advanced: Kaplan-Meier / Cox PH / competing-risks (CIF). Returns the fitted survival model object."
     ),
     category = c(
+      "transform",
       "transform",
       "transform",
       "transform",
@@ -46,6 +50,7 @@ register_stats_blocks <- function() {
       "diagram-3",
       "clipboard2-data",
       "bar-chart-line",
+      "grid-3x3",
       "clipboard-check",
       "sliders",
       "rulers",
@@ -88,6 +93,7 @@ register_stats_blocks <- function() {
       NULL, # new_broom_block
       NULL, # new_descriptives_block
       NULL, # new_frequencies_block
+      NULL, # new_correlate_block
       NULL, # new_stat_test_block
       NULL, # new_padjust_block
       NULL, # new_effect_size_block

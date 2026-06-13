@@ -48,6 +48,43 @@ test_that("descriptives_block emits a tidy per-variable frame", {
   )
 })
 
+test_that("correlate_block emits a tidy correlation matrix", {
+  blk <- new_correlate_block(vars = c("mpg", "hp", "wt"),
+                             method = "spearman")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      res <- session$returned$result()
+      # leading `var` char column + one numeric column per selected variable
+      expect_identical(names(res), c("var", "mpg", "hp", "wt"))
+      expect_type(res$var, "character")
+      expect_setequal(res$var, c("mpg", "hp", "wt"))
+      # square-ish matrix: nrow == number of value columns
+      expect_equal(nrow(res), length(names(res)) - 1L)
+      num_cols <- setdiff(names(res), "var")
+      expect_true(all(vapply(res[num_cols], is.numeric, logical(1L))))
+      # diagonal is 1 (a variable correlates perfectly with itself)
+      expect_equal(res$mpg[res$var == "mpg"], 1)
+    },
+    args = list(x = blk, data = list(data = function() mtcars))
+  )
+})
+
+test_that("correlate_block expr carries the selected method", {
+  blk <- new_correlate_block(vars = c("mpg", "hp"), method = "kendall")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      ex <- session$returned$expr()
+      expect_true(grepl("kendall", paste(deparse(ex), collapse = " ")))
+      expect_equal(session$returned$state$method(), "kendall")
+    },
+    args = list(x = blk, data = list(data = function() mtcars))
+  )
+})
+
 test_that("survival_block returns a survfit", {
   blk <- new_survival_block(type = "km", time_var = "time",
                             event_var = "status", group_var = "sex")

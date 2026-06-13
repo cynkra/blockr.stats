@@ -107,100 +107,100 @@ board <- new_dock_board(
 
     # --- LM: 1 continuous + 1 factor ---------------------------------------
     s_lm  = new_function_block(fn = sim_lm),
-    mp_lm = new_drilldown_chart_block(
+    mp_lm = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               color = "site", series = "site", smoother = "lm",
               block_name = "Marginal: y vs x by site"),
     m_lm  = new_model_block(model_type = "lm",
                             formula = parse_formula("y ~ x + site")),
     a_lm  = new_broom_block(output = "augment", qq = TRUE),
-    rp_lm = new_drilldown_chart_block(
+    rp_lm = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess",
               block_name = "Residuals vs fitted"),
-    qq_lm = new_drilldown_chart_block(
+    qq_lm = new_chart_block(
               chart_type = "scatter",
               x = ".qq_theoretical", y = ".qq_sample",
               block_name = "Normal Q-Q"),
 
     # --- LM with interaction ------------------------------------------------
     s_int  = new_function_block(fn = sim_lm_inter),
-    mp_int = new_drilldown_chart_block(
+    mp_int = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               color = "age", series = "age", smoother = "lm",
               block_name = "Marginal: y vs x by age"),
     m_int  = new_model_block(model_type = "lm",
                              formula = parse_formula("y ~ x * age")),
     a_int  = new_broom_block(output = "augment", qq = TRUE),
-    rp_int = new_drilldown_chart_block(
+    rp_int = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess",
               block_name = "Residuals vs fitted"),
-    qq_int = new_drilldown_chart_block(
+    qq_int = new_chart_block(
               chart_type = "scatter",
               x = ".qq_theoretical", y = ".qq_sample",
               block_name = "Normal Q-Q"),
 
     # --- LM with quadratic effect ------------------------------------------
     s_qd  = new_function_block(fn = sim_lm_quad),
-    mp_qd = new_drilldown_chart_block(
+    mp_qd = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               smoother = "loess",
               block_name = "Marginal: y vs x (loess)"),
     m_qd  = new_model_block(model_type = "lm",
                             formula = parse_formula("y ~ x + I(x^2)")),
     a_qd  = new_broom_block(output = "augment", qq = TRUE),
-    rp_qd = new_drilldown_chart_block(
+    rp_qd = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess",
               block_name = "Residuals vs fitted"),
-    qq_qd = new_drilldown_chart_block(
+    qq_qd = new_chart_block(
               chart_type = "scatter",
               x = ".qq_theoretical", y = ".qq_sample",
               block_name = "Normal Q-Q"),
 
     # --- GLM binomial ------------------------------------------------------
     s_bn  = new_function_block(fn = sim_glm_binom),
-    mp_bn = new_drilldown_chart_block(
+    mp_bn = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               smoother = "loess",
               block_name = "Marginal: y vs x"),
     m_bn  = new_model_block(model_type = "logistic",
                             formula = parse_formula("y ~ x")),
     a_bn  = new_broom_block(output = "augment"),
-    fp_bn = new_drilldown_chart_block(
+    fp_bn = new_chart_block(
               chart_type = "scatter", x = "x", y = ".fitted",
               smoother = "loess",
               block_name = "Fitted probability vs x"),
 
     # --- GLM poisson -------------------------------------------------------
     s_ps  = new_function_block(fn = sim_glm_pois),
-    mp_ps = new_drilldown_chart_block(
+    mp_ps = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               smoother = "loess",
               block_name = "Marginal: y vs x"),
     m_ps  = new_model_block(model_type = "poisson",
                             formula = parse_formula("y ~ x")),
     a_ps  = new_broom_block(output = "augment"),
-    fp_ps = new_drilldown_chart_block(
+    fp_ps = new_chart_block(
               chart_type = "scatter", x = "x", y = ".fitted",
               smoother = "loess",
               block_name = "Fitted mean vs x"),
 
     # --- Violating assumptions --------------------------------------------
     s_vi  = new_function_block(fn = sim_violate),
-    mp_vi = new_drilldown_chart_block(
+    mp_vi = new_chart_block(
               chart_type = "scatter", x = "x", y = "y",
               smoother = "lm",
               block_name = "Marginal: y vs x"),
     m_vi  = new_model_block(model_type = "lm",
                             formula = parse_formula("y ~ x")),
     a_vi  = new_broom_block(output = "augment", qq = TRUE),
-    rp_vi = new_drilldown_chart_block(
+    rp_vi = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess",
               block_name = "Residuals vs fitted"),
-    qq_vi = new_drilldown_chart_block(
+    qq_vi = new_chart_block(
               chart_type = "scatter",
               x = ".qq_theoretical", y = ".qq_sample",
               block_name = "Normal Q-Q")
