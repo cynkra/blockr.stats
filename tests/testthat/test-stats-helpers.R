@@ -21,11 +21,34 @@ test_that("describe_numeric messages with no numeric columns", {
 test_that("tabulate_freq one-way and two-way", {
   d <- data.frame(s = c("x", "x", "y"), t = c("p", "q", "p"))
   ow <- tabulate_freq(d, "s")
-  expect_setequal(names(ow), c("variable", "level", "n", "proportion"))
+  expect_setequal(
+    names(ow),
+    c("variable", "level", "n", "proportion", "pct", ".fmt")
+  )
   expect_equal(sum(ow$n), 3L)
   tw <- tabulate_freq(d, "s", by = "t")
   expect_true(all(c("by", "by_level") %in% names(tw)))
   expect_equal(sum(tw$n), 3L)
+})
+
+test_that("tabulate_freq carries a .fmt template referencing real columns", {
+  d <- data.frame(s = c("x", "x", "y"))
+  ow <- tabulate_freq(d, "s")
+  # The hidden template column is present and additive (raw numbers kept).
+  expect_true(".fmt" %in% names(ow))
+  expect_true(all(c("n", "proportion", "pct") %in% names(ow)))
+  expect_equal(unique(ow$.fmt), "{n} ({pct:1}%)")
+  # Every {token} in the template names a real column on the frame.
+  toks <- regmatches(ow$.fmt[1], gregexpr("\\{([^{}:]+)", ow$.fmt[1]))[[1]]
+  toks <- sub("\\{", "", toks)
+  expect_true(all(toks %in% names(ow)))
+  # pct is the percentage companion of the 0-1 proportion.
+  expect_equal(ow$pct, ow$proportion * 100)
+  # Two-way carries the template too.
+  tw <- tabulate_freq(data.frame(s = c("x", "x", "y"),
+                                 t = c("p", "q", "p")), "s", by = "t")
+  expect_true(".fmt" %in% names(tw))
+  expect_equal(unique(tw$.fmt), "{n} ({pct:1}%)")
 })
 
 test_that("build_broom_call emits standard broom code with extras inlined", {

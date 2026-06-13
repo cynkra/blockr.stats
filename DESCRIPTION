@@ -29,6 +29,7 @@ Imports:
     effsize,
     glue,
     htmltools,
+    lifecycle,
     moments,
     nortest,
     stats,
@@ -39,6 +40,7 @@ Suggests:
     knitr,
     palmerpenguins,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 VignetteBuilder: knitr
 Config/testthat/edition: 3

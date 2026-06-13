@@ -60,6 +60,14 @@ describe_numeric <- function(data, vars = NULL) {
 #' }
 #' @export
 new_descriptives_block <- function(vars = character(), ...) {
+  lifecycle::deprecate_soft(
+    "0.0.0",
+    "new_descriptives_block()",
+    details = paste(
+      "Unregistered; use blockr.bi::new_summary_table_block (mixed-type,",
+      "by-group, tidy). Constructor kept so existing boards still load."
+    )
+  )
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output, session) {

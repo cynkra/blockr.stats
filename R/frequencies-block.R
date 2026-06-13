@@ -6,6 +6,14 @@
 #' renderers; the two-way form also feeds the chi-square test of
 #' independence.
 #'
+#' The raw numeric columns (`n`, `proportion`) stay untouched and
+#' `dplyr`-able; a `pct` column (`proportion * 100`) and a hidden `.fmt`
+#' template column (`"{n} ({pct:1}%)"`) ride alongside so a renderer can
+#' assemble the composite `"38 (54.0%)"` cell via the blockr.bi `.fmt`
+#' engine. We scale to a percentage (rather than format the 0-1
+#' proportion directly) because `n (pct%)` reads better than `n (prop)`,
+#' and pin one decimal (`:1`) for the percentage.
+#'
 #' @param data A data frame.
 #' @param vars Categorical column name(s).
 #' @param by Optional second categorical column (crosstab).
@@ -41,7 +49,12 @@ tabulate_freq <- function(data, vars, by = NULL) {
       )
     }
   })
-  do.call(rbind, out)
+  res <- do.call(rbind, out)
+  # Additive `.fmt` convention: hidden template + a `pct` companion the
+  # template references. Numeric `n` / `proportion` are left as-is.
+  res$pct <- res$proportion * 100
+  res$.fmt <- "{n} ({pct:1}%)"
+  res
 }
 
 # NOTE (under review): usefulness debated. Convenience block; one-way counts

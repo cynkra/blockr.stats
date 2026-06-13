@@ -34,7 +34,21 @@ test_that("broom_block tidies an upstream model", {
   )
 })
 
+test_that("descriptives_block is soft-deprecated but still constructs", {
+  # Unregistered per the deprecation policy, but the constructor is kept so
+  # existing boards still load; it nudges via lifecycle::deprecate_soft().
+  expect_false("descriptives_block" %in% names(blockr.core::available_blocks()))
+  withr::local_options(lifecycle_verbosity = "warning")
+  expect_warning(
+    blk0 <- new_descriptives_block(vars = "mpg"),
+    "deprecated",
+    ignore.case = TRUE
+  )
+  expect_s3_class(blk0, "descriptives_block")
+})
+
 test_that("descriptives_block emits a tidy per-variable frame", {
+  withr::local_options(lifecycle_verbosity = "quiet")
   blk <- new_descriptives_block(vars = c("mpg", "wt"))
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),

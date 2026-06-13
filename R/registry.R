@@ -4,7 +4,6 @@ register_stats_blocks <- function() {
     c(
       "new_model_block",
       "new_broom_block",
-      "new_descriptives_block",
       "new_frequencies_block",
       "new_correlate_block",
       "new_stat_test_block",
@@ -15,7 +14,6 @@ register_stats_blocks <- function() {
     name = c(
       "Model",
       "Broom Adapter",
-      "Descriptives",
       "Frequencies",
       "Correlate",
       "Statistical Test",
@@ -26,7 +24,6 @@ register_stats_blocks <- function() {
     description = c(
       "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
       "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
-      "Per-variable summary statistics (n, mean, SD, median, quartiles, range).",
       "Frequency counts and proportions; one-way or two-way (crosstab).",
       "Pairwise correlation matrix of numeric columns (pearson / spearman / kendall) as a tidy `var` + per-variable frame; renders as a heatmap table.",
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
@@ -42,13 +39,11 @@ register_stats_blocks <- function() {
       "transform",
       "transform",
       "transform",
-      "transform",
       "transform"
     ),
     icon = c(
       "calculator",
       "diagram-3",
-      "clipboard2-data",
       "bar-chart-line",
       "grid-3x3",
       "clipboard-check",
@@ -91,7 +86,6 @@ register_stats_blocks <- function() {
         )
       ),
       NULL, # new_broom_block
-      NULL, # new_descriptives_block
       NULL, # new_frequencies_block
       NULL, # new_correlate_block
       NULL, # new_stat_test_block
