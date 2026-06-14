@@ -15,7 +15,7 @@ pkgload::load_all("blockr.ui",    quiet = TRUE)
 pkgload::load_all("blockr.core",  quiet = TRUE)
 pkgload::load_all("blockr.react", quiet = TRUE)
 pkgload::load_all("blockr.dock",  quiet = TRUE)
-pkgload::load_all("blockr.bi",    quiet = TRUE)
+pkgload::load_all("blockr.viz",    quiet = TRUE)
 pkgload::load_all("blockr.stats", quiet = TRUE)
 
 # model formula authored via the formula-input widget; built here from text

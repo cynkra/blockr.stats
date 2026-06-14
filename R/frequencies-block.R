@@ -9,7 +9,7 @@
 #' The raw numeric columns (`n`, `proportion`) stay untouched and
 #' `dplyr`-able; a `pct` column (`proportion * 100`) and a hidden `.fmt`
 #' template column (`"{n} ({pct:1}%)"`) ride alongside so a renderer can
-#' assemble the composite `"38 (54.0%)"` cell via the blockr.bi `.fmt`
+#' assemble the composite `"38 (54.0%)"` cell via the blockr.viz `.fmt`
 #' engine. We scale to a percentage (rather than format the 0-1
 #' proportion directly) because `n (pct%)` reads better than `n (prop)`,
 #' and pin one decimal (`:1`) for the percentage.
