@@ -15,7 +15,7 @@ pkgload::load_all("blockr.ui",    quiet = TRUE)
 pkgload::load_all("blockr.core",  quiet = TRUE)
 pkgload::load_all("blockr.react", quiet = TRUE)
 pkgload::load_all("blockr.dock",  quiet = TRUE)
-pkgload::load_all("blockr.bi",    quiet = TRUE)
+pkgload::load_all("blockr.viz",    quiet = TRUE)
 pkgload::load_all("blockr.stats", quiet = TRUE)
 
 # model formula authored via the formula-input widget; built here from text
@@ -35,7 +35,7 @@ board <- new_dock_board(
     freq  = new_frequencies_block(vars = "species", by = "sex"),
 
     # Associate
-    cormat = new_correlation_matrix_block(),
+    cormat = new_correlate_block(),
 
     # Compare / Nonparametric (adaptive test block)
     test = new_stat_test_block(type = "anova_oneway"),
@@ -43,12 +43,12 @@ board <- new_dock_board(
     # Regress: model -> broom tidy -> coef plot; broom augment -> resid
     mdl   = new_model_block(model_type = "lm", formula = mdl_formula),
     coefs = new_broom_block(output = "tidy"),
-    coefp = new_drilldown_chart_block(
+    coefp = new_chart_block(
               chart_type = "scatter", x = "term", y = "estimate",
               series = "term", lo = "conf.low", hi = "conf.high",
               block_name = "Coefficient plot"),
     aug   = new_broom_block(output = "augment", qq = TRUE),
-    resid = new_drilldown_chart_block(
+    resid = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess", block_name = "Residuals vs fitted"),
 
@@ -59,7 +59,7 @@ board <- new_dock_board(
     surv  = new_survival_block(type = "km", time_var = "time",
               event_var = "status", group_var = "sex"),
     kmt   = new_broom_block(output = "tidy"),
-    kmp   = new_drilldown_chart_block(
+    kmp   = new_chart_block(
               chart_type = "line", x = "time", y = "estimate",
               color = "strata", series = "strata", step = "end",
               block_name = "Kaplan-Meier")

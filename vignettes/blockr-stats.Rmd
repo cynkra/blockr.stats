@@ -27,7 +27,7 @@ The blocks cover an applied-statistics-basics *spine*
 * **Regress** -- `lm` / `glm` / `aov` model fitting and a generic broom adapter
 * **Nonparametric** -- folded into the adaptive test stack
 
-(Pairwise correlation matrices are not a block here -- blockr.bi's
+(Pairwise correlation matrices are not a block here -- blockr.viz's
 `new_drilldown_table_block(transform = "correlation")` computes and renders one
 directly from a data frame.)
 

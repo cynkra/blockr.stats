@@ -1,11 +1,12 @@
-#' @importFrom blockr.core register_blocks
+#' @importFrom blockr.core register_blocks new_block_args new_block_arg
+#'   arg_string arg_enum
 register_stats_blocks <- function() {
   blockr.core::register_blocks(
     c(
       "new_model_block",
       "new_broom_block",
-      "new_descriptives_block",
       "new_frequencies_block",
+      "new_correlate_block",
       "new_stat_test_block",
       "new_padjust_block",
       "new_effect_size_block",
@@ -14,8 +15,8 @@ register_stats_blocks <- function() {
     name = c(
       "Model",
       "Broom Adapter",
-      "Descriptives",
       "Frequencies",
+      "Correlate",
       "Statistical Test",
       "P-Value Adjustment",
       "Effect Size",
@@ -24,8 +25,8 @@ register_stats_blocks <- function() {
     description = c(
       "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
       "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
-      "Per-variable summary statistics (n, mean, SD, median, quartiles, range).",
       "Frequency counts and proportions; one-way or two-way (crosstab).",
+      "Pairwise correlation matrix of numeric columns (pearson / spearman / kendall) as a tidy `var` + per-variable frame; renders as a heatmap table.",
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
       "Adjust p-values for multiple comparisons via stats::p.adjust().",
       "Effect sizes: Cohen's d / Hedges' g (effsize), eta^2 / partial eta^2 / omega^2 / r^2 (base) with CIs.",
@@ -44,50 +45,70 @@ register_stats_blocks <- function() {
     icon = c(
       "calculator",
       "diagram-3",
-      "clipboard2-data",
       "bar-chart-line",
+      "grid-3x3",
       "clipboard-check",
       "sliders",
       "rulers",
       "activity"
     ),
+    guidance = c(
+      # new_model_block:
+      paste(
+        "Fit a regression model. Pick model_type for the outcome",
+        "(lm/logistic/poisson/gamma) and write formula as a string:",
+        "'response ~ predictor1 + predictor2'. weights and offset are",
+        "optional column names; leave them out unless the request needs them."
+      ),
+      "", # new_broom_block
+      "", # new_frequencies_block
+      "", # new_correlate_block
+      "", # new_stat_test_block
+      "", # new_padjust_block
+      "", # new_effect_size_block
+      ""  # new_survival_block
+    ),
     arguments = list(
       # new_model_block: flat, fully AI-accessible surface.
-      structure(
-        c(
-          model_type = paste(
+      new_block_args(
+        model_type = new_block_arg(
+          paste(
             "Model family: one of 'lm' (linear, continuous outcome),",
             "'logistic' (binary 0/1 outcome), 'poisson' (counts),",
             "'gamma' (positive continuous)."
           ),
-          formula = paste(
+          example = "lm",
+          type = arg_enum(c("lm", "logistic", "poisson", "gamma"))
+        ),
+        formula = new_block_arg(
+          paste(
             "Model formula as a string, e.g. 'mpg ~ hp + wt'. Response on the",
             "left of ~, predictors on the right: '+' adds terms, '*' is a full",
             "interaction (main effects + product), ':' is interaction-only."
           ),
-          weights = paste(
+          example = "mpg ~ hp + wt",
+          type = arg_string()
+        ),
+        # weights / offset are optional column names whose value varies in type
+        # (column name string or NULL); left untyped, with no worked example.
+        weights = new_block_arg(
+          paste(
             "Optional: a column name to use as case weights. Omit unless the",
             "task explicitly calls for weighting."
           ),
-          offset = paste(
+          example = NULL
+        ),
+        offset = new_block_arg(
+          paste(
             "Optional: a column name to use as a model offset (e.g. log",
             "exposure for a Poisson rate). Omit unless explicitly needed."
-          )
-        ),
-        examples = list(
-          model_type = "lm",
-          formula = "mpg ~ hp + wt"
-        ),
-        prompt = paste(
-          "Fit a regression model. Pick model_type for the outcome",
-          "(lm/logistic/poisson/gamma) and write formula as a string:",
-          "'response ~ predictor1 + predictor2'. weights and offset are",
-          "optional column names; leave them out unless the request needs them."
+          ),
+          example = NULL
         )
       ),
       NULL, # new_broom_block
-      NULL, # new_descriptives_block
       NULL, # new_frequencies_block
+      NULL, # new_correlate_block
       NULL, # new_stat_test_block
       NULL, # new_padjust_block
       NULL, # new_effect_size_block

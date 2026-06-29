@@ -20,9 +20,9 @@ options(blockr.dock_is_locked = FALSE)
 
 pkgload::load_all("blockr.ui",    quiet = TRUE)
 pkgload::load_all("blockr.core",  quiet = TRUE)
-pkgload::load_all("blockr.react", quiet = TRUE)
+pkgload::load_all("blockr.dag", quiet = TRUE)
 pkgload::load_all("blockr.dock",  quiet = TRUE)
-pkgload::load_all("blockr.bi",    quiet = TRUE)
+pkgload::load_all("blockr.viz",    quiet = TRUE)
 pkgload::load_all("blockr.stats", quiet = TRUE)
 
 # formula state authored via the formula-input widget; built here from text
@@ -41,17 +41,17 @@ board <- new_dock_board(
             block_name = "Linear model"),
 
     # marginal: response vs a predictor, by group, with lm smoother
-    marg = new_drilldown_chart_block(
+    marg = new_chart_block(
              chart_type = "scatter", x = "flipper_length_mm",
              y = "body_mass_g", color = "species", series = "species",
              smoother = "lm", block_name = "Marginal: mass vs flipper"),
 
     # augment (+qq) -> residual diagnostics
     aug   = new_broom_block(output = "augment", qq = TRUE),
-    resid = new_drilldown_chart_block(
+    resid = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess", block_name = "Residuals vs fitted"),
-    qq    = new_drilldown_chart_block(
+    qq    = new_chart_block(
               chart_type = "scatter", x = ".qq_theoretical",
               y = ".qq_sample", block_name = "Normal Q-Q")
   ),
@@ -59,17 +59,7 @@ board <- new_dock_board(
     from = c("peng", "peng", "mdl", "aug", "aug"),
     to   = c("mdl",  "marg", "aug", "resid", "qq")
   ),
-  extensions = list(blockr.react::new_react_extension()),
-  layouts = list(
-    # four side-by-side columns: model card + the three output panels
-    # (bare ids = separate split cells; panels() would tab them instead)
-    Model = dock_layout(
-      "mdl", "marg", "qq", "resid",
-      orientation = "horizontal",
-      sizes = c(0.31, 0.23, 0.23, 0.23),
-      active = TRUE
-    )
-  )
+  extensions = list(blockr.dag::new_dag_extension())
 )
 
 serve(board)

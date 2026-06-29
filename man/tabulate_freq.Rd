@@ -23,6 +23,15 @@ is set): per variable -> level x by_level contingency in long form
 renderers; the two-way form also feeds the chi-square test of
 independence.
 }
+\details{
+The raw numeric columns (\code{n}, \code{proportion}) stay untouched and
+\code{dplyr}-able; a \code{pct} column (\code{proportion * 100}) and a hidden \code{.fmt}
+template column (\code{"{n} ({pct:1}\%)"}) ride alongside so a renderer can
+assemble the composite \code{"38 (54.0\%)"} cell via the blockr.viz \code{.fmt}
+engine. We scale to a percentage (rather than format the 0-1
+proportion directly) because \verb{n (pct\%)} reads better than \code{n (prop)},
+and pin one decimal (\verb{:1}) for the percentage.
+}
 \examples{
 tabulate_freq(warpbreaks, vars = "wool")
 tabulate_freq(warpbreaks, vars = "wool", by = "tension")
