@@ -3,3 +3,4 @@
 ^_screenshots$
 ^\.github$
 ^\.lintr$
+^tsconfig\.json$
