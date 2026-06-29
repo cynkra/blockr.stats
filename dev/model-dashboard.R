@@ -20,7 +20,7 @@ options(blockr.dock_is_locked = FALSE)
 
 pkgload::load_all("blockr.ui",    quiet = TRUE)
 pkgload::load_all("blockr.core",  quiet = TRUE)
-pkgload::load_all("blockr.react", quiet = TRUE)
+pkgload::load_all("blockr.dag", quiet = TRUE)
 pkgload::load_all("blockr.dock",  quiet = TRUE)
 pkgload::load_all("blockr.viz",    quiet = TRUE)
 pkgload::load_all("blockr.stats", quiet = TRUE)
@@ -59,17 +59,7 @@ board <- new_dock_board(
     from = c("peng", "peng", "mdl", "aug", "aug"),
     to   = c("mdl",  "marg", "aug", "resid", "qq")
   ),
-  extensions = list(blockr.react::new_react_extension()),
-  layouts = list(
-    # four side-by-side columns: model card + the three output panels
-    # (bare ids = separate split cells; panels() would tab them instead)
-    Model = dock_layout(
-      "mdl", "marg", "qq", "resid",
-      orientation = "horizontal",
-      sizes = c(0.31, 0.23, 0.23, 0.23),
-      active = TRUE
-    )
-  )
+  extensions = list(blockr.dag::new_dag_extension())
 )
 
 serve(board)
