@@ -4,19 +4,19 @@
 #' eta-squared from an observed F. Returns `NA` bounds on
 #' non-convergence rather than erroring.
 #'
-#' @param Fval Observed F statistic.
+#' @param f_val Observed F statistic.
 #' @param df1,df2 Numerator / denominator df.
 #' @param conf Confidence level.
 #' @return Named list `low`, `high` (partial eta^2 scale).
 #' @keywords internal
 #' @noRd
-es_ncp_ci <- function(Fval, df1, df2, conf = 0.95) {
+es_ncp_ci <- function(f_val, df1, df2, conf = 0.95) {
   na <- list(low = NA_real_, high = NA_real_)
-  if (!is.finite(Fval) || Fval <= 0) return(na)
+  if (!is.finite(f_val) || f_val <= 0) return(na)
   a <- (1 - conf) / 2
   ncp_to_pe <- function(ncp) ncp / (ncp + df1 + df2 + 1)
   solve_ncp <- function(target) {
-    f <- function(ncp) stats::pf(Fval, df1, df2, ncp = ncp) - target
+    f <- function(ncp) stats::pf(f_val, df1, df2, ncp = ncp) - target
     if (f(0) < 0) return(0)
     hi <- 1
     while (f(hi) > 0 && hi < 1e7) hi <- hi * 4
@@ -55,7 +55,10 @@ effect_size <- function(model, measure = "partial_eta2",
     for (j in 2:ncol(mf)) {
       v <- mf[[j]]
       if ((is.factor(v) || is.character(v)) &&
-          length(unique(stats::na.omit(v))) == 2L) { fac <- v; break }
+          length(unique(stats::na.omit(v))) == 2L) {
+        fac <- v
+        break
+      }
     }
     if (is.null(fac)) return(msg("Need a 2-level factor for d/g"))
     cd <- tryCatch(
@@ -89,7 +92,8 @@ effect_size <- function(model, measure = "partial_eta2",
   df <- aov_tab[["Df"]]
   terms <- rownames(aov_tab)
   res_i <- length(ss)
-  ss_res <- ss[res_i]; df_res <- df[res_i]
+  ss_res <- ss[res_i]
+  df_res <- df[res_i]
   ms_res <- ss_res / df_res
   ss_tot <- sum(ss)
   fvals <- aov_tab[["F value"]]

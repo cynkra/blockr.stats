@@ -45,7 +45,8 @@ model_summary_html <- function(model, conf_level = 0.95, id = NULL) {
   }
 
   # class-keyed radio toggle: Visual (default) vs R text, no server round-trip
-  vid <- paste0(id, "-v"); rid <- paste0(id, "-r")
+  vid <- paste0(id, "-v")
+  rid <- paste0(id, "-r")
   tags$div(class = "smb-card",
     tags$input(type = "radio", name = id, id = vid, class = "smb-radio smb-radio-v",
                checked = NA),
@@ -89,13 +90,18 @@ smb_fit_chip <- function(glance_df, model) {
   g <- function(nm) if (!is.null(glance_df) && nm %in% names(glance_df)) glance_df[[nm]][1] else NULL
   spec <- NULL
   # one fit measure only; adjusted R\u00b2 preferred over raw R\u00b2 for lm
-  if (!is.null(g("adj.r.squared")))    spec <- list("adj. R\u00b2", g("adj.r.squared"), g("adj.r.squared"))
-  else if (!is.null(g("r.squared")))   spec <- list("R\u00b2", g("r.squared"), g("r.squared"))
-  else if (!is.null(g("concordance"))) spec <- list("C", g("concordance"), g("concordance"))
-  else if (!is.null(g("deviance")) && !is.null(g("null.deviance"))) {
+  if (!is.null(g("adj.r.squared"))) {
+    spec <- list("adj. R\u00b2", g("adj.r.squared"), g("adj.r.squared"))
+  } else if (!is.null(g("r.squared"))) {
+    spec <- list("R\u00b2", g("r.squared"), g("r.squared"))
+  } else if (!is.null(g("concordance"))) {
+    spec <- list("C", g("concordance"), g("concordance"))
+  } else if (!is.null(g("deviance")) && !is.null(g("null.deviance"))) {
     pr2 <- 1 - g("deviance") / g("null.deviance")
     spec <- list("pseudo-R\u00b2", pr2, pr2)
-  } else if (!is.null(g("AIC")))       spec <- list("AIC", g("AIC"), NA)
+  } else if (!is.null(g("AIC"))) {
+    spec <- list("AIC", g("AIC"), NA)
+  }
 
   if (is.null(spec)) return(NULL)
   frac <- spec[[3]]
@@ -130,13 +136,16 @@ smb_forest <- function(tidy_df) {
   x0 <- sx(0)
 
   rows <- lapply(seq_len(nrow(d)), function(i) {
-    est <- d$estimate[i]; l <- lo[i]; h <- hi[i]
+    est <- d$estimate[i]
+    l <- lo[i]
+    h <- hi[i]
     p <- if ("p.value" %in% names(d)) d$p.value[i] else NA_real_
     sig <- !is.na(p) && p < 0.05
     col <- if (!sig) "var(--blockr-grey-400, #9ca3af)"
            else if (est >= 0) "var(--blockr-blue-600, #2563eb)"
            else "var(--blockr-color-danger, #dc3545)"
-    wl <- sx(l); wr <- sx(h)
+    wl <- sx(l)
+    wr <- sx(h)
     tags$tr(
       tags$td(class = "smb-fterm", d$term[i]),
       tags$td(class = "smb-fbar",

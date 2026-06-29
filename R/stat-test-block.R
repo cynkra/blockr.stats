@@ -95,8 +95,9 @@ new_stat_test_block <- function(
         get_cols = function() {
           req(data())
           cn <- colnames(data())
-          cn[vapply(data(), function(x) is.factor(x) ||
-            is.character(x), logical(1))]
+          cn[vapply(data(), function(x) {
+            is.factor(x) || is.character(x)
+          }, logical(1))]
         },
         initial_value = by
       )
@@ -136,8 +137,10 @@ new_stat_test_block <- function(
 
       # Adaptive parameter UI for the current test
       output$params_ui <- renderUI({
-        ct <- r_type(); req(ct)
-        cfg <- test_config[[ct]]; req(cfg)
+        ct <- r_type()
+        req(ct)
+        cfg <- test_config[[ct]]
+        req(cfg)
         p <- cfg$params
         bits <- list()
         if ("method" %in% names(p)) {
@@ -185,8 +188,9 @@ new_stat_test_block <- function(
         req(data())
         d <- data()
         num <- colnames(d)[vapply(d, is.numeric, logical(1))]
-        fac <- colnames(d)[vapply(d, function(x) is.factor(x) ||
-          is.character(x), logical(1))]
+        fac <- colnames(d)[vapply(d, function(x) {
+          is.factor(x) || is.character(x)
+        }, logical(1))]
         # categorical tests use factor columns as "values"
         cfg <- test_config[[r_type()]]
         val_type <- tryCatch(cfg$inputs$values$type, error = function(e) "numeric")
@@ -200,8 +204,10 @@ new_stat_test_block <- function(
 
       list(
         expr = reactive({
-          ct <- r_type(); req(ct)
-          cfg <- test_config[[ct]]; req(cfg)
+          ct <- r_type()
+          req(ct)
+          cfg <- test_config[[ct]]
+          req(cfg)
           cv <- r_values()
           if (is.null(cv) || !any(nzchar(cv))) return(bquote(NULL))
           if (cfg$inputs$groups$role %||% "hidden" == "required") {

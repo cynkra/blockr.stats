@@ -85,8 +85,9 @@ new_frequencies_block <- function(vars = character(), by = "", ...) {
         r_initialized <- reactiveVal(FALSE)
 
         cat_of <- function(d) {
-          colnames(d)[vapply(d, function(x) is.factor(x) ||
-            is.character(x), logical(1))]
+          colnames(d)[vapply(d, function(x) {
+            is.factor(x) || is.character(x)
+          }, logical(1))]
         }
 
         observeEvent(input$vars, r_vars(input$vars))

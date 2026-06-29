@@ -28,7 +28,9 @@ survival_state <- function(time_var, event_var, group_var) {
   list(
     response = list(fn = "Surv", time = tv, event = ev, eventLevel = NULL),
     intercept = TRUE,
-    terms = if (is.null(g)) list() else {
+    terms = if (is.null(g)) {
+      list()
+    } else {
       list(list(kind = "factor", label = g, var = g))
     },
     bars = list(),

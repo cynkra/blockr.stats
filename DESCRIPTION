@@ -21,7 +21,7 @@ RoxygenNote: 7.3.3
 Imports:
     shiny,
     shinyWidgets,
-    blockr.core (>= 0.1.1),
+    blockr.core (>= 0.1.2),
     blockr.dplyr,
     broom,
     cmprsk,
@@ -43,4 +43,6 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 VignetteBuilder: knitr
+Remotes:
+    BristolMyersSquibb/blockr.core
 Config/testthat/edition: 3
