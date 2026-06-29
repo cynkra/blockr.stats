@@ -1,3 +1,5 @@
 ^dev$
 ^\.claude$
 ^_screenshots$
+^\.github$
+^\.lintr$

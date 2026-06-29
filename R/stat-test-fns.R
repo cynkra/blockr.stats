@@ -498,9 +498,11 @@ test_t_paired <- function(data, values, groups, params) {
       estimate = NA_real_, statistic = NA_real_, df = NA_real_,
       p.value = NA_real_))))
   }
-  x <- data[[values[1]]]; y <- data[[values[2]]]
+  x <- data[[values[1]]]
+  y <- data[[values[2]]]
   keep <- !is.na(x) & !is.na(y)
-  x <- x[keep]; y <- y[keep]
+  x <- x[keep]
+  y <- y[keep]
   res <- stats::t.test(x, y, paired = TRUE, alternative = alternative,
                        mu = mu, conf.level = conf_level)
   dplyr::bind_rows(list(tibble::tibble_row(
@@ -525,9 +527,11 @@ test_wilcoxon_paired <- function(data, values, groups, params) {
       method = NA_character_, values = NA_character_, n = 0L,
       statistic = NA_real_, p.value = NA_real_))))
   }
-  x <- data[[values[1]]]; y <- data[[values[2]]]
+  x <- data[[values[1]]]
+  y <- data[[values[2]]]
   keep <- !is.na(x) & !is.na(y)
-  x <- x[keep]; y <- y[keep]
+  x <- x[keep]
+  y <- y[keep]
   res <- stats::wilcox.test(x, y, paired = TRUE, mu = mu,
                             alternative = alternative)
   dplyr::bind_rows(list(tibble::tibble_row(
