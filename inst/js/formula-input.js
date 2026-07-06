@@ -847,12 +847,20 @@
     }
     this._predSelect.setOptions(opts, this._colVars());
     this.renderChips();
-    if (this._text)
+    if (this._text) {
       this._text.setColumns(
         this.columns.map(function (c) {
           return c.name;
         })
       );
+      // Columns may arrive AFTER setState (e.g. a survival card on a dock view
+      // that was inactive at startup): the time/event selects could not hold
+      // their values until now, so the composed formula text was empty. Now
+      // that the selects can resolve, recompose it. Without this the pills show
+      // but the Formula box stays blank.
+      this._text.setValue(this._currentFormulaText());
+      this._setConfirmed(true);
+    }
   };
 
   // -- Shiny input binding ---------------------------------------------------

@@ -1,9 +1,20 @@
 # blockr.stats — stats-101 demo board.
 #
-# The applied-stats-basics spine (Describe / Compare / Associate /
-# Regress / Nonparametric) + the Advanced survival tier, all emitting
-# tidy frames into the generic drilldown renderers. No easystats, no
-# auto-narrative, no bespoke plot blocks.
+# A model-centric tour, not a method checklist. The star is the
+# model card: new_model_block()'s preview already carries the
+# coefficient forest, the adj-R2 fit chip, the lm/glm toggle and the
+# live formula-input widget. Everything else is the story around it —
+# explore the correlations, read the forest, check the diagnostics,
+# see the fit, then repeat the whole move on the survival side
+# (Kaplan-Meier curve + a Cox hazard-ratio forest that rhymes with
+# the regression forest).
+#
+#   Explore   penguins correlations (heatmap)
+#   Model     lm card (forest + adj-R2) ── marginal fit
+#   Diagnose  broom augment ─┬─ residuals vs fitted
+#                            └─ normal Q-Q
+#   Survival  KM card ── Kaplan-Meier step curve
+#   Hazards   Cox card ── broom tidy ── hazard-ratio forest
 #
 # Run from workspace root:
 #   Rscript -e 'options(shiny.port=3838L, shiny.host="127.0.0.1");
@@ -20,7 +31,7 @@ pkgload::load_all("blockr.stats", quiet = TRUE)
 
 # model formula authored via the formula-input widget; built here from text
 mdl_formula <- parse_formula(
-  "body_mass_g ~ flipper_length_mm + bill_length_mm"
+  "body_mass_g ~ flipper_length_mm + bill_length_mm + species"
 )
 
 board <- new_dock_board(
@@ -30,57 +41,91 @@ board <- new_dock_board(
                              package = "palmerpenguins"),
     lung = new_dataset_block(dataset = "lung", package = "survival"),
 
-    # Describe
-    desc  = new_descriptives_block(),
-    freq  = new_frequencies_block(vars = "species", by = "sex"),
-
-    # Associate
+    # Explore: correlation matrix, shown two ways — the heatmap and a
+    # shaded table (diverging fill centred on 0, domain -1..1)
     cormat = new_correlate_block(),
+    # The styled cell-visual table lives in the control pane; hide the
+    # default DT preview pane ("outputs") so only the shaded heatmap shows.
+    cortab = `attr<-`(
+               new_table_block(
+                 rowname = "var",
+                 cell_color = drilldown_table_color("diverging",
+                                                    domain = c(-1, 1)),
+                 block_name = "Correlation matrix"),
+               "visible", "inputs"),
 
-    # Compare / Nonparametric (adaptive test block)
-    test = new_stat_test_block(type = "anova_oneway"),
+    # Model: the ONE model block — its preview IS the model card
+    # (coefficient forest + adj-R2 chip + lm/glm toggle + formula widget)
+    mdl = new_model_block(model_type = "lm", formula = mdl_formula,
+            block_name = "Linear model"),
 
-    # Regress: model -> broom tidy -> coef plot; broom augment -> resid
-    mdl   = new_model_block(model_type = "lm", formula = mdl_formula),
-    coefs = new_broom_block(output = "tidy"),
-    coefp = new_chart_block(
-              chart_type = "scatter", x = "term", y = "estimate",
-              series = "term", lo = "conf.low", hi = "conf.high",
-              block_name = "Coefficient plot"),
+    # Marginal: response vs a predictor, by group, with an lm smoother
+    marg = new_chart_block(
+             chart_type = "scatter", x = "flipper_length_mm",
+             y = "body_mass_g", color = "species", series = "species",
+             smoother = "lm", block_name = "Marginal: mass vs flipper"),
+
+    # Diagnose: augment (+qq) -> residual diagnostics
     aug   = new_broom_block(output = "augment", qq = TRUE),
     resid = new_chart_block(
               chart_type = "scatter", x = ".fitted", y = ".resid",
               smoother = "loess", block_name = "Residuals vs fitted"),
+    qq    = new_chart_block(
+              chart_type = "scatter", x = ".qq_theoretical",
+              y = ".qq_sample", block_name = "Normal Q-Q"),
 
-    # Effect size
-    es    = new_effect_size_block(measure = "partial_eta2"),
-
-    # Advanced: survival KM -> broom tidy -> step curve
+    # Survival: KM card -> broom tidy -> step curve
     surv  = new_survival_block(type = "km", time_var = "time",
-              event_var = "status", group_var = "sex"),
+              event_var = "status", group_var = "sex",
+              block_name = "Kaplan-Meier fit"),
     kmt   = new_broom_block(output = "tidy"),
     kmp   = new_chart_block(
               chart_type = "line", x = "time", y = "estimate",
               color = "strata", series = "strata", step = "end",
-              block_name = "Kaplan-Meier")
+              block_name = "Kaplan-Meier"),
+
+    # Hazards: Cox card -> broom tidy -> HR forest (mirrors the lm forest).
+    # Seeded with one covariate; add age / ph.ecog live in the card and
+    # the forest grows.
+    cox   = new_survival_block(type = "cox", time_var = "time",
+              event_var = "status", group_var = "sex",
+              block_name = "Cox PH"),
+    coxt  = new_broom_block(output = "tidy"),
+    coxp  = new_chart_block(
+              chart_type = "scatter", x = "term", y = "estimate",
+              series = "term", lo = "conf.low", hi = "conf.high",
+              block_name = "Hazard ratios")
   ),
   links = links(
-    from = c("peng", "peng", "peng", "peng", "peng",
-             "mdl", "coefs", "mdl", "aug", "mdl",
-             "lung", "surv", "kmt"),
-    to   = c("desc", "freq", "cormat", "test", "mdl",
-             "coefs", "coefp", "aug", "resid", "es",
-             "surv", "kmt", "kmp")
+    from = c(
+      # penguins fan-out
+      "peng", "peng", "peng",
+      # correlation heatmap -> shaded table
+      "cormat",
+      # regression chain
+      "mdl", "aug", "aug",
+      # survival: KM + Cox off the lung data
+      "lung", "surv", "kmt",
+      "lung", "cox", "coxt"
+    ),
+    to   = c(
+      "cormat", "mdl", "marg",
+      "cortab",
+      "aug", "resid", "qq",
+      "surv", "kmt", "kmp",
+      "cox", "coxt", "coxp"
+    )
   ),
   extensions = list(blockr.react::new_react_extension()),
   layouts = list(
-    Setup     = dock_layout("peng", "lung", "react_extension", active = TRUE),
-    Describe  = dock_layout("desc", "freq"),
-    Associate = dock_layout("cormat"),
-    Compare   = dock_layout("test"),
-    Regress   = dock_layout("coefp", "resid", "es"),
-    Survival  = dock_layout("kmp")
-  )
+    Setup    = dock_layout("peng", "lung", "react_extension"),
+    Explore  = dock_layout("cormat", "cortab"),
+    Model    = dock_layout("mdl", "marg"),
+    Diagnose = dock_layout("resid", "qq"),
+    Survival = dock_layout("surv", "kmp"),
+    Hazards  = dock_layout("cox", "coxp")
+  ),
+  active = "Model"
 )
 
 serve(board)
