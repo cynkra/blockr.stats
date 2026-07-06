@@ -19,7 +19,7 @@
 # Run with:
 #   source(system.file("examples/stats-101.R", package = "blockr.stats"))
 
-options(blockr.dock_is_locked = FALSE)
+options(blockr.dock_is_locked = FALSE, blockr.html_table_preview = TRUE)
 
 # ---- Package loading (dual: installed vs local source) ---------------------
 # `dev_local = FALSE` (the default, and what ships) attaches the INSTALLED
@@ -34,6 +34,7 @@ blockr_pkgs <- c(
   "blockr.dag",
   "blockr.dock",
   "blockr.viz",
+  "blockr.extra",     # html table-preview glue (blockr.html_table_preview option)
   "blockr.stats"      # model / broom / survival / correlate blocks (this example)
 )
 
