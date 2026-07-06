@@ -66,16 +66,8 @@ new_correlate_block <- function(vars = character(), method = "pearson", ...) {
           if (!r_initialized() && length(colnames(data())) > 0) {
             d <- data()
             num_cols <- colnames(d)[vapply(d, is.numeric, logical(1))]
-            # Empty default = correlate everything: seed the picker with all
-            # numeric columns so the UI reflects what the block computes.
-            sel <- if (length(r_vars())) {
-              intersect(r_vars(), num_cols)
-            } else {
-              num_cols
-            }
-            r_vars(sel)
             updateSelectizeInput(session, "vars",
-              choices = num_cols, selected = sel)
+              choices = num_cols, selected = r_vars())
             r_initialized(TRUE)
           }
         })
