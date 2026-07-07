@@ -31,6 +31,7 @@ if (!exists("dev_local")) dev_local <- FALSE
 blockr_pkgs <- c(
   "blockr.ui",
   "blockr.core",
+  "blockr.session",   # project save / load / versions
   "blockr.dag",
   "blockr.dock",
   "blockr.viz",
@@ -42,6 +43,21 @@ for (pkg in blockr_pkgs) {
   if (dev_local) pkgload::load_all(pkg, quiet = TRUE)
   else library(pkg, character.only = TRUE)
 }
+
+# ---- Curate the block browser ----------------------------------------------
+# Keep ONLY `dataset` and `glue` from blockr.core; drop its low-level / noise
+# blocks (subset, merge, rbind, head, scatter, csv, filebrowser, upload) via
+# unregister_blocks(), selecting by the registry `package` attribute so only
+# core blocks are affected.
+core_keep <- c("dataset_block", "glue_block")
+core_drop <- setdiff(
+  names(Filter(
+    function(entry) identical(attr(entry, "package"), "blockr.core"),
+    available_blocks()
+  )),
+  core_keep
+)
+unregister_blocks(core_drop)
 
 library(palmerpenguins)   # penguins dataset for the regression side
 
@@ -144,4 +160,7 @@ board <- new_dock_board(
   active = "Model"
 )
 
-serve(board)
+serve(
+  board,
+  plugins = custom_plugins(manage_project())
+)
