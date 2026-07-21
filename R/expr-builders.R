@@ -174,32 +174,13 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
       } else {
         blockr.core::bbquote(broom::tidy(.(data)), list())
       }
-      blockr.core::bbquote({
-        out <- as.data.frame(
-          tryCatch(.(tc), error = function(e) broom::tidy(.(data)))
-        )
-        labs <- c(
-          term = "Term", estimate = "Estimate", std.error = "Std. error",
-          statistic = "Statistic", p.value = "p-value",
-          conf.low = "Lower CI", conf.high = "Upper CI",
-          time = "Time", n.risk = "At risk", n.event = "Events",
-          n.censor = "Censored", strata = "Group", group = "Group"
-        )
-        if (inherits(.(data), "survfit")) {
-          labs["estimate"] <- "Survival probability"
-          labs["time"] <- "Time (days)"
-        } else if (inherits(.(data), "cuminc")) {
-          labs["estimate"] <- "Cumulative incidence"
-          labs["time"] <- "Time (days)"
-        } else if (inherits(.(data), "coxph")) {
-          labs["estimate"] <- "log(Hazard ratio)"
-          labs["term"] <- "Comparison"
-        }
-        for (nm in intersect(names(out), names(labs))) {
-          attr(out[[nm]], "label") <- unname(labs[nm])
-        }
-        out
-      }, list(tc = tidy_call))
+      # Just the tidy call. broom::tidy methods take conf.int through
+      # `...` and ignore it where it does not apply (checked: survfit,
+      # coxph), so no fallback is needed -- if a model genuinely cannot be
+      # tidied, let it error. (Earlier this branch also stamped pretty
+      # column labels as attributes; nothing read them but the app header,
+      # they never reached the rendered report, and they buried the code.)
+      blockr.core::bbquote(as.data.frame(.(tc)), list(tc = tidy_call))
     }
   )
 }
