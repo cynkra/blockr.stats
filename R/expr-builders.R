@@ -139,32 +139,44 @@ formula_ast_to_text <- function(state) {
 #' @noRd
 build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
                              qq = FALSE) {
+  # The block's input must reach the exported code as the `.(data)`
+  # placeholder that blockr.core substitutes with the upstream block's
+  # name (this is a bquoted block). A bare `data` is bound at runtime by
+  # the block server but is UNBOUND in the reproducible code the outline /
+  # generate_code emit -- broom::glance(data) then resolves `data` to the
+  # base function and errors. blockr.core::bbquote leaves `.(data)` intact
+  # (it only substitutes vars named in the explicit `where` list), the way
+  # the model block does.
   switch(
     output,
-    glance = bquote(as.data.frame(broom::glance(data))),
+    glance = blockr.core::bbquote(
+      as.data.frame(broom::glance(.(data))), list()
+    ),
     augment = if (isTRUE(qq)) {
-      bquote({
-        out <- as.data.frame(broom::augment(data))
+      blockr.core::bbquote({
+        out <- as.data.frame(broom::augment(.(data)))
         if (".std.resid" %in% names(out)) {
           qn <- stats::qqnorm(out$.std.resid, plot.it = FALSE)
           out$.qq_theoretical <- qn$x
           out$.qq_sample <- qn$y
         }
         out
-      })
+      }, list())
     } else {
-      bquote(as.data.frame(broom::augment(data)))
+      blockr.core::bbquote(as.data.frame(broom::augment(.(data))), list())
     },
     {
       tidy_call <- if (isTRUE(conf_int)) {
-        bquote(broom::tidy(data, conf.int = TRUE, conf.level = .(cl)),
-               list(cl = conf_level))
+        blockr.core::bbquote(
+          broom::tidy(.(data), conf.int = TRUE, conf.level = .(cl)),
+          list(cl = conf_level)
+        )
       } else {
-        quote(broom::tidy(data))
+        blockr.core::bbquote(broom::tidy(.(data)), list())
       }
-      bquote({
+      blockr.core::bbquote({
         out <- as.data.frame(
-          tryCatch(.(tc), error = function(e) broom::tidy(data))
+          tryCatch(.(tc), error = function(e) broom::tidy(.(data)))
         )
         labs <- c(
           term = "Term", estimate = "Estimate", std.error = "Std. error",
@@ -173,13 +185,13 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
           time = "Time", n.risk = "At risk", n.event = "Events",
           n.censor = "Censored", strata = "Group", group = "Group"
         )
-        if (inherits(data, "survfit")) {
+        if (inherits(.(data), "survfit")) {
           labs["estimate"] <- "Survival probability"
           labs["time"] <- "Time (days)"
-        } else if (inherits(data, "cuminc")) {
+        } else if (inherits(.(data), "cuminc")) {
           labs["estimate"] <- "Cumulative incidence"
           labs["time"] <- "Time (days)"
-        } else if (inherits(data, "coxph")) {
+        } else if (inherits(.(data), "coxph")) {
           labs["estimate"] <- "log(Hazard ratio)"
           labs["term"] <- "Comparison"
         }
