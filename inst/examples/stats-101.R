@@ -158,7 +158,9 @@ board <- new_dock_board(
   ),
   extensions = list(blockr.dag::new_dag_extension()),
   grids = list(
-    Setup    = dock_grid("peng", "lung", "dag_extension"),
+    # ext(), not "dag_extension": extension ids are container-owned, so the
+    # class-derived name resolves to nothing and the panel silently vanishes.
+    Setup    = dock_grid("peng", "lung", ext("dag")),
     Explore  = dock_grid("cormat", "cortab"),
     Model    = dock_grid("mdl", "marg"),
     Diagnose = dock_grid("resid", "qq"),
