@@ -166,10 +166,11 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
       blockr.core::bbquote(as.data.frame(broom::augment(.(data))), list())
     },
     {
+      cl <- conf_level
       tidy_call <- if (isTRUE(conf_int)) {
         blockr.core::bbquote(
           broom::tidy(.(data), conf.int = TRUE, conf.level = .(cl)),
-          list(cl = conf_level)
+          list(cl = cl)
         )
       } else {
         blockr.core::bbquote(broom::tidy(.(data)), list())
@@ -180,7 +181,8 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
       # tidied, let it error. (Earlier this branch also stamped pretty
       # column labels as attributes; nothing read them but the app header,
       # they never reached the rendered report, and they buried the code.)
-      blockr.core::bbquote(as.data.frame(.(tc)), list(tc = tidy_call))
+      tc <- tidy_call
+      blockr.core::bbquote(as.data.frame(.(tc)), list(tc = tc))
     }
   )
 }
