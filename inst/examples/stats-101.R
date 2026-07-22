@@ -19,7 +19,15 @@
 # Run with:
 #   source(system.file("examples/stats-101.R", package = "blockr.stats"))
 
-options(blockr.dock_is_locked = FALSE, blockr.tabular_display = blockr.ui::html_table_display)
+options(
+  blockr.dock_is_locked = FALSE,
+  blockr.tabular_display = blockr.ui::html_table_display,
+  # Build a block only once it is required, instead of staggering every
+  # off-screen block into existence in the background. This board spreads ~16
+  # blocks over two views, so the default pass spends startup constructing
+  # blocks nobody is looking at.
+  blockr.background_construction_delay = Inf
+)
 
 # ---- Package loading (dual: installed vs local source) ---------------------
 # `dev_local = FALSE` (the default, and what ships) attaches the INSTALLED
