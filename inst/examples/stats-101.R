@@ -149,13 +149,13 @@ board <- new_dock_board(
     )
   ),
   extensions = list(blockr.dag::new_dag_extension()),
-  layouts = list(
-    Setup    = dock_layout("peng", "lung", "dag_extension"),
-    Explore  = dock_layout("cormat", "cortab"),
-    Model    = dock_layout("mdl", "marg"),
-    Diagnose = dock_layout("resid", "qq"),
-    Survival = dock_layout("surv", "kmp"),
-    Hazards  = dock_layout("cox", "coxp")
+  grids = list(
+    Setup    = dock_grid("peng", "lung", "dag_extension"),
+    Explore  = dock_grid("cormat", "cortab"),
+    Model    = dock_grid("mdl", "marg"),
+    Diagnose = dock_grid("resid", "qq"),
+    Survival = dock_grid("surv", "kmp"),
+    Hazards  = dock_grid("cox", "coxp")
   ),
   active = "Model"
 )
