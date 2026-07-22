@@ -1,4 +1,4 @@
-#' @importFrom blockr.core register_blocks new_block_args new_block_arg
+#' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
 #'   arg_string arg_enum
 register_stats_blocks <- function() {
   blockr.core::register_blocks(
@@ -70,8 +70,8 @@ register_stats_blocks <- function() {
     ),
     arguments = list(
       # new_model_block: flat, fully AI-accessible surface.
-      new_block_args(
-        model_type = new_block_arg(
+      new_arg_specs(
+        model_type = new_arg_spec(
           paste(
             "Model family: one of 'lm' (linear, continuous outcome),",
             "'logistic' (binary 0/1 outcome), 'poisson' (counts),",
@@ -80,7 +80,7 @@ register_stats_blocks <- function() {
           example = "lm",
           type = arg_enum(c("lm", "logistic", "poisson", "gamma"))
         ),
-        formula = new_block_arg(
+        formula = new_arg_spec(
           paste(
             "Model formula as a string, e.g. 'mpg ~ hp + wt'. Response on the",
             "left of ~, predictors on the right: '+' adds terms, '*' is a full",
@@ -91,14 +91,14 @@ register_stats_blocks <- function() {
         ),
         # weights / offset are optional column names whose value varies in type
         # (column name string or NULL); left untyped, with no worked example.
-        weights = new_block_arg(
+        weights = new_arg_spec(
           paste(
             "Optional: a column name to use as case weights. Omit unless the",
             "task explicitly calls for weighting."
           ),
           example = NULL
         ),
-        offset = new_block_arg(
+        offset = new_arg_spec(
           paste(
             "Optional: a column name to use as a model offset (e.g. log",
             "exposure for a Poisson rate). Omit unless explicitly needed."
