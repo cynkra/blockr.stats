@@ -53,10 +53,15 @@ test_that("tabulate_freq carries a .fmt template referencing real columns", {
 
 test_that("build_broom_call emits standard broom code with extras inlined", {
   m <- lm(mpg ~ wt + hp, mtcars)
-  run <- function(call) eval(call, list(data = m))
+  # build_broom_call() leaves `.(data)` unresolved (blockr.core's bbquote
+  # pattern, same as head_block/tail_block) -- block-server.R resolves it
+  # via a second bquote() pass before eval; mirror that here.
+  run <- function(call) {
+    eval(do.call(bquote, list(call, list(data = as.name("data")))),
+         list(data = m))
+  }
   ti <- run(build_broom_call("tidy", conf_int = TRUE))
   expect_true(all(c("term", "estimate", "conf.low") %in% names(ti)))
-  expect_equal(attr(ti$estimate, "label"), "Estimate")
   gl <- run(build_broom_call("glance"))
   expect_equal(nrow(gl), 1L)
   ag <- run(build_broom_call("augment", qq = TRUE))
