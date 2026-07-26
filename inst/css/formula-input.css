@@ -291,33 +291,42 @@
   margin: 0;
 }
 
-.formula-advanced .formula-row__label {
-  font-weight: 500;
-  opacity: 0.85;
-}
-
-/* the Formula label uses .blockr-label; tighten its gap like the surv header */
-.formula-advanced {
-  margin-bottom: 0;
-}
-
-.formula-advanced .blockr-label {
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
 .formula-text-row {
   margin-top: 0;
 }
 
-/* Build-menu trigger ("+ interaction / transform"), styled like the filter
-   block's "+ Add condition" link. */
+/* Footer row below the input: the build-menu trigger ("+ interaction /
+   transform", styled like the filter block's "+ Add condition" link) on the
+   left and the </> mode toggle hard right. Geometry is entirely
+   .blockr-add-row's (space-between, min-height 30px) so this row matches
+   summarize's exactly — do not add justify-content or gap here. */
 .formula-add-row {
   margin-top: -2px;
 }
 
 .formula-add-link {
   font-size: 0.8rem;
+}
+
+/* The toggle is blockr.dplyr's .blockr-add-link-expr (22x22, bordered, grey at
+   rest, blue on hover), reused as-is. Two deltas, both forced by this being a
+   <button> rather than summarize's <span> — kept a button so it is
+   keyboard-operable:
+   1. the UA's default button padding (1px 6px) squeezes the 14x14 icon to
+      8x14, so it has to be zeroed;
+   2. dplyr has no pressed state, since there the button adds a row rather
+      than switching a view. */
+.formula-code-btn {
+  padding: 0;
+}
+
+/* Pressed = the formula text is showing. Same blue at 8% fill as
+   .blockr-gear-active, so "this control is on" reads the same package-wide. */
+.formula-code-btn--on,
+.formula-code-btn--on:hover {
+  color: var(--blockr-color-primary, #2563eb);
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 /* Floating build menu (interactions / transforms / splines). Rounded,

@@ -1,0 +1,1103 @@
+<title>Model block: what comes out, what goes in</title>
+
+<style>
+/* ============================================================
+   DOCUMENT SHELL
+   Type: monospace display (the subject is console output) +
+   system sans body. Neutral carries a faint plum bias so it
+   reads as chosen, not inherited. The only saturated colour in
+   the document chrome is the recommendation marker — every
+   other hue on the page belongs to the block mockups.
+   ============================================================ */
+:root {
+  --paper:   #F1EFF2;
+  --surface: #FFFFFF;
+  --ink:     #191721;
+  --muted:   #6B6675;
+  --rule:    #DCD8E0;
+  --accent:  #8E2A57;
+  --bezel:   #E2DEE6;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --gap: 1.5rem;
+  --measure: 68ch;
+  --wide: 1080px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:   #141119;
+    --surface: #1D1A24;
+    --ink:     #EDE9F2;
+    --muted:   #9992A3;
+    --rule:    #322D3C;
+    --accent:  #EC87AF;
+    --bezel:   #262130;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:   #141119;
+  --surface: #1D1A24;
+  --ink:     #EDE9F2;
+  --muted:   #9992A3;
+  --rule:    #322D3C;
+  --accent:  #EC87AF;
+  --bezel:   #262130;
+}
+:root[data-theme="light"] {
+  --paper:   #F1EFF2;
+  --surface: #FFFFFF;
+  --ink:     #191721;
+  --muted:   #6B6675;
+  --rule:    #DCD8E0;
+  --accent:  #8E2A57;
+  --bezel:   #E2DEE6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(1rem, 4vw, 2.5rem) 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3.25rem;
+}
+
+.prose { max-width: var(--measure); display: flex; flex-direction: column; gap: 0.9rem; }
+.prose p { margin: 0; }
+
+/* --- type ------------------------------------------------- */
+h1, h2, h3 { font-family: var(--mono); font-weight: 500; margin: 0; text-wrap: balance; }
+h1 {
+  font-size: clamp(1.75rem, 4.2vw, 2.5rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 { font-size: clamp(1.25rem, 2.4vw, 1.5rem); letter-spacing: -0.015em; line-height: 1.25; }
+h3 { font-size: 1.02rem; letter-spacing: -0.005em; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.lede { font-size: 1.075rem; color: var(--muted); }
+
+code, kbd {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+}
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- masthead --------------------------------------------- */
+.masthead { display: flex; flex-direction: column; gap: 1rem; }
+.masthead .rule { height: 1px; background: var(--rule); }
+.meta {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem;
+  font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+
+/* --- section ---------------------------------------------- */
+.section { display: flex; flex-direction: column; gap: 1.5rem; }
+.section-head { display: flex; flex-direction: column; gap: 0.55rem; max-width: var(--measure); }
+
+/* --- variant card ----------------------------------------- */
+.variants { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.variant {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.variant--pick { border-color: color-mix(in srgb, var(--accent) 45%, var(--rule)); }
+.variant--pick .variant-head { box-shadow: inset 3px 0 0 var(--accent); }
+
+.variant-head {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.3rem 0.75rem;
+  padding: 0.95rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+.variant-id {
+  font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em;
+  color: var(--muted); text-transform: uppercase;
+}
+.variant-name { font-family: var(--mono); font-size: 0.98rem; font-weight: 500; }
+.tag {
+  font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.14em;
+  text-transform: uppercase; padding: 0.16rem 0.44rem; border-radius: 3px;
+  border: 1px solid currentColor; margin-left: auto;
+}
+.tag--pick { color: var(--accent); }
+.tag--now  { color: var(--muted); }
+
+.variant-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.variant-note { margin: 0; max-width: var(--measure); font-size: 0.95rem; }
+
+/* trade-offs: two columns, mono keys */
+.tradeoffs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.5rem 2rem; font-size: 0.9rem;
+  border-top: 1px dashed var(--rule); padding-top: 0.9rem;
+}
+.tradeoff { display: flex; gap: 0.6rem; align-items: baseline; }
+.tradeoff-k {
+  font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em;
+  text-transform: uppercase; flex: 0 0 3.4rem; color: var(--muted);
+}
+.tradeoff--plus .tradeoff-k { color: #2F7D5D; }
+.tradeoff--minus .tradeoff-k { color: #A65422; }
+@media (prefers-color-scheme: dark) {
+  .tradeoff--plus .tradeoff-k { color: #6FC79C; }
+  .tradeoff--minus .tradeoff-k { color: #DE9A63; }
+}
+:root[data-theme="dark"] .tradeoff--plus .tradeoff-k { color: #6FC79C; }
+:root[data-theme="dark"] .tradeoff--minus .tradeoff-k { color: #DE9A63; }
+:root[data-theme="light"] .tradeoff--plus .tradeoff-k { color: #2F7D5D; }
+:root[data-theme="light"] .tradeoff--minus .tradeoff-k { color: #A65422; }
+
+/* --- bezel: frames the mockups as rendered UI, not page content --- */
+.bezel {
+  background: var(--bezel);
+  border-radius: 8px;
+  padding: 18px;
+  overflow-x: auto;
+}
+.bezel--pair {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px; align-items: start;
+}
+.hint {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+  color: var(--muted); margin: 0.55rem 0 0; text-transform: uppercase;
+}
+
+/* --- chain diagram ---------------------------------------- */
+.chain {
+  display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 0.82rem;
+}
+.chain-node {
+  border: 1px solid var(--rule); border-radius: 6px;
+  padding: 0.4rem 0.7rem; background: var(--surface);
+}
+.chain-node--new { border-color: color-mix(in srgb, var(--accent) 50%, var(--rule)); color: var(--accent); }
+.chain-arrow { color: var(--muted); }
+.chain-wire { font-size: 0.7rem; color: var(--muted); }
+
+/* --- closing list ----------------------------------------- */
+ol.steps { margin: 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: 0.55rem; max-width: var(--measure); }
+ol.steps li::marker { font-family: var(--mono); color: var(--muted); font-size: 0.85em; }
+ul.plain { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: 0.5rem; max-width: var(--measure); }
+
+/* ============================================================
+   BLOCK MOCKUPS  (.bk-*)  — approximates real blockr chrome so
+   the comparison is honest. Deliberately kept on a light ground
+   inside the bezel: this is a picture of the app, not page UI.
+   ============================================================ */
+.bk {
+  --bk-border: #E5E7EB;
+  --bk-ink: #111827;
+  --bk-muted: #6B7280;
+  --bk-soft: #F8F9FA;
+  --bk-blue: #2563EB;
+  --bk-red: #DC3545;
+  --bk-grey: #9CA3AF;
+  background: #FFFFFF;
+  border: 1px solid var(--bk-border);
+  border-radius: 10px;
+  color: var(--bk-ink);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.45;
+  min-width: 290px;
+  overflow: hidden;
+}
+
+.bk-head { display: flex; align-items: center; gap: 11px; padding: 13px 15px; }
+.bk-icon {
+  width: 34px; height: 34px; border-radius: 8px; flex: 0 0 34px;
+  background: #D8EBE0; color: #2F6B4C;
+  display: grid; place-items: center;
+}
+.bk-icon svg { width: 18px; height: 18px; }
+.bk-titles { display: flex; flex-direction: column; line-height: 1.2; }
+.bk-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; }
+.bk-sub { font-size: 12px; color: var(--bk-muted); }
+.bk-acts { margin-left: auto; display: flex; gap: 10px; color: var(--bk-blue); }
+.bk-acts svg { width: 15px; height: 15px; }
+
+.bk-body { border-top: 1px solid var(--bk-border); padding: 14px 15px; display: flex; flex-direction: column; gap: 11px; }
+
+.bk-label { font-size: 12px; color: #374151; }
+
+/* segmented model-type control */
+.bk-seg { display: flex; }
+.bk-seg button {
+  font: inherit; font-size: 12.5px; background: #fff; color: var(--bk-ink);
+  border: 1px solid var(--bk-border); border-right-width: 0;
+  padding: 6px 11px; cursor: default;
+}
+.bk-seg button:first-child { border-radius: 6px 0 0 6px; }
+.bk-seg button:last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
+.bk-seg button[aria-pressed="true"] { background: #EFF4FE; color: var(--bk-blue); border-color: #C3D6FA; }
+
+/* formula pill */
+.bk-pill {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--bk-border); border-radius: 8px;
+  background: var(--bk-soft); padding: 7px 9px; min-height: 42px;
+}
+.bk-lhs {
+  display: flex; align-items: center; gap: 7px;
+  padding-right: 9px; border-right: 1px solid var(--bk-border);
+  min-width: 132px; font-family: var(--mono); font-size: 12.5px;
+}
+.bk-lhs svg { width: 11px; height: 11px; color: var(--bk-muted); margin-left: auto; }
+.bk-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.bk-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #EDEFF2; border-radius: 5px; padding: 3px 7px;
+  font-family: var(--mono); font-size: 12px; white-space: nowrap;
+}
+.bk-chip--ghost { background: #fff; border: 1px solid var(--bk-border); color: var(--bk-muted); }
+.bk-chip .x { color: var(--bk-muted); font-size: 12px; }
+.bk-op { font-family: var(--mono); font-size: 13px; color: var(--bk-muted); padding: 0 1px; }
+
+.bk-addlink { font-size: 12.5px; color: var(--bk-muted); }
+
+/* formula text field */
+.bk-field {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--bk-border); border-radius: 8px;
+  background: var(--bk-soft); padding: 9px 11px;
+  font-family: var(--mono); font-size: 13px; min-height: 42px;
+}
+.bk-field .ok { margin-left: auto; color: #9CA3AF; }
+.bk-field--edit { background: #fff; border-color: #C3D6FA; box-shadow: 0 0 0 2px #EFF4FE; }
+
+/* the code badge — the affordance under discussion */
+.bk-code {
+  font: inherit; font-family: var(--mono); font-size: 11px; line-height: 1;
+  border: 1px solid var(--bk-border); background: #fff; color: var(--bk-muted);
+  border-radius: 5px; padding: 4px 6px; cursor: pointer; flex: 0 0 auto;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.bk-code:hover { color: var(--bk-blue); border-color: #C3D6FA; }
+.bk-code[aria-expanded="true"] { background: #EFF4FE; color: var(--bk-blue); border-color: #C3D6FA; }
+
+.bk-reveal { display: none; flex-direction: column; gap: 4px; }
+.bk-reveal.is-open { display: flex; }
+
+/* preview area */
+.bk-preview { border-top: 1px solid var(--bk-border); padding: 14px 15px; }
+.bk-switch { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+.bk-switch button {
+  font: inherit; font-size: 12px; background: #fff; color: var(--bk-ink);
+  border: 1px solid var(--bk-border); padding: 4px 12px; cursor: pointer;
+}
+.bk-switch button:first-child { border-radius: 6px 0 0 6px; }
+.bk-switch button:last-child { border-radius: 0 6px 6px 0; border-left-width: 0; }
+.bk-switch button[aria-pressed="true"] { background: #EFF4FE; color: var(--bk-blue); border-color: #C3D6FA; }
+
+.bk-pane { display: none; }
+.bk-pane.is-on { display: block; }
+
+/* visual pane: headline + fit chip + forest */
+.bk-hl { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+.bk-hl-kind { font-size: 13px; }
+.bk-chip-fit { text-align: right; min-width: 118px; }
+.bk-chip-row { display: flex; justify-content: flex-end; gap: 7px; align-items: baseline; }
+.bk-chip-k { font-size: 11px; color: var(--bk-muted); }
+.bk-chip-v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.bk-chip-bar { height: 3px; background: #E5E7EB; border-radius: 2px; margin-top: 4px; }
+.bk-chip-fill { height: 100%; background: var(--bk-blue); border-radius: 2px; }
+
+.bk-forest { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.bk-forest td { padding: 5px 0; vertical-align: middle; }
+.bk-fterm { font-family: var(--mono); font-size: 12px; white-space: nowrap; padding-right: 12px !important; }
+.bk-fbar { width: 100%; }
+.bk-track { position: relative; height: 12px; }
+.bk-ref { position: absolute; top: 0; bottom: 0; width: 1px; background: #D1D5DB; }
+.bk-whisk { position: absolute; top: 5px; height: 2px; border-radius: 1px; }
+.bk-dot { position: absolute; top: 2px; width: 8px; height: 8px; border-radius: 50%; margin-left: -4px; }
+.bk-fval { text-align: right; font-variant-numeric: tabular-nums; padding-left: 12px !important; white-space: nowrap; }
+
+/* R pane */
+.bk-rtext {
+  margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.5;
+  white-space: pre; overflow-x: auto; color: #1F2937;
+}
+.bk-rtext--boxed {
+  background: var(--bk-soft); border: 1px solid var(--bk-border);
+  border-radius: 8px; padding: 11px 12px;
+}
+
+/* object header strip */
+.bk-objbar {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--bk-border);
+}
+.bk-objtype {
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600;
+  background: #EFF4FE; color: var(--bk-blue); border: 1px solid #C3D6FA;
+  border-radius: 4px; padding: 2px 7px;
+}
+.bk-objfacts { font-size: 12px; color: var(--bk-muted); font-variant-numeric: tabular-nums; }
+.bk-objfit { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.bk-objfit b { font-weight: 650; }
+
+/* stub card (O4) */
+.bk-stub { display: flex; align-items: center; gap: 13px; padding: 4px 0; }
+.bk-stub-glyph {
+  width: 40px; height: 40px; border-radius: 8px; flex: 0 0 40px;
+  background: #EFF4FE; color: var(--bk-blue);
+  display: grid; place-items: center; font-family: var(--mono); font-size: 12px; font-weight: 600;
+}
+.bk-stub-lines { display: flex; flex-direction: column; }
+.bk-stub-1 { font-family: var(--mono); font-size: 12.5px; }
+.bk-stub-2 { font-size: 12px; color: var(--bk-muted); }
+
+/* downstream renderer card */
+.bk--viz .bk-icon { background: #E4E2F5; color: #4C46A8; }
+
+/* footer row under the inputs — where dplyr puts the </> button
+   (.blockr-add-link-expr: 22x22, bordered, grey at rest) */
+.bk-footer { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.bk-codebtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex: 0 0 22px; padding: 0;
+  color: #9CA3AF; background: transparent;
+  border: 1px solid var(--bk-border); border-radius: 4px; cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.bk-codebtn svg { width: 14px; height: 14px; }
+.bk-codebtn:hover {
+  color: var(--bk-blue); border-color: rgba(37,99,235,.3); background: rgba(37,99,235,.04);
+}
+.bk-codebtn[aria-pressed="true"] {
+  color: var(--bk-blue); border-color: rgba(37,99,235,.3); background: rgba(37,99,235,.08);
+}
+
+/* two-state display + specimen strip */
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start; }
+.state-cap {
+  font-family: var(--mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+  margin: 0 0 .55rem; display: flex; align-items: center; gap: .5rem;
+}
+.state-cap b { color: var(--ink); font-weight: 500; }
+.specimen {
+  display: flex; flex-wrap: wrap; gap: 1.75rem; align-items: flex-start;
+  background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px 18px;
+}
+.specimen-item { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.specimen-lab {
+  font-family: var(--mono); font-size: .64rem; letter-spacing: .1em;
+  text-transform: uppercase; color: #6B7280;
+}
+.specimen-note { font-family: var(--mono); font-size: .72rem; color: #6B7280; max-width: 30ch; line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <!-- ══════════════════ MASTHEAD ══════════════════ -->
+  <header class="masthead">
+    <div class="eyebrow">blockr.stats &middot; design brainstorm</div>
+    <h1>What comes out of a model block, and what goes into it</h1>
+    <div class="rule"></div>
+    <div class="meta">
+      <span>2026-07-26</span>
+      <span>new_model_block()</span>
+      <span>output: 4 variants &middot; formula: settled</span>
+      <span>mockups are live &mdash; click them</span>
+    </div>
+  </header>
+
+  <div class="prose">
+    <p class="lede">Two separate complaints, one shared cause: the block is trying to
+    <em>answer the analysis</em> when its job is to <em>hand over an object</em>.</p>
+    <p>The preview shows a coefficient forest plot, so the block reads as "here is your
+    regression". The formula row shows the builder and the text at once, so the same
+    fact is stated twice. Both are cases of the block doing more than its share.
+    Below: four ways to trim the output, four ways to trim the input.</p>
+  </div>
+
+  <!-- ══════════════════ PART 1 — OUTPUT ══════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">Question one &middot; output preview</div>
+      <h2>The preview should say what's on the wire</h2>
+      <p>The forest plot is not ugly &mdash; it's arguably the prettiest thing in the package.
+      But it answers <em>"what does this model say?"</em>, and the socket underneath answers
+      <em>"what object comes out?"</em>. Those are different questions, and only the second one is
+      the block's. Someone who came here to run an <code>lm()</code> is looking for the thing
+      they'd see in the console; someone who wants the picture should be able to plug a
+      renderer onto the output and get a better picture than a preview can give.</p>
+    </div>
+
+    <div class="variants">
+
+      <!-- O1 -->
+      <article class="variant">
+        <div class="variant-head">
+          <span class="variant-id">O1</span>
+          <span class="variant-name">Visual first, R behind a toggle</span>
+          <span class="tag tag--now">Today</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">What ships now. The forest plot is the default face of the
+          block; <code>summary()</code> is one click away but nobody clicks it, because the
+          default already looks finished.</p>
+          <div class="bezel">
+            <div class="bk" style="max-width:560px">
+              <div class="bk-preview" style="border-top:0">
+                <div class="bk-switch" data-group="o1">
+                  <button type="button" data-pane="v" aria-pressed="true">Visual</button>
+                  <button type="button" data-pane="r" aria-pressed="false">R</button>
+                </div>
+                <div class="bk-pane is-on" data-pane="v">
+                  <div class="bk-hl">
+                    <div class="bk-hl-kind">Linear model &middot; 342 obs</div>
+                    <div class="bk-chip-fit">
+                      <div class="bk-chip-row"><span class="bk-chip-k">adj. R&sup2;</span><span class="bk-chip-v">0.78</span></div>
+                      <div class="bk-chip-bar"><div class="bk-chip-fill" style="width:78%"></div></div>
+                    </div>
+                  </div>
+                  <table class="bk-forest"><tbody>
+                    <tr>
+                      <td class="bk-fterm">flipper_length_mm</td>
+                      <td class="bk-fbar"><div class="bk-track">
+                        <div class="bk-ref" style="left:44%"></div>
+                        <div class="bk-whisk" style="left:44.4%;width:0.8%;background:#2563EB"></div>
+                        <div class="bk-dot" style="left:44.8%;background:#2563EB"></div>
+                      </div></td>
+                      <td class="bk-fval">40.7</td>
+                    </tr>
+                    <tr>
+                      <td class="bk-fterm">speciesChinstrap</td>
+                      <td class="bk-fbar"><div class="bk-track">
+                        <div class="bk-ref" style="left:44%"></div>
+                        <div class="bk-whisk" style="left:15%;width:27%;background:#DC3545"></div>
+                        <div class="bk-dot" style="left:28%;background:#DC3545"></div>
+                      </div></td>
+                      <td class="bk-fval">-207</td>
+                    </tr>
+                    <tr>
+                      <td class="bk-fterm">speciesGentoo</td>
+                      <td class="bk-fbar"><div class="bk-track">
+                        <div class="bk-ref" style="left:44%"></div>
+                        <div class="bk-whisk" style="left:51%;width:38%;background:#2563EB"></div>
+                        <div class="bk-dot" style="left:70%;background:#2563EB"></div>
+                      </div></td>
+                      <td class="bk-fval">267</td>
+                    </tr>
+                  </tbody></table>
+                </div>
+                <div class="bk-pane" data-pane="r">
+                  <pre class="bk-rtext">Call:
+lm(formula = body_mass_g ~ flipper_length_mm + species, data = data)
+
+Coefficients:
+                   Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept)       -4013.174    586.548  -6.842 3.90e-11 ***
+flipper_length_mm    40.705      3.072  13.251  &lt; 2e-16 ***
+speciesChinstrap   -206.510     57.731  -3.577 0.000398 ***
+speciesGentoo       266.810     95.264   2.801 0.005393 **</pre>
+                </div>
+              </div>
+            </div>
+            <p class="hint">Click Visual / R</p>
+          </div>
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Looks finished; sells the product in a screenshot.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>Reads as "the analysis is done here", so nobody looks downstream. Hides what's actually on the wire.</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- O2 -->
+      <article class="variant">
+        <div class="variant-head">
+          <span class="variant-id">O2</span>
+          <span class="variant-name">Same card, R is the default pane</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">One-line change: flip which radio carries <code>checked</code>.
+          Console output greets you; the plot stays for whoever wants it. Cheapest possible
+          move, and reversible.</p>
+          <div class="bezel">
+            <div class="bk" style="max-width:560px">
+              <div class="bk-preview" style="border-top:0">
+                <div class="bk-switch" data-group="o2">
+                  <button type="button" data-pane="v" aria-pressed="false">Visual</button>
+                  <button type="button" data-pane="r" aria-pressed="true">R</button>
+                </div>
+                <div class="bk-pane" data-pane="v">
+                  <div class="bk-hl">
+                    <div class="bk-hl-kind">Linear model &middot; 342 obs</div>
+                    <div class="bk-chip-fit">
+                      <div class="bk-chip-row"><span class="bk-chip-k">adj. R&sup2;</span><span class="bk-chip-v">0.78</span></div>
+                      <div class="bk-chip-bar"><div class="bk-chip-fill" style="width:78%"></div></div>
+                    </div>
+                  </div>
+                  <table class="bk-forest"><tbody>
+                    <tr><td class="bk-fterm">flipper_length_mm</td>
+                      <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:44.4%;width:0.8%;background:#2563EB"></div><div class="bk-dot" style="left:44.8%;background:#2563EB"></div></div></td>
+                      <td class="bk-fval">40.7</td></tr>
+                    <tr><td class="bk-fterm">speciesChinstrap</td>
+                      <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:15%;width:27%;background:#DC3545"></div><div class="bk-dot" style="left:28%;background:#DC3545"></div></div></td>
+                      <td class="bk-fval">-207</td></tr>
+                    <tr><td class="bk-fterm">speciesGentoo</td>
+                      <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:51%;width:38%;background:#2563EB"></div><div class="bk-dot" style="left:70%;background:#2563EB"></div></div></td>
+                      <td class="bk-fval">267</td></tr>
+                  </tbody></table>
+                </div>
+                <div class="bk-pane is-on" data-pane="r">
+                  <pre class="bk-rtext">Call:
+lm(formula = body_mass_g ~ flipper_length_mm + species, data = data)
+
+Residuals:
+    Min      1Q  Median      3Q     Max
+-927.70 -254.82  -23.92  241.16 1191.68
+
+Coefficients:
+                   Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept)       -4013.174    586.548  -6.842 3.90e-11 ***
+flipper_length_mm    40.705      3.072  13.251  &lt; 2e-16 ***
+speciesChinstrap   -206.510     57.731  -3.577 0.000398 ***
+speciesGentoo       266.810     95.264   2.801 0.005393 **
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 375.5 on 338 degrees of freedom
+Multiple R-squared:  0.7826,	Adjusted R-squared:  0.7807
+F-statistic: 405.7 on 3 and 338 DF,  p-value: &lt; 2.2e-16</pre>
+                </div>
+              </div>
+            </div>
+            <p class="hint">Click Visual / R</p>
+          </div>
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Two-character diff. Keeps the plot for anyone who liked it.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>The toggle is still there, so the block still owns a viewing decision that belongs downstream.</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- O3 -->
+      <article class="variant variant--pick">
+        <div class="variant-head">
+          <span class="variant-id">O3</span>
+          <span class="variant-name">Object strip + console output, no toggle</span>
+          <span class="tag tag--pick">Pick</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">The preview becomes an <em>object inspector</em>. A thin strip
+          names the class and the two facts you can't read off the text at a glance
+          (<code>n</code>, fit); the body is exactly what the console prints. No toggle, because
+          there's nothing to toggle to &mdash; the picture moved downstream. The forest plot code
+          isn't deleted, it becomes a renderer on the broom output.</p>
+          <div class="bezel">
+            <div class="bk" style="max-width:560px">
+              <div class="bk-preview" style="border-top:0">
+                <div class="bk-objbar">
+                  <span class="bk-objtype">lm</span>
+                  <span class="bk-objfacts">342 obs &middot; 3 terms</span>
+                  <span class="bk-objfit">adj. R&sup2; <b>0.78</b></span>
+                </div>
+                <pre class="bk-rtext">Call:
+lm(formula = body_mass_g ~ flipper_length_mm + species, data = data)
+
+Residuals:
+    Min      1Q  Median      3Q     Max
+-927.70 -254.82  -23.92  241.16 1191.68
+
+Coefficients:
+                   Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept)       -4013.174    586.548  -6.842 3.90e-11 ***
+flipper_length_mm    40.705      3.072  13.251  &lt; 2e-16 ***
+speciesChinstrap   -206.510     57.731  -3.577 0.000398 ***
+speciesGentoo       266.810     95.264   2.801 0.005393 **
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 375.5 on 338 degrees of freedom
+Multiple R-squared:  0.7826,	Adjusted R-squared:  0.7807
+F-statistic: 405.7 on 3 and 338 DF,  p-value: &lt; 2.2e-16</pre>
+              </div>
+            </div>
+          </div>
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Says <code>lm</code> out loud, so the next block is an obvious question. Familiar to anyone who's used R. One code path, no toggle state.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>A board full of console text is less appealing in a screenshot until the renderer block exists. Ship them together.</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- O4 -->
+      <article class="variant">
+        <div class="variant-head">
+          <span class="variant-id">O4</span>
+          <span class="variant-name">Object stub only</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">The far end: the preview shows only that a model exists and
+          what shape it is, the way a list element prints in an environment pane. Everything
+          you'd actually read comes from a downstream block.</p>
+          <div class="bezel">
+            <div class="bk" style="max-width:420px">
+              <div class="bk-preview" style="border-top:0">
+                <div class="bk-stub">
+                  <div class="bk-stub-glyph">lm</div>
+                  <div class="bk-stub-lines">
+                    <div class="bk-stub-1">body_mass_g ~ flipper_length_mm + species</div>
+                    <div class="bk-stub-2">342 observations &middot; 3 terms &middot; adj. R&sup2; 0.78</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Maximally honest about the block's job. Tiny on a crowded board.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>Punishing without a downstream block already attached &mdash; you fit a model and see nothing. Worth keeping as the <em>collapsed</em> state of O3, not as the only state.</span></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="prose" style="margin-top:0.5rem">
+      <h3>Where the picture goes instead</h3>
+      <p>Trimming the preview only works if the plot lands somewhere better. The chain already
+      half exists &mdash; broom turns the fit into a tidy frame today. The missing piece is a
+      renderer that takes that frame and draws the forest, with the axes, CI width and sorting
+      controls a 200&nbsp;px preview can never offer.</p>
+      <div class="chain">
+        <span class="chain-node">Model</span>
+        <span class="chain-arrow">&rarr;</span>
+        <span class="chain-wire">&lt;lm&gt;</span>
+        <span class="chain-arrow">&rarr;</span>
+        <span class="chain-node">Broom &middot; tidy</span>
+        <span class="chain-arrow">&rarr;</span>
+        <span class="chain-wire">data.frame</span>
+        <span class="chain-arrow">&rarr;</span>
+        <span class="chain-node chain-node--new">Coefficient plot</span>
+      </div>
+      <p>A first pass is close to free: the existing <code>smb_forest()</code> already takes a
+      tidy data frame and nothing else, so it lifts out of the preview and into a renderer
+      almost unchanged.</p>
+      <div class="bezel" style="margin-top:0.25rem">
+        <div class="bk bk--viz" style="max-width:560px">
+          <div class="bk-head">
+            <div class="bk-icon">
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="4" cy="4" r="2"/><circle cx="11" cy="8" r="2"/><circle cx="6" cy="12" r="2"/></svg>
+            </div>
+            <div class="bk-titles">
+              <span class="bk-title">Coefficient plot</span>
+              <span class="bk-sub">Renderer</span>
+            </div>
+            <div class="bk-acts">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/><circle cx="6" cy="4" r="1.6" fill="currentColor"/><circle cx="10" cy="8" r="1.6" fill="currentColor"/><circle cx="5" cy="12" r="1.6" fill="currentColor"/></svg>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8Z"/><circle cx="8" cy="8" r="2"/></svg>
+            </div>
+          </div>
+          <div class="bk-body">
+            <div class="bk-label">Sort by</div>
+            <div class="bk-seg">
+              <button type="button" aria-pressed="true">Effect size</button>
+              <button type="button" aria-pressed="false">Model order</button>
+              <button type="button" aria-pressed="false">p-value</button>
+            </div>
+          </div>
+          <div class="bk-preview">
+            <table class="bk-forest"><tbody>
+              <tr><td class="bk-fterm">speciesGentoo</td>
+                <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:51%;width:38%;background:#2563EB"></div><div class="bk-dot" style="left:70%;background:#2563EB"></div></div></td>
+                <td class="bk-fval">267</td></tr>
+              <tr><td class="bk-fterm">speciesChinstrap</td>
+                <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:15%;width:27%;background:#DC3545"></div><div class="bk-dot" style="left:28%;background:#DC3545"></div></div></td>
+                <td class="bk-fval">-207</td></tr>
+              <tr><td class="bk-fterm">flipper_length_mm</td>
+                <td class="bk-fbar"><div class="bk-track"><div class="bk-ref" style="left:44%"></div><div class="bk-whisk" style="left:44.4%;width:0.8%;background:#2563EB"></div><div class="bk-dot" style="left:44.8%;background:#2563EB"></div></div></td>
+                <td class="bk-fval">40.7</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ PART 2 — FORMULA ══════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">Question two &middot; formula row</div>
+      <h2>Say the formula once</h2>
+      <p>The builder and the text field are two projections of one structure &mdash; that's the
+      architecture <code>dev/rich-vs-expr-authoring.md</code> argues for, and it's why they can
+      never disagree. Which is exactly the argument for not showing both: a projection that can't
+      contradict the other adds no information, only height. <code>blockr.dplyr</code> already
+      owns the affordance for this &mdash; <code>.blockr-add-link-expr</code>, a 22&nbsp;&times;&nbsp;22
+      bordered square carrying <code>Blockr.icons.code</code>, sitting in the footer row
+      <em>below</em> the inputs. Same button, same place, one new behaviour: it's a toggle, and
+      it swaps which projection you're looking at.</p>
+    </div>
+
+    <div class="variants">
+
+      <!-- FX -->
+      <article class="variant variant--pick">
+        <div class="variant-head">
+          <span class="variant-id">FX</span>
+          <span class="variant-name"><code>&lt;/&gt;</code> below the input, off = click UI, on = formula</span>
+          <span class="tag tag--pick">Built</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">One row of controls at a time. Off is the resting state and
+          shows the chips; pressing <code>&lt;/&gt;</code> replaces them in place with the formula
+          string. The footer row never moves &mdash; the button is anchored there in both states,
+          so the toggle stays where your eye left it and the block doesn't jump.</p>
+
+          <div class="states">
+            <div>
+              <p class="state-cap"><span>Off</span> &mdash; <b>click UI</b></p>
+              <div class="bezel">
+                <div class="bk">
+                  <div class="bk-body" style="border-top:0">
+                    <div class="bk-label">Model type</div>
+                    <div class="bk-seg">
+                      <button type="button" aria-pressed="true">Linear (lm)</button>
+                      <button type="button" aria-pressed="false">Logistic (glm)</button>
+                      <button type="button" aria-pressed="false">Poisson (glm)</button>
+                    </div>
+                    <div class="bk-pill">
+                      <span class="bk-lhs">body_mass_g
+                        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                      </span>
+                      <span class="bk-chips">
+                        <span class="bk-chip bk-chip--ghost">intercept</span>
+                        <span class="bk-chip">flipper_length_mm <span class="x">&times;</span></span>
+                        <span class="bk-chip">species <span class="x">&times;</span></span>
+                      </span>
+                    </div>
+                    <div class="bk-footer" style="justify-content:space-between">
+                      <span class="bk-addlink">+ interaction / transform</span>
+                      <button type="button" class="bk-codebtn" aria-pressed="false" title="Edit as formula text" aria-label="Edit as formula text">
+                        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p class="state-cap"><span>On</span> &mdash; <b>formula</b></p>
+              <div class="bezel">
+                <div class="bk">
+                  <div class="bk-body" style="border-top:0">
+                    <div class="bk-label">Model type</div>
+                    <div class="bk-seg">
+                      <button type="button" aria-pressed="true">Linear (lm)</button>
+                      <button type="button" aria-pressed="false">Logistic (glm)</button>
+                      <button type="button" aria-pressed="false">Poisson (glm)</button>
+                    </div>
+                    <div class="bk-field bk-field--edit">body_mass_g ~ flipper_length_mm + species
+                      <span class="ok">&#10003;</span>
+                    </div>
+                    <div class="bk-footer" style="justify-content:space-between">
+                      <span class="bk-addlink" style="visibility:hidden">+ interaction / transform</span>
+                      <button type="button" class="bk-codebtn" aria-pressed="true" title="Back to the builder" aria-label="Back to the builder">
+                        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p class="state-cap"><span>Live</span> &mdash; <b>press it</b></p>
+            <div class="bezel">
+              <div class="bk" style="max-width:560px">
+                <div class="bk-body" style="border-top:0">
+                  <div class="bk-label">Model type</div>
+                  <div class="bk-seg">
+                    <button type="button" aria-pressed="true">Linear (lm)</button>
+                    <button type="button" aria-pressed="false">Logistic (glm)</button>
+                    <button type="button" aria-pressed="false">Poisson (glm)</button>
+                  </div>
+                  <div class="bk-pill" id="fx-build">
+                    <span class="bk-lhs">body_mass_g
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+                    </span>
+                    <span class="bk-chips">
+                      <span class="bk-chip bk-chip--ghost">intercept</span>
+                      <span class="bk-chip">flipper_length_mm <span class="x">&times;</span></span>
+                      <span class="bk-chip">species <span class="x">&times;</span></span>
+                    </span>
+                  </div>
+                  <div class="bk-field bk-field--edit" id="fx-text" style="display:none">body_mass_g ~ flipper_length_mm + species
+                    <span class="ok">&#10003;</span>
+                  </div>
+                  <div class="bk-footer" style="justify-content:space-between">
+                    <span class="bk-addlink" id="fx-add">+ interaction / transform</span>
+                    <button type="button" class="bk-codebtn" data-swap="fx" aria-pressed="false" title="Toggle formula text" aria-label="Toggle formula text">
+                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="hint">Press &lt;/&gt; &mdash; the footer stays put, the row above swaps</p>
+            </div>
+          </div>
+
+          <div>
+            <p class="state-cap"><span>The button</span> &mdash; <b>reused, not invented</b></p>
+            <div class="specimen">
+              <div class="specimen-item">
+                <button type="button" class="bk-codebtn" aria-pressed="false" tabindex="-1" aria-label="Rest state sample">
+                  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                </button>
+                <span class="specimen-lab">Rest</span>
+              </div>
+              <div class="specimen-item">
+                <button type="button" class="bk-codebtn" aria-pressed="false" tabindex="-1"
+                        style="color:#2563EB;border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)" aria-label="Hover state sample">
+                  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                </button>
+                <span class="specimen-lab">Hover</span>
+              </div>
+              <div class="specimen-item">
+                <button type="button" class="bk-codebtn" aria-pressed="true" tabindex="-1" aria-label="Active state sample">
+                  <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                </button>
+                <span class="specimen-lab">Active</span>
+              </div>
+              <p class="specimen-note">22&times;22 &middot; 4px radius &middot; 1px #e5e7eb<br>
+              rest #9ca3af &middot; hover + active #2563eb<br>
+              <br>
+              Rest and hover are <code style="background:#F3F4F6">.blockr-add-link-expr</code> as
+              shipped. Active is new: the same blue at 8% fill, matching
+              <code style="background:#F3F4F6">.blockr-gear-active</code>.</p>
+            </div>
+          </div>
+
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Existing button, existing position, so nothing new to learn. Exactly one formula on screen. Block gets shorter in both states.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>In dplyr the same button <em>adds a row</em> rather than switching a view &mdash; close enough to feel consistent, different enough that someone could expect an extra field. The active state is what carries the difference, so it has to be unmistakable.</span></div>
+          </div>
+
+          <div>
+            <p class="state-cap"><span>As built</span> &mdash; <b>what the drawing didn't say</b></p>
+            <div class="tradeoffs" style="border-top:0;padding-top:0">
+              <div class="tradeoff"><span class="tradeoff-k">Order</span><span>The footer is appended <em>last</em>, after both the pill and the text row. Built the other way round first &mdash; the row read fine with the chips showing, then stranded itself above the field in text mode.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">Align</span><span>The toggle sits hard right, not beside the link &mdash; that <em>is</em> summarize's layout (<code>.blockr-add-row</code> is <code>space-between</code>). The drawing above got this wrong; the shipped row adds no geometry of its own.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">Icon</span><span>Built as a <code>&lt;button&gt;</code> for keyboard access, where summarize uses a <code>&lt;span&gt;</code>. The UA's default button padding squeezed the 14&times;14 icon to 8&times;14 &mdash; visibly smaller side by side. Zeroed.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">Hiding</span><span>In text mode the link goes by <code>visibility</code>, not <code>display</code>: dropping it out of the flow leaves <code>space-between</code> one item, which slides the toggle to the left edge.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">Label</span><span>The old "Formula" caption above the text field is gone. It only ever labelled a row that now appears on request, and dropping it keeps both modes the same height.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">Surv</span><span>The three-segment pill, its Time / Event / Predictors headers and the event-value gear all hide together &mdash; the gear has no formula-text spelling, so it travels with the chips.</span></div>
+              <div class="tradeoff"><span class="tradeoff-k">State</span><span>Pressed state is view-only and resets to off on remount, so no R change and nothing new in saved boards. See the open question below.</span></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ruled out -->
+      <article class="variant">
+        <div class="variant-head">
+          <span class="variant-id">&mdash;</span>
+          <span class="variant-name">Ruled out along the way</span>
+        </div>
+        <div class="variant-body">
+          <div class="tradeoffs" style="border-top:0;padding-top:0">
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Drawer</span><span>Badge on the pill's right edge that <em>opens the text underneath</em> rather than replacing it. Still shows both at once, which was the original complaint.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Segments</span><span>A <code>Build | Text</code> segmented control. Puts a second row of segments directly under the model-type segments; they read as one broken control.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Text first</span><span>Formula as the default with the builder behind the toggle. Inverts the dplyr convention so the same button means the opposite thing two blocks apart.</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- F4 -->
+      <article class="variant variant--pick">
+        <div class="variant-head">
+          <span class="variant-id">F4</span>
+          <span class="variant-name">One line: the chips <em>are</em> the formula</span>
+          <span class="tag tag--pick">Worth prototyping</span>
+        </div>
+        <div class="variant-body">
+          <p class="variant-note">The reason the two rows feel redundant is that the chip row
+          <em>already reads as the formula</em>, left to right &mdash; it's just missing the
+          operators. Put <code>~</code> and <code>+</code> between the chips and there is nothing
+          left to duplicate; the badge then flips the same line into an editable string rather
+          than opening a second one. One row, one truth, and the operators become visible
+          objects you can click to change (<code>+</code> &rarr; <code>*</code> &rarr;
+          <code>:</code>).</p>
+          <div class="bezel bezel--pair">
+            <div>
+              <div class="bk" style="max-width:100%">
+                <div class="bk-body" style="border-top:0">
+                  <div class="bk-label">Formula</div>
+                  <div class="bk-pill" id="f4-build">
+                    <span class="bk-chips">
+                      <span class="bk-chip">body_mass_g</span>
+                      <span class="bk-op">~</span>
+                      <span class="bk-chip">flipper_length_mm <span class="x">&times;</span></span>
+                      <span class="bk-op">+</span>
+                      <span class="bk-chip">species <span class="x">&times;</span></span>
+                      <span class="bk-op">+</span>
+                      <span class="bk-chip bk-chip--ghost">add&hellip;</span>
+                    </span>
+                  </div>
+                  <div class="bk-field bk-field--edit" id="f4-text" style="display:none">body_mass_g ~ flipper_length_mm + species
+                    <span class="ok">&#10003;</span>
+                  </div>
+                  <div class="bk-footer">
+                    <button type="button" class="bk-codebtn" data-swap="f4" aria-pressed="false" title="Toggle formula text" aria-label="Toggle formula text">
+                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="hint">Same toggle, same footer &mdash; one line instead of two</p>
+            </div>
+            <div>
+              <div class="bk" style="max-width:100%">
+                <div class="bk-body" style="border-top:0">
+                  <div class="bk-label">With an interaction</div>
+                  <div class="bk-pill">
+                    <span class="bk-chips">
+                      <span class="bk-chip">body_mass_g</span>
+                      <span class="bk-op">~</span>
+                      <span class="bk-chip">flipper_length_mm <span class="x">&times;</span></span>
+                      <span class="bk-op" style="color:#2563EB">*</span>
+                      <span class="bk-chip">species <span class="x">&times;</span></span>
+                      <span class="bk-op">+</span>
+                      <span class="bk-chip">log(bill_depth_mm) <span class="x">&times;</span></span>
+                    </span>
+                  </div>
+                  <div class="bk-footer">
+                    <button type="button" class="bk-codebtn" aria-pressed="false" title="Toggle formula text" aria-label="Toggle formula text">
+                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0m6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="hint">Operators are clickable, transforms stay one chip</p>
+            </div>
+          </div>
+          <div class="tradeoffs">
+            <div class="tradeoff tradeoff--plus"><span class="tradeoff-k">For</span><span>Removes the duplication rather than hiding it. Teaches formula syntax by showing it. Shortest of all four. Interactions stop needing a separate "+ interaction" affordance.</span></div>
+            <div class="tradeoff tradeoff--minus"><span class="tradeoff-k">Against</span><span>Real JS work in <code>formula-input.js</code>, not a layout change. The response slot loses its labelled box, so it needs a visual cue that it's the outcome. Long formulas wrap onto several lines.</span></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════ CLOSING ══════════════════ -->
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">If you want a route</div>
+      <h2>Cheapest order to do this in</h2>
+    </div>
+    <div class="prose">
+      <ol class="steps">
+        <li><strong>FX &mdash; done.</strong> <code>inst/js/formula-input.js</code> +
+        <code>inst/css/formula-input.css</code>, no R changes: the widget already keeps one AST and
+        projects both views, so this is purely which projection gets rendered. Verified in the dock
+        board for both the model and survival blocks &mdash; the formula text is current in both
+        states whether or not it is showing.</li>
+        <li><strong>Lift <code>smb_forest()</code> out</strong> into a coefficient-plot renderer
+        over the broom <code>tidy</code> frame. It already takes a plain data frame, so this is
+        mostly a move.</li>
+        <li><strong>Then O3.</strong> Once the plot has a home, swap the preview for the object
+        strip plus <code>summary()</code> and drop the toggle. Doing this before step 2 removes a
+        capability instead of relocating it.</li>
+        <li><strong>F4 as a prototype</strong> after the above land, if the single-line formula
+        still looks as good in the widget as it does here.</li>
+      </ol>
+      <h3 style="margin-top:1rem">Open questions</h3>
+      <ul class="plain">
+        <li>Built as view-only, so the toggle resets to off whenever the widget remounts. Worth
+        persisting in block state? A formula-first user would press it once and keep it &mdash; but
+        then a saved board reopens in a mode the next person didn't choose, and it stops being a
+        no-R-change feature.</li>
+        <li><code>+ interaction / transform</code> is hidden in the on state, since it's a builder
+        affordance. That does make the footer jump from two items to one. Alternative: keep it,
+        greyed.</li>
+        <li>The survival block shares <code>formula_input_ui()</code> and has a three-segment
+        pill (Time / Event / Predictors). FX carries over unchanged; F4 needs its own answer for
+        the <code>Surv()</code> response.</li>
+        <li>Does the object strip in O3 belong to the model block, or is it generic block chrome
+        that any block returning a non-data-frame object should get?</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Segmented pane switchers (Visual/R, Build/Text)
+  document.querySelectorAll('[data-group]').forEach(function (group) {
+    var scope = group.closest('.bk');
+    group.addEventListener('click', function (ev) {
+      var btn = ev.target.closest('button[data-pane]');
+      if (!btn) return;
+      group.querySelectorAll('button[data-pane]').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      scope.querySelectorAll('.bk-pane').forEach(function (p) {
+        p.classList.toggle('is-on', p.dataset.pane === btn.dataset.pane);
+      });
+    });
+  });
+
+  // </> toggle: swaps the row above the footer, chips <-> formula text.
+  // The footer itself never moves.
+  document.querySelectorAll('[data-swap]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var key = btn.dataset.swap;
+      var build = document.getElementById(key + '-build');
+      var text = document.getElementById(key + '-text');
+      var add = document.getElementById(key + '-add');
+      var toText = build.style.display !== 'none';
+      build.style.display = toText ? 'none' : 'flex';
+      text.style.display = toText ? 'flex' : 'none';
+      // visibility, not display — space-between needs the left item to stay
+      if (add) add.style.visibility = toText ? 'hidden' : '';
+      btn.setAttribute('aria-pressed', String(toText));
+    });
+  });
+})();
+</script>

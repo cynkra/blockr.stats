@@ -57,6 +57,12 @@
     this.offset = null;
     this.weights = null;
 
+    // Which projection of the one AST is on screen: false = chip builder,
+    // true = formula text. View-only, so it never reaches R (see _applyMode).
+    this._textMode = false;
+    this._builderEls = [];
+    this._textEls = [];
+
     this._build();
   }
 
@@ -95,6 +101,9 @@
       gearHeader.appendChild(this._eventLevelInput);
       gearHeader.appendChild(gearBtn);
       this.el.appendChild(gearHeader);
+      // A builder affordance: eventLevel has no formula-text spelling, so the
+      // gear travels with the chips rather than hovering over the text field.
+      this._builderEls.push(gearHeader);
     }
 
     var predHost = document.createElement("div");
@@ -127,6 +136,7 @@
       head.appendChild(seg("formula-seg-divider"));
       head.appendChild(headLabel("formula-seg--pred", "Predictors"));
       this.el.appendChild(head);
+      this._builderEls.push(head);
 
       // the single bordered pill, segmented to match the header
       var spill = document.createElement("div");
@@ -140,6 +150,7 @@
       spill.appendChild(seg("formula-seg-divider"));
       spill.appendChild(predSeg);
       this.el.appendChild(spill);
+      this._builderEls.push(spill);
       ctxTarget = predSeg;
 
       this._timeSelect = Blockr.Select.single(timeSeg, {
@@ -176,6 +187,7 @@
       row.appendChild(lhsWrap);
       row.appendChild(rhsWrap);
       this.el.appendChild(row);
+      this._builderEls.push(row);
       ctxTarget = rhsWrap;
       this._respSelect = Blockr.Select.single(respHost, {
         placeholder: "response…",
@@ -210,7 +222,23 @@
       self._openMenu(self._addLink);
     });
     addRow.appendChild(this._addLink);
-    this.el.appendChild(addRow);
+
+    // </> toggle, in the footer row below the input — same button blockr.dplyr
+    // puts there (.blockr-add-link-expr). Off: the chip builder. On: the
+    // formula text. The footer itself never moves, so the toggle stays put.
+    this._codeBtn = document.createElement("button");
+    this._codeBtn.type = "button";
+    this._codeBtn.className = "blockr-add-link-expr formula-code-btn";
+    this._codeBtn.innerHTML = Blockr.icons.code;
+    this._codeBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      self._textMode = !self._textMode;
+      self._applyMode();
+      if (self._textMode && self._text) self._text.focus();
+    });
+    addRow.appendChild(this._codeBtn);
+    // appended AFTER the text row below, so the footer is under whichever
+    // input is showing — not stranded above the field in text mode.
 
     // Right-click anywhere on the predictors area opens the same menu.
     if (this._ctxTarget) {
@@ -223,11 +251,9 @@
     // (intercept is the inline 1/0 toggle at the left of the RHS, above)
 
     // Formula: raw text with autocomplete + confirm button — same code editor
-    // and chrome as the filter block's expression row.
-    var advRow = mkRow("Formula");
-    advRow.classList.add("formula-advanced");
-    this.el.appendChild(advRow);
-
+    // and chrome as the filter block's expression row. No "Formula" label: the
+    // row only exists once you press </>, and a label would make the two modes
+    // different heights.
     var fRow = document.createElement("div");
     fRow.className = "blockr-row formula-text-row";
     var codeHost = document.createElement("div");
@@ -259,9 +285,37 @@
     });
     fRow.appendChild(this._textConfirm);
     this.el.appendChild(fRow);
+    this._textEls.push(fRow);
+
+    // Footer last: chip pill / text field above, the </> toggle below.
+    this.el.appendChild(addRow);
 
     this._renderIntercept();
     this.renderChips();
+    this._applyMode();
+  };
+
+  // Show exactly one projection. The text field's value is kept current by
+  // _sync / setState / updateColumns whether or not it is visible, so there is
+  // nothing to refresh on reveal.
+  FormulaInput.prototype._applyMode = function () {
+    var on = this._textMode;
+    this._builderEls.forEach(function (el) {
+      el.style.display = on ? "none" : "";
+    });
+    this._textEls.forEach(function (el) {
+      el.style.display = on ? "" : "none";
+    });
+    // The build menu is a chip affordance, so it goes in text mode — but by
+    // visibility, not display: the row is space-between, and removing the left
+    // item from the flow would slide the toggle over to the left edge.
+    if (this._addLink) this._addLink.style.visibility = on ? "hidden" : "";
+    if (this._codeBtn) {
+      this._codeBtn.classList.toggle("formula-code-btn--on", on);
+      this._codeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      this._codeBtn.title = on ? "Back to the builder" : "Edit as formula text";
+    }
+    if (on) this._closeMenu();
   };
 
   FormulaInput.prototype._colOptions = function () {
@@ -911,13 +965,4 @@
     else if (el) el._pendingState = msg.state;
   });
 
-  function mkRow(labelText) {
-    var row = document.createElement("div");
-    row.className = "formula-row";
-    var l = document.createElement("label");
-    l.className = "blockr-label";
-    l.textContent = labelText;
-    row.appendChild(l);
-    return row;
-  }
 })();
