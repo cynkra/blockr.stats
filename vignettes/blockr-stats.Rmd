@@ -20,29 +20,26 @@ ends in the same place: a **tidy data frame** that blockr.core's generic
 renderers (drilldown table, coefficient plot, scatter, step curve) draw
 without any block-specific plotting code.
 
-The blocks cover an applied-statistics-basics *spine*
+There are six blocks:
 
-* **Describe** -- per-variable summaries, frequency / cross tabulation
-* **Compare** -- adaptive significance tests, p-value adjustment, effect sizes
-* **Regress** -- `lm` / `glm` / `aov` model fitting and a generic broom adapter
-* **Nonparametric** -- folded into the adaptive test stack
+* **Model** -- `lm` / `glm` fitting from a formula
+* **Model summary** -- a fitted model rendered as a card: model facts line
+  plus a coefficient table with an inline forest. It calls `broom::tidy()` and
+  `broom::glance()` itself, so it needs no adapter in between, and its own
+  value is the tidy coefficient frame
+* **Broom adapter** -- any fitted model to a tidy frame
+* **Statistical test** -- one adaptive block covering the `stats` test family
+* **Correlate** -- pairwise correlation matrix, rendered as a heatmap table
+* **Survival** -- Kaplan-Meier, Cox, competing risks, kept as a single
+  separable cluster so it can later move to a dedicated domain package
 
-(Pairwise correlation matrices are not a block here -- blockr.viz's
-`new_drilldown_table_block(transform = "correlation")` computes and renders one
-directly from a data frame.)
+Descriptive tables (per-variable summaries, counts, crosstabs) are
+deliberately absent: `blockr.viz::new_summary_table_block()` already produces
+them for mixed types with by-group columns, and blockr.dplyr covers the rest.
 
-plus one **Advanced** tier -- survival (Kaplan-Meier, Cox, competing risks) --
-deliberately kept as a single separable cluster so it can later move to a
-dedicated domain package.
-
-Most blocks emit **standard R** -- `stats::lm()`, `survival::survfit()`,
+Every block emits **standard R** -- `stats::lm()`, `survival::survfit()`,
 `broom::tidy()`, and so on -- so a generated pipeline reads as ordinary code
-you could run without blockr loaded. A couple of blocks (`describe_numeric()`,
-`effect_size()`) wrap a small bespoke computation; this vignette shows those
-plain functions directly, since reading them is the quickest way to see what
-the block emits. In a board you would not call them by hand -- you would wire
-the corresponding `new_*_block()` into a pipeline -- but the data frames are
-identical either way.
+you could run without blockr loaded.
 
 ## Architecture: model objects flow, broom adapts, renderers draw
 
@@ -51,34 +48,22 @@ The key design decision is the **renderer boundary**. Two kinds of block exist:
 1. **Model-fitting blocks** (`new_model_block()`, `new_survival_block()`)
    emit a *fitted model object* (an `lm`, `glm`,
    `coxph`, `survfit`, `cuminc`). Their own preview is a generic `summary()`.
-2. **Tidying blocks** -- chiefly the **broom adapter**
+2. **Tidying blocks** -- the **model summary**
+   (`new_model_summary_block()`) and the **broom adapter**
    (`new_broom_block()`) -- consume a fitted model upstream and emit a tidy
-   data frame.
+   data frame. The summary block also draws that frame as a card; the adapter
+   hands it on untouched, and adds `augment()` for per-observation output.
 
-Everything that produces a table directly (`describe_numeric()`,
-`effect_size()`, the adaptive tests) skips step 1 and
-emits tidy frames straight away. The result: no block carries plotting code.
-A coefficient plot is just the generic drilldown reading `estimate`,
-`conf.low`, `conf.high`; a survival curve is the generic step renderer reading
-`time`, `estimate`, `group`.
+The blocks that produce a table directly (the adaptive tests, correlate) skip
+step 1 and emit tidy frames straight away. The result: no block carries
+plotting code. A coefficient plot is just the generic drilldown reading
+`estimate`, `conf.low`, `conf.high`; a survival curve is the generic step
+renderer reading `time`, `estimate`, `group`.
 
 ```
  data ─▶ [model block] ─▶ fitted object ─▶ [broom adapter] ─▶ tidy df ─▶ renderer
- data ─▶ [describe / test / effect-size] ──────────────────▶ tidy df ─▶ renderer
+ data ─▶ [test / correlate] ───────────────────────────────▶ tidy df ─▶ renderer
 ```
-
-## Describe
-
-`describe_numeric()` returns one row per numeric variable -- `n`, `n_missing`,
-`mean`, `sd`, `median`, `q1`, `q3`, `min`, `max` -- in base R, no easystats
-dependency.
-
-```{r describe}
-describe_numeric(mtcars, vars = c("mpg", "hp", "wt"))
-```
-
-With `vars = NULL` (the default) it summarises every numeric column. This is
-the frame the **Descriptives** block emits.
 
 ## Regress: a model object, then the broom adapter
 
@@ -110,24 +95,6 @@ a plain scatter; and the `tidy` frame gets model-aware column `label`
 attributes the renderers display. This is why a single `new_broom_block()`
 serves `lm`, `glm`, `aov`, Cox and competing-risks alike -- the renderer only
 ever sees a tidy frame.
-
-## Compare: effect sizes
-
-`effect_size()` consumes a fitted `lm`/`aov` and emits a tidy effect-size
-frame -- `term`, `measure`, `estimate`, `conf.low`, `conf.high` -- with **no
-interpretation labels** (the package does not editorialise "small/medium/
-large").
-
-```{r effect-size}
-aov_fit <- aov(mpg ~ factor(cyl), data = mtcars)
-
-effect_size(aov_fit, measure = "partial_eta2")
-```
-
-`measure` is one of `"eta2"`, `"partial_eta2"`, `"omega2"`, `"r2"`, `"d"`,
-`"g"`. The partial-eta-squared CI is obtained by inverting the noncentral F
-(`es_ncp_ci()`), returning `NA` bounds on non-convergence rather than
-erroring.
 
 ## Advanced: survival
 

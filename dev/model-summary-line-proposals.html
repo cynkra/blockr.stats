@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>blockr.stats: the model summary line + column names</title>
+<style>
+  :root {
+    /* target token set, verbatim from blockr.docs/design-system/target/design-system.html */
+    --blockr-grey-50:  #f9fafb;
+    --blockr-grey-100: #f3f4f6;
+    --blockr-grey-200: #e5e7eb;
+    --blockr-grey-300: #d1d5db;
+    --blockr-grey-400: #9ca3af;
+    --blockr-grey-500: #6b7280;
+    --blockr-grey-600: #4b5563;
+    --blockr-grey-700: #374151;
+    --blockr-grey-900: #111827;
+    --blockr-blue-50:  #eff6ff;
+    --blockr-blue-600: #2563eb;
+    --blockr-blue-700: #1d4ed8;
+    --blockr-font-size-base: 0.875rem;
+    --blockr-font-size-sm:   0.8125rem;
+    --blockr-font-size-xs:   0.75rem;
+    --blockr-font-weight-normal:   400;
+    --blockr-font-weight-medium:   500;
+    --blockr-font-weight-semibold: 600;
+    --blockr-color-text-primary:   var(--blockr-grey-900);
+    --blockr-color-text-secondary: var(--blockr-grey-700);
+    --blockr-color-text-muted:     var(--blockr-grey-500);
+    --blockr-color-text-subtle:    var(--blockr-grey-400);
+    --blockr-color-border:         var(--blockr-grey-200);
+    --blockr-color-bg-subtle:      var(--blockr-grey-50);
+    --blockr-color-primary:        var(--blockr-blue-600);
+    --blockr-color-primary-bg:     var(--blockr-blue-50);
+    --blockr-color-danger:         #dc2626;
+    --blockr-radius-md: 6px;
+    --blockr-radius-lg: 8px;
+
+    --ink: var(--blockr-grey-900);
+    --ink-2: var(--blockr-grey-700);
+    --muted: var(--blockr-grey-500);
+    --faint: var(--blockr-grey-400);
+    --line: var(--blockr-grey-200);
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px;
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-weight: 600;
+    margin: 48px 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  h3 { font-size: 16px; margin: 0 0 2px; letter-spacing: -0.005em; }
+  .lede { color: var(--ink-2); max-width: 74ch; margin: 0 0 4px; }
+  .sub  { color: var(--muted); font-size: 13.5px; max-width: 82ch; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--blockr-grey-50);
+         border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+
+  .variant { margin: 26px 0 0; }
+  .vhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .vtag {
+    font: 600 11px/1 var(--mono); letter-spacing: 0.04em;
+    color: var(--muted); background: var(--blockr-grey-50);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px;
+  }
+  .vtag--pick { color: #fff; background: var(--blockr-color-primary); border-color: var(--blockr-color-primary); }
+  .cap { margin-top: 10px; font-size: 13px; color: var(--muted); max-width: 92ch; }
+  .cap b { color: var(--ink-2); font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--blockr-radius-lg); padding: 14px 16px 12px;
+  }
+  .card--tight { padding: 10px 14px; }
+  .matrix { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13.5px; }
+  .matrix th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--faint); font-weight: 600; padding: 0 12px 6px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .matrix td { padding: 9px 12px 9px 0; vertical-align: top; border-bottom: 1px solid var(--blockr-grey-100); color: var(--ink-2); }
+  .matrix td:first-child { white-space: nowrap; font-weight: 600; color: var(--ink); }
+
+  /* ================================================================== */
+  /* the shipped card, verbatim from R/css.R (css_summary_card)          */
+  /* ================================================================== */
+  .msc-card { font-size: var(--blockr-font-size-base); color: var(--blockr-color-text-primary); }
+  .msc-facts {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+    padding: 2px 0 10px;
+    font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-muted);
+  }
+  .msc-fkind { font-weight: var(--blockr-font-weight-medium); color: var(--blockr-color-text-secondary); }
+  .msc-fv { color: var(--blockr-color-text-secondary); font-variant-numeric: tabular-nums; }
+  .msc-sep { color: var(--blockr-grey-300); }
+
+  .msc-ct { width: 100%; border-collapse: collapse; }
+  .msc-ct td {
+    padding: 7px 0; vertical-align: middle;
+    border-bottom: 1px solid var(--blockr-grey-100);
+  }
+  .msc-ct tbody tr:last-child td { border-bottom: none; }
+  .msc-term { white-space: nowrap; padding-right: 16px !important; color: var(--blockr-color-text-secondary); }
+  .msc-lvl { color: var(--blockr-color-text-subtle); }
+  .msc-num { text-align: right; white-space: nowrap; padding-left: 16px !important; font-variant-numeric: tabular-nums; }
+  .msc-sig { text-align: right; white-space: nowrap; padding-left: 12px !important; width: 1%;
+             font-variant-numeric: tabular-nums; color: var(--blockr-grey-600); }
+  .msc-int td { color: var(--blockr-color-text-muted); }
+  .msc-eff { width: 42%; min-width: 140px; }
+  .msc-track { position: relative; height: 16px; }
+  .msc-ref { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--blockr-grey-300); }
+  .msc-whisk { position: absolute; top: 50%; height: 2px; min-width: 2px; transform: translateY(-50%); border-radius: 1px; }
+  .msc-dot { position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%;
+             transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #fff; }
+  .msc-off { position: absolute; top: 50%; transform: translateY(-50%); font-size: 9px; line-height: 1; color: var(--blockr-color-text-subtle); }
+  .msc-axis { position: relative; height: 15px; }
+  .msc-axis span { position: absolute; top: 0; transform: translateX(-50%);
+                   font-size: var(--blockr-font-size-xs); color: var(--blockr-color-text-subtle);
+                   font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .msc-ct tfoot td { border-bottom: none; padding-top: 2px; }
+  .pos { background: var(--blockr-blue-600); }
+  .neg { background: var(--blockr-color-danger); }
+  .nul { background: var(--blockr-grey-400); }
+
+  /* --- H1: what ships today (the micro-caps header) ------------------- */
+  .h-caps thead th {
+    padding: 0 0 6px; text-align: right;
+    font-size: var(--blockr-font-size-xs); font-weight: var(--blockr-font-weight-medium);
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--blockr-color-text-muted);
+    border-bottom: 1px solid var(--blockr-color-border); white-space: nowrap;
+  }
+  .h-caps thead th:first-child, .h-caps thead th.eff-h { text-align: left; }
+
+  /* --- H2/H3: the canonical blockr column header ----------------------
+     verbatim from blockr.ui/inst/assets/css/blockr-table-preview.css
+     (.blockr-table th / .blockr-col-name / .blockr-col-label / sort icon)
+     with viz's type-driven alignment from blockr.viz/inst/css/table.css. */
+  .blockr-table thead tr { border-bottom: 1px solid var(--blockr-color-border); }
+  .blockr-table thead th {
+    text-align: left; padding: 0 0 7px;
+    font-weight: var(--blockr-font-weight-medium);
+    color: var(--blockr-color-text-primary);
+    vertical-align: bottom; white-space: nowrap;
+  }
+  .blockr-col-name {
+    display: inline-block; max-width: 100%;
+    font-size: 14px; font-weight: var(--blockr-font-weight-medium);
+    color: var(--blockr-color-text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .blockr-col-label {
+    display: block; font-size: 11px; font-weight: 400;
+    color: var(--blockr-color-text-muted);
+    white-space: nowrap; margin-top: 1px;
+  }
+  .blockr-table thead th.dt-col-num { text-align: right; }
+  .blockr-table thead th.dt-col-num .dt-th-namerow,
+  .blockr-table thead th.dt-col-num .blockr-col-label { justify-content: flex-end; text-align: right; }
+  .dt-th-namerow { display: flex; align-items: center; gap: 4px; }
+  .blockr-sortable { cursor: pointer; user-select: none; transition: background-color 0.15s ease; }
+  .blockr-sortable:hover { background-color: var(--blockr-color-bg-subtle); }
+  .blockr-sort-icon { display: inline-block; width: 12px; height: 12px; font-size: 10px; line-height: 12px; text-align: center; }
+  .blockr-sort-icon-asc::after  { content: '\2191'; color: var(--blockr-grey-700); }
+  .blockr-sort-icon-desc::after { content: '\2193'; color: var(--blockr-grey-700); }
+  .sort-hint { opacity: 0; }
+  .blockr-sortable:hover .sort-hint { opacity: 0.45; }
+
+  /* ================================================================== */
+  /* summary-line variants                                              */
+  /* ================================================================== */
+
+  /* S2 — identity left, fit right */
+  .s2 { display: flex; align-items: baseline; gap: 16px; padding: 2px 0 10px; flex-wrap: wrap; }
+  .s2-id { font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-secondary); font-weight: var(--blockr-font-weight-medium); }
+  .s2-id .n { color: var(--blockr-color-text-muted); font-weight: 400; }
+  .s2-fit { margin-left: auto; display: flex; gap: 14px; align-items: baseline; }
+  .s2-pair { font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-muted); font-variant-numeric: tabular-nums; }
+  .s2-pair b { color: var(--blockr-color-text-secondary); font-weight: var(--blockr-font-weight-medium); }
+
+  /* S3 — stat tiles */
+  .s3 { display: flex; gap: 26px; padding: 2px 0 12px; flex-wrap: wrap; }
+  .s3-tile { min-width: 0; }
+  .s3-k { display: block; font-size: 11px; color: var(--blockr-color-text-muted); }
+  .s3-v { display: block; font-size: 17px; font-weight: var(--blockr-font-weight-semibold);
+          color: var(--blockr-color-text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .s3-kind { font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-secondary); padding-bottom: 8px; }
+
+  /* S4 — sentence */
+  .s4 { padding: 2px 0 10px; font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-secondary); max-width: 70ch; }
+  .s4 b { font-weight: var(--blockr-font-weight-medium); color: var(--blockr-color-text-primary); font-variant-numeric: tabular-nums; }
+
+  /* S5 — formula first */
+  .s5 { padding: 2px 0 10px; }
+  .s5-f {
+    font-family: var(--mono); font-size: 12.5px;
+    color: var(--blockr-color-text-primary);
+    display: block; margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .s5-f .resp { color: var(--blockr-color-primary); }
+  .s5-facts { font-size: var(--blockr-font-size-xs); color: var(--blockr-color-text-muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
+  .s5-facts b { color: var(--blockr-color-text-secondary); font-weight: var(--blockr-font-weight-medium); font-variant-numeric: tabular-nums; }
+
+  /* S6 — column-header vocabulary reused for the facts */
+  .s6 { display: flex; gap: 22px; padding: 2px 0 11px; flex-wrap: wrap; align-items: flex-end; }
+  .s6-kind { font-size: 14px; font-weight: var(--blockr-font-weight-medium); color: var(--blockr-color-text-primary); }
+  .s6-kind .blockr-col-label { text-align: left; }
+  .s6-item { min-width: 0; }
+  .s6-v { font-size: 14px; font-weight: var(--blockr-font-weight-medium); color: var(--blockr-color-text-primary); font-variant-numeric: tabular-nums; }
+
+  /* S7 — hero number */
+  .s7 { display: flex; align-items: center; gap: 14px; padding: 0 0 10px; }
+  .s7-hero { font-size: 24px; font-weight: var(--blockr-font-weight-semibold); color: var(--blockr-color-text-primary);
+             font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.1; }
+  .s7-hero-k { font-size: 11px; color: var(--blockr-color-text-muted); display: block; letter-spacing: 0.02em; }
+  .s7-rest { border-left: 1px solid var(--blockr-color-border); padding-left: 14px; font-size: var(--blockr-font-size-sm); color: var(--blockr-color-text-muted); line-height: 1.5; }
+  .s7-rest b { color: var(--blockr-color-text-secondary); font-weight: var(--blockr-font-weight-medium); font-variant-numeric: tabular-nums; }
+
+  .note { background: #fffbeb; border: 1px solid #fde68a; color: #78350f;
+          border-radius: var(--blockr-radius-md); padding: 10px 12px; font-size: 13px; margin-top: 14px; }
+  .foot { margin-top: 52px; padding-top: 14px; border-top: 1px solid var(--line);
+          font-size: 12.5px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>The model summary line, and what a column header looks like</h1>
+  <p class="lede">
+    Two open questions on the shipped model summary card: the one-line model
+    summary above the table, and whether the column names should follow the
+    blockr column header instead of the micro-caps the card invented.
+  </p>
+  <p class="sub">
+    Every mock below uses the real CSS: the card styles are copied verbatim from
+    <code>R/css.R</code>, the column header from
+    <code>blockr.ui/inst/assets/css/blockr-table-preview.css</code> and
+    <code>blockr.viz/inst/css/table.css</code>, and the tokens from the target
+    set in <code>blockr.docs/design-system/target/design-system.html</code>.
+    Numbers are a real penguins fit: <code>body_mass_g ~ flipper_length_mm + species</code>,
+    333 observations.
+  </p>
+
+  <!-- ================================================================== -->
+  <h2>Part 1 &middot; The column header</h2>
+  <p class="sub">
+    This one I think is simply a bug in what I shipped. blockr has a column
+    header, in two places that already agree with each other, and the card
+    ignored it.
+  </p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">H1</span><h3>What ships today: micro-caps</h3></div>
+    <div class="card">
+      <div class="msc-card">
+        <div class="msc-facts">
+          <span class="msc-fkind">Linear model</span>
+          <span class="msc-sep">&middot;</span><span>333 obs</span>
+          <span class="msc-sep">&middot;</span><span>adj. R&sup2; <b class="msc-fv">0.785</b></span>
+          <span class="msc-sep">&middot;</span><span>residual SD <b class="msc-fv">373.3</b></span>
+          <span class="msc-sep">&middot;</span><span>AIC <b class="msc-fv">4895</b></span>
+        </div>
+        <table class="msc-ct h-caps">
+          <thead>
+            <tr>
+              <th>Term</th><th class="eff-h">Effect (95% CI)</th>
+              <th>Estimate</th><th>95% CI</th><th>p</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="msc-term">flipper_length_mm</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:48%;width:1.5%"></div>
+                <div class="msc-dot pos" style="left:48.8%"></div></div></td>
+              <td class="msc-num">40.6</td><td class="msc-num">34.55 &ndash; 46.66</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Chinstrap</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk neg" style="left:8%;width:22%"></div>
+                <div class="msc-dot neg" style="left:19%"></div></div></td>
+              <td class="msc-num">&minus;205.4</td><td class="msc-num">&minus;318.62 &ndash; &minus;92.13</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Gentoo</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:55%;width:37%"></div>
+                <div class="msc-dot pos" style="left:73%"></div></div></td>
+              <td class="msc-num">284.5</td><td class="msc-num">96.79 &ndash; 472.25</td><td class="msc-sig">0.003</td>
+            </tr>
+            <tr class="msc-int">
+              <td class="msc-term">(Intercept)</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-off" style="left:0">&#9664;</div></div></td>
+              <td class="msc-num">&minus;4013.2</td><td class="msc-num">&minus;5166.44 &ndash; &minus;2859.92</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+          </tbody>
+          <tfoot><tr><td></td><td class="msc-eff"><div class="msc-axis">
+            <span style="left:0">&minus;370</span><span style="left:44%">0</span><span style="left:100%">520</span>
+          </div></td><td colspan="3"></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <p class="cap">
+      10&ndash;12px uppercase, letter-spaced, muted. It is a perfectly normal
+      way to head a table, and it is <b>not the blockr way</b>: nothing else in
+      the product heads a column like this, so the card reads as imported from
+      another product.
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag vtag--pick">H2</span><h3>The blockr column header, with the interval as the sub-label</h3></div>
+    <div class="card">
+      <div class="msc-card">
+        <div class="msc-facts">
+          <span class="msc-fkind">Linear model</span>
+          <span class="msc-sep">&middot;</span><span>333 obs</span>
+          <span class="msc-sep">&middot;</span><span>adj. R&sup2; <b class="msc-fv">0.785</b></span>
+          <span class="msc-sep">&middot;</span><span>residual SD <b class="msc-fv">373.3</b></span>
+          <span class="msc-sep">&middot;</span><span>AIC <b class="msc-fv">4895</b></span>
+        </div>
+        <table class="msc-ct blockr-table">
+          <thead>
+            <tr>
+              <th><span class="blockr-col-name">Term</span></th>
+              <th><span class="blockr-col-name">Effect</span><span class="blockr-col-label">95% CI</span></th>
+              <th class="dt-col-num"><span class="blockr-col-name">Estimate</span><span class="blockr-col-label">body mass (g)</span></th>
+              <th class="dt-col-num"><span class="blockr-col-name">95% CI</span></th>
+              <th class="dt-col-num"><span class="blockr-col-name">p</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="msc-term">flipper_length_mm</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:48%;width:1.5%"></div>
+                <div class="msc-dot pos" style="left:48.8%"></div></div></td>
+              <td class="msc-num">40.6</td><td class="msc-num">34.55 &ndash; 46.66</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Chinstrap</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk neg" style="left:8%;width:22%"></div>
+                <div class="msc-dot neg" style="left:19%"></div></div></td>
+              <td class="msc-num">&minus;205.4</td><td class="msc-num">&minus;318.62 &ndash; &minus;92.13</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Gentoo</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:55%;width:37%"></div>
+                <div class="msc-dot pos" style="left:73%"></div></div></td>
+              <td class="msc-num">284.5</td><td class="msc-num">96.79 &ndash; 472.25</td><td class="msc-sig">0.003</td>
+            </tr>
+            <tr class="msc-int">
+              <td class="msc-term">(Intercept)</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-off" style="left:0">&#9664;</div></div></td>
+              <td class="msc-num">&minus;4013.2</td><td class="msc-num">&minus;5166.44 &ndash; &minus;2859.92</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+          </tbody>
+          <tfoot><tr><td></td><td class="msc-eff"><div class="msc-axis">
+            <span style="left:0">&minus;370</span><span style="left:44%">0</span><span style="left:100%">520</span>
+          </div></td><td colspan="3"></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+    <p class="cap">
+      <b>The recipe, verbatim:</b> 14px medium in primary ink for the name, an
+      11px normal muted <code>.blockr-col-label</code> underneath, numeric
+      columns right-aligned (viz drives that off the column type). The card
+      stops inventing and starts matching the preview and the table block.
+      <b>The sub-label earns its keep here:</b> "Effect / 95% CI" says what the
+      whisker is without spending a parenthesis, and "Estimate / body mass (g)"
+      is the one place the response's units can appear at all. Costs one line
+      of header height.
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">H3</span><h3>Same header, sortable</h3></div>
+    <div class="card">
+      <div class="msc-card">
+        <table class="msc-ct blockr-table">
+          <thead>
+            <tr>
+              <th class="blockr-sortable"><span class="dt-th-namerow"><span class="blockr-col-name">Term</span><span class="blockr-sort-icon sort-hint blockr-sort-icon-asc"></span></span></th>
+              <th><span class="blockr-col-name">Effect</span><span class="blockr-col-label">95% CI</span></th>
+              <th class="dt-col-num blockr-sortable">
+                <span class="dt-th-namerow"><span class="blockr-col-name">Estimate</span><span class="blockr-sort-icon blockr-sort-icon-desc"></span></span>
+                <span class="blockr-col-label">body mass (g)</span>
+              </th>
+              <th class="dt-col-num"><span class="blockr-col-name">95% CI</span></th>
+              <th class="dt-col-num blockr-sortable"><span class="dt-th-namerow"><span class="blockr-col-name">p</span><span class="blockr-sort-icon sort-hint blockr-sort-icon-asc"></span></span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Gentoo</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:55%;width:37%"></div>
+                <div class="msc-dot pos" style="left:73%"></div></div></td>
+              <td class="msc-num">284.5</td><td class="msc-num">96.79 &ndash; 472.25</td><td class="msc-sig">0.003</td>
+            </tr>
+            <tr>
+              <td class="msc-term">flipper_length_mm</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk pos" style="left:48%;width:1.5%"></div>
+                <div class="msc-dot pos" style="left:48.8%"></div></div></td>
+              <td class="msc-num">40.6</td><td class="msc-num">34.55 &ndash; 46.66</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr>
+              <td class="msc-term">species<span class="msc-lvl"> Chinstrap</span></td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-whisk neg" style="left:8%;width:22%"></div>
+                <div class="msc-dot neg" style="left:19%"></div></div></td>
+              <td class="msc-num">&minus;205.4</td><td class="msc-num">&minus;318.62 &ndash; &minus;92.13</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+            <tr class="msc-int">
+              <td class="msc-term">(Intercept)</td>
+              <td class="msc-eff"><div class="msc-track">
+                <div class="msc-ref" style="left:44%"></div>
+                <div class="msc-off" style="left:0">&#9664;</div></div></td>
+              <td class="msc-num">&minus;4013.2</td><td class="msc-num">&minus;5166.44 &ndash; &minus;2859.92</td><td class="msc-sig">&lt;0.001</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="cap">
+      Sorted descending by estimate (hover a header to see the hint arrow; the
+      unsorted arrow reserves no width, so nothing shifts). Note the intercept
+      <b>stays pinned last</b> in every sort: it is the baseline, not a
+      competitor, and it is out of the shared scale.
+    </p>
+    <div class="note">
+      <b>Sorting is a decision, not just CSS.</b> We cut "sort terms" as a gear
+      option an hour ago, for a reason that still holds: reordering turns a
+      coefficient table into a ranking across terms measured on different
+      scales. A header click is a weaker, better version of the same thing (no
+      gear slot, no change to the default reading, standard table affordance) —
+      but it has to live somewhere. Purely in JS it is lost on every redraw, and
+      the card redraws on every option change and every upstream refit. Persisted,
+      it is block state, and lands in the saved board and the exported code.
+      My recommendation: <b>ship H2 now, leave H3 for when the sort belongs to
+      the shared table component</b> rather than being reimplemented per card.
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 2 &middot; The one-line model summary</h2>
+  <p class="sub">
+    What ships is S1. The question behind all of these: is this line an
+    <em>identity</em> ("what model is this?"), a <em>scorecard</em> ("how good
+    is it?"), or both — and how much visual weight should something the reader
+    checks once, and then ignores, be allowed to take?
+  </p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">S1</span><h3>Dot-separated run &mdash; ships today</h3></div>
+    <div class="card card--tight">
+      <div class="msc-card"><div class="msc-facts">
+        <span class="msc-fkind">Linear model</span>
+        <span class="msc-sep">&middot;</span><span>333 obs</span>
+        <span class="msc-sep">&middot;</span><span>adj. R&sup2; <b class="msc-fv">0.785</b></span>
+        <span class="msc-sep">&middot;</span><span>residual SD <b class="msc-fv">373.3</b></span>
+        <span class="msc-sep">&middot;</span><span>AIC <b class="msc-fv">4895</b></span>
+      </div></div>
+    </div>
+    <p class="cap">
+      One line, wraps safely, cheap. <b>The complaint:</b> five facts of four
+      different kinds (what it is, how much data, two fit measures, one
+      information criterion) all at the same pitch, so nothing is findable and
+      the eye slides off. Also the only bolded things are numbers whose labels
+      are the quiet part, which is backwards.
+    </p>
+  </div>
+
+  <div class="grid2">
+    <div class="variant">
+      <div class="vhead"><span class="vtag">S2</span><h3>Identity left, fit right</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card"><div class="s2">
+          <span class="s2-id">Linear model <span class="n">&middot; 333 obs</span></span>
+          <span class="s2-fit">
+            <span class="s2-pair">adj. R&sup2; <b>0.785</b></span>
+            <span class="s2-pair">SD <b>373.3</b></span>
+            <span class="s2-pair">AIC <b>4895</b></span>
+          </span>
+        </div></div>
+      </div>
+      <p class="cap">
+        Same height, two jobs separated: what the model <em>is</em> on the left,
+        how well it <em>fits</em> on the right, where numbers belong. Costs
+        nothing, and the right edge lines up with the table's numeric columns.
+      </p>
+    </div>
+
+    <div class="variant">
+      <div class="vhead"><span class="vtag">S3</span><h3>Stat tiles</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card">
+          <div class="s3-kind">Linear model &middot; 333 obs</div>
+          <div class="s3">
+            <span class="s3-tile"><span class="s3-k">adj. R&sup2;</span><span class="s3-v">0.785</span></span>
+            <span class="s3-tile"><span class="s3-k">residual SD</span><span class="s3-v">373.3</span></span>
+            <span class="s3-tile"><span class="s3-k">AIC</span><span class="s3-v">4895</span></span>
+          </div>
+        </div>
+      </div>
+      <p class="cap">
+        V5 from the first round, kept honest. Findable and scannable, but it is
+        two lines and it out-shouts the coefficients: in a dock panel the fit
+        stats would be the loudest thing on a card whose point is the terms.
+        Right for a card that is <em>only</em> the fit; wrong above a table.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="variant">
+      <div class="vhead"><span class="vtag">S4</span><h3>Sentence</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card"><div class="s4">
+          Linear model of <b>body mass</b> on <b>2</b> predictors,
+          <b>333</b> observations, explaining <b>78.5%</b> of the variance
+          (residual SD <b>373.3</b>).
+        </div></div>
+      </div>
+      <p class="cap">
+        Reads without training, and it is the only variant that can say
+        "78.5% of the variance" instead of "R&sup2; 0.785". <b>Against:</b>
+        prose does not survive a Cox or a Poisson without a per-class template,
+        it wraps to three lines in a narrow panel, and a reader coming back for
+        the third time has to re-read a sentence to find one number.
+      </p>
+    </div>
+
+    <div class="variant">
+      <div class="vhead"><span class="vtag">S5</span><h3>Formula first</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card"><div class="s5">
+          <span class="s5-f"><span class="resp">body_mass_g</span> ~ flipper_length_mm + species</span>
+          <span class="s5-facts">
+            <span>Linear model</span><span class="msc-sep">&middot;</span>
+            <span>333 obs</span><span class="msc-sep">&middot;</span>
+            <span>adj. R&sup2; <b>0.785</b></span><span class="msc-sep">&middot;</span>
+            <span>SD <b>373.3</b></span><span class="msc-sep">&middot;</span>
+            <span>AIC <b>4895</b></span>
+          </span>
+        </div></div>
+      </div>
+      <p class="cap">
+        The formula is what the model <em>is</em>, and right now it appears
+        nowhere on the card — it lives in the block's name, which a reader of an
+        exported report never sees. Monospace, response tinted.
+        <b>Against:</b> a wide formula truncates, and on a board the block title
+        usually says it already.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="variant">
+      <div class="vhead"><span class="vtag vtag--pick">S6</span><h3>The column-header vocabulary, reused</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card"><div class="s6">
+          <span class="s6-item"><span class="s6-kind">Linear model</span><span class="blockr-col-label">333 observations</span></span>
+          <span class="s6-item"><span class="s6-v">0.785</span><span class="blockr-col-label">adj. R&sup2;</span></span>
+          <span class="s6-item"><span class="s6-v">373.3</span><span class="blockr-col-label">residual SD</span></span>
+          <span class="s6-item"><span class="s6-v">4895</span><span class="blockr-col-label">AIC</span></span>
+        </div></div>
+      </div>
+      <p class="cap">
+        The same two-tier pattern as the column header: 14px medium value,
+        11px muted label underneath. <b>Why I like it:</b> if Part 1 lands, the
+        card already speaks this language in its header, so the summary line
+        stops being a fourth kind of typography on one card. Value-over-label
+        also puts the numbers where the eye looks first, and it survives any
+        model class because it is just pairs.
+      </p>
+    </div>
+
+    <div class="variant">
+      <div class="vhead"><span class="vtag">S7</span><h3>One hero number</h3></div>
+      <div class="card card--tight">
+        <div class="msc-card"><div class="s7">
+          <span><span class="s7-hero">0.785</span><span class="s7-hero-k">adj. R&sup2;</span></span>
+          <span class="s7-rest">
+            Linear model &middot; 333 obs<br>
+            residual SD <b>373.3</b> &middot; AIC <b>4895</b>
+          </span>
+        </div></div>
+      </div>
+      <p class="cap">
+        Picks the one fit measure that suits the class (adj. R&sup2; for lm,
+        concordance for Cox, pseudo-R&sup2; for a GLM) and makes it the anchor.
+        <b>Against:</b> it asserts that one number is the headline, which is
+        exactly the habit that gets R&sup2; over-read; and for an AIC-only model
+        there is no defensible hero.
+      </p>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Decided</h2>
+  <div class="note" style="background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">
+    <b>Christoph, 2026-07-26 — implemented.</b> Summary line: <b>S2</b>.
+    Column header: the blockr column header <b>without the sub-label tier</b>
+    (the interval stays inside the name it qualifies, "Effect (95% CI)"), and
+    <b>with sorting</b>. Sorting is pure JS and stores nothing: sort by name,
+    by largest coefficient or by weakest evidence, which is what you want once
+    a model has many predictors. Because the card is redrawn by R on every
+    update, the chosen order is remembered per output in the browser and
+    re-applied to the new table — it lives as long as the tab, never reaches
+    R, and never enters the saved board or the exported code. A third click on
+    the same column returns to model order, and the intercept stays pinned last
+    in every order.
+  </div>
+
+  <h2>What I had recommended</h2>
+  <table class="matrix">
+    <thead><tr><th>Question</th><th>Recommendation</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Column header</td>
+        <td><b>H2</b> — the blockr column header, sub-label carrying the interval and the response units</td>
+        <td>Not really a preference: blockr already has one column header, used
+            by both the preview and the table block, and the card invented a
+            different one. The sub-label tier then pays for itself twice over.</td>
+      </tr>
+      <tr>
+        <td>Sortable</td>
+        <td><b>Not yet</b></td>
+        <td>Right gesture, wrong owner. A per-card sort is either lost on redraw
+            or becomes block state we deliberately declined. Worth doing when
+            the shared table component owns sorting.</td>
+      </tr>
+      <tr>
+        <td>Summary line</td>
+        <td><b>S6</b>, with <b>S2</b> as the fallback if the two-tier line feels
+            too tall</td>
+        <td>S6 makes the card speak one typographic language once H2 lands, and
+            reads value-first. S2 is the zero-risk version of the same idea:
+            identity left, numbers right, one line.</td>
+      </tr>
+      <tr>
+        <td>The formula (S5)</td>
+        <td>Worth having, but as a <b>gear option</b> rather than a default</td>
+        <td>It is the only thing on the card that says what was fitted, which
+            matters in an exported report where the block title is gone. It also
+            duplicates the block title on a board, which is why it should not be
+            on by default.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="cap" style="margin-top:16px">
+    Open question I cannot answer from here: <b>the response units</b>
+    ("body mass (g)") in the Estimate sub-label. We can only fill that in when
+    the upstream data carries a column label — real for ADaM/BDS data, absent
+    for penguins and mtcars. So the sub-label has to be optional, and the header
+    must not jump a line when it is missing.
+  </p>
+
+  <div class="foot">
+    Card CSS copied from <code>blockr.stats/R/css.R</code> (<code>css_summary_card</code>);
+    column header from <code>blockr.ui/inst/assets/css/blockr-table-preview.css</code>
+    plus the type-driven alignment in <code>blockr.viz/inst/css/table.css</code>;
+    tokens from <code>blockr.docs/design-system/target/design-system.html</code>.
+    Companion to <code>dev/model-summary-proposals.html</code>, which decided the
+    card and its gear.
+  </div>
+
+</div>
+</body>
+</html>

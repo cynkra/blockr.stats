@@ -1,6 +1,6 @@
 # blockr.stats
 
-Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr): descriptives, frequencies, an adaptive test family, linear and generalized linear models, effect sizes, and survival analysis. Every block emits tidy data frames and stays canonical R underneath, aimed at no-code statistical workflows.
+Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr): linear and generalized linear models, an adaptive test family, correlations, and survival analysis, plus a card that renders a fitted model. Six blocks. Every block emits tidy data frames and stays canonical R underneath, aimed at no-code statistical workflows.
 
 ## Installation
 
@@ -8,46 +8,47 @@ Statistical analysis blocks for [blockr](https://github.com/blockr-org/blockr): 
 pak::pak("blockr-org/blockr.stats")
 ```
 
-Runtime dependencies are all on CRAN: `broom`, `survival`, `cmprsk`, `effsize`, `moments`, `nortest`, `dplyr`, `glue`, and base `stats`. Model output is tidied through `broom` rather than the easystats family.
+Runtime dependencies are all on CRAN: `broom`, `survival`, `cmprsk`, `moments`, `nortest`, `dplyr`, and base `stats`. Model output is tidied through `broom` rather than the easystats family.
 
 ## Block catalog
 
 | Block | Wraps | Notes |
 |---|---|---|
 | `new_model_block()` | `stats::lm`, `stats::glm`, `stats::aov` | Adaptive: pick `model_type` (`lm`, `glm` logistic/poisson, `aov`); role pickers adapt. |
+| `new_model_summary_block()` | `broom::tidy`, `broom::glance` | Renders a fitted model as a card: model facts line + coefficient table with an inline forest. Feeds on the model object directly, so no adapter block in between; its value is the tidy coefficient frame. |
 | `new_broom_block()` | `broom::tidy`, `broom::glance`, `broom::augment` | Generic adapter: turns any fitted model into a tidy / glance / augment frame. |
-| `new_descriptives_block()` | base `stats` + `moments` | Per-variable mean / SD / quantiles / skew / kurtosis. |
-| `new_frequencies_block()` | `table()` | Counts and proportions for categorical columns, optional `by`. |
+| `new_correlate_block()` | `stats::cor` | Pairwise correlation matrix (pearson / spearman / kendall); renders as a heatmap table. |
 | `new_stat_test_block()` | `stats` test family | Adaptive `type`: one-sample / paired / two-sample t, Wilcoxon, one-way ANOVA, Kruskal-Wallis, chi-square independence, correlation, normality, homogeneity. |
-| `new_padjust_block()` | `stats::p.adjust` | Multiple-comparison p-value adjustment. |
-| `new_effect_size_block()` | `effsize`, `stats::aov` | Partial eta² / omega² and related effect sizes. |
 | `new_survival_block()` | `survival`, `cmprsk` | Kaplan-Meier (`km`), Cox (`cox`), cumulative incidence (`cif`). |
+
+Counts, proportions and per-variable descriptives are not blocks here: `blockr.viz::new_summary_table_block()` covers them for mixed types and by-group columns, and `blockr.dplyr` covers the rest.
 
 ## Demo
 
-A hand-composed `dock_board` script lives in `dev/`:
+Hand-composed `dock_board` scripts live in `dev/`:
 
-- `dev/stats-101.R` — the applied-stats spine (Describe / Compare / Associate / Regress / Nonparametric) plus the advanced survival tier, emitting tidy frames into the generic drilldown renderers.
+- `dev/basic-analysis.R` — start here. The smallest board that walks a whole analysis: penguins, a Table 1 by species, a two-sample t-test, an `lm` card and its tidy coefficients. Six blocks, four views.
+- `dev/stats-101.R` — the full tour: the applied-stats spine (Describe / Compare / Associate / Regress / Nonparametric) plus the advanced survival tier, emitting tidy frames into the generic drilldown renderers.
 
 Run from the workspace root:
 
 ```bash
+Rscript blockr.stats/dev/basic-analysis.R          # port 3838, or pass one
 Rscript -e 'options(shiny.port=3838L, shiny.host="127.0.0.1"); source("blockr.stats/dev/stats-101.R", echo=FALSE, print.eval=TRUE)'
 ```
 
-Open `http://localhost:3838`.
+Open `http://127.0.0.1:3838`.
 
 ## Workflow
 
 ```
-data ──► descriptives / frequencies
-data ──► stat_test ──► padjust
-data ──► model ──┬──► broom (tidy / glance / augment)
-                 └──► effect_size
+data ──► correlate ──► table (heatmap)
+data ──► stat_test
+data ──► model ──► broom (tidy / glance / augment)
 data ──► survival ──► broom (tidy step curve)
 ```
 
-`new_broom_block()` is the hinge: model and survival blocks fit, `broom` tidies, and downstream blocks (tables, drilldown charts) render the tidy frame.
+`new_model_summary_block()` is the usual next step after a fit: it tidies the model itself and draws the card. `new_broom_block()` is the hinge when you want the frame rather than the card: model and survival blocks fit, `broom` tidies, and downstream blocks (tables, drilldown charts) render the tidy frame.
 
 ## Design
 

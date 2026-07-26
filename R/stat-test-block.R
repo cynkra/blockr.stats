@@ -2,8 +2,9 @@
 #'
 #' A single adaptive block for running statistical tests. Pick a
 #' category and test; the parameter UI adapts to the chosen test.
-#' Optional group-by stratification. Pure stock-Shiny r-driven block
-#' (no shinyWidgets / shinyjs) — the adaptive UI is a `renderUI`.
+#' Optional group-by stratification. The adaptive UI is a `renderUI`;
+#' alternative / confidence level / null value live in the gear band, and
+#' tests that have none of them show no gear.
 #'
 #' @param type Test type key from `test_config` (default "normality").
 #' @param values Numeric (or factor, for categorical tests) column
@@ -41,8 +42,34 @@ new_stat_test_block <- function(
   ui <- function(id) {
     ns <- NS(id)
     tagList(
+      # Blockr.icons + gear-header styles from blockr.dplyr; the in-flow
+      # settings band is vendored here (see settings_band_dep()).
+      blockr.dplyr::blockr_core_js_dep(),
+      blockr.dplyr::blockr_blocks_css_dep(),
+      settings_band_dep(),
       div(
         class = "block-container",
+        # Alternative / confidence level / null value live in the gear band,
+        # like every other blockr block. Tests that have none of them (most
+        # normality and categorical tests) get no gear at all.
+        conditionalPanel(
+          "output.has_advanced", ns = ns,
+          div(
+            class = "blockr-gear-header",
+            tags$button(id = ns("gear"), type = "button",
+                        class = "blockr-gear-btn", title = "Advanced options")
+          ),
+          div(
+            id = ns("band"),
+            class = "blockr-settings blockr-settings--beak",
+            div(class = "blockr-settings__title", "Advanced options"),
+            div(
+              class = "blockr-settings__grid",
+              div(class = "blockr-settings__field--full",
+                  uiOutput(ns("advanced_ui")))
+            )
+          )
+        ),
         div(
           class = "block-form-grid",
           div(style = "grid-column: 1 / -1;",
@@ -73,7 +100,8 @@ new_stat_test_block <- function(
                 style = "font-size:0.875rem;color:#666;font-weight:normal;"),
               initial_choices = by, initial_selected = by))
         )
-      )
+      ),
+      gear_band_script(ns)
     )
   }
 
@@ -135,53 +163,78 @@ new_stat_test_block <- function(
                     selected = sel, width = "100%")
       })
 
-      # Adaptive parameter UI for the current test
+      # Which of the current test's parameters belong in the gear band.
+      # Everything else (method, variant) is a primary choice and stays on
+      # the block face.
+      adv_params <- reactive({
+        cfg <- test_config[[r_type()]]
+        req(cfg)
+        intersect(c("alternative", "conf_level", "null"), names(cfg$params))
+      })
+
+      # Drives the conditionalPanel around the gear: no advanced parameters,
+      # no gear. Must keep evaluating while hidden, or the panel can never
+      # come back.
+      output$has_advanced <- reactive(length(adv_params()) > 0)
+      outputOptions(output, "has_advanced", suspendWhenHidden = FALSE)
+
+      # Adaptive parameter UI for the current test (block face)
       output$params_ui <- renderUI({
         ct <- r_type()
         req(ct)
         cfg <- test_config[[ct]]
         req(cfg)
         p <- cfg$params
+        # The block can be constructed with method / variant unset, and a
+        # test switch can leave a value the new test does not offer. Both
+        # fall back to the test's default; a bare `%in%` on character(0)
+        # would error out of the renderUI ("argument is of length zero").
+        sel_or_default <- function(cur, choices, default) {
+          if (length(cur) == 1L && cur %in% choices) cur else default
+        }
         bits <- list()
         if ("method" %in% names(p)) {
           bits <- c(bits, list(selectInput(ns("method"),
             p$method$label %||% "Method", choices = p$method$choices,
-            selected = if (r_method() %in% p$method$choices)
-              r_method() else p$method$default, width = "100%")))
+            selected = sel_or_default(r_method(), p$method$choices,
+                                      p$method$default), width = "100%")))
         }
         if ("variant" %in% names(p)) {
           bits <- c(bits, list(selectInput(ns("variant"),
             p$variant$label %||% "Variance assumption",
             choices = p$variant$choices,
-            selected = if (r_variant() %in% p$variant$choices)
-              r_variant() else p$variant$default, width = "100%")))
+            selected = sel_or_default(r_variant(), p$variant$choices,
+                                      p$variant$default), width = "100%")))
         }
+        if (!length(bits)) return(NULL)
+        do.call(tagList, bits)
+      })
+
+      # Advanced parameter UI (gear band)
+      output$advanced_ui <- renderUI({
+        keys <- adv_params()
+        cfg <- test_config[[r_type()]]
+        p <- cfg$params
         adv <- list()
-        if ("alternative" %in% names(p)) {
+        if ("alternative" %in% keys) {
           adv <- c(adv, list(selectInput(ns("alternative"),
             "Alternative",
             choices = c("Two sided" = "two.sided",
                         "Greater" = "greater", "Less" = "less"),
             selected = r_alternative(), width = "100%")))
         }
-        if ("conf_level" %in% names(p)) {
+        if ("conf_level" %in% keys) {
           adv <- c(adv, list(numericInput(ns("conf_level"),
             "Confidence level", value = r_conf_level(),
             min = 0, max = 1, step = 0.01, width = "100%")))
         }
-        if ("null" %in% names(p)) {
+        if ("null" %in% keys) {
           adv <- c(adv, list(numericInput(ns("null"),
             p$null$label %||% "Null value", value = r_null(),
             step = 0.1, width = "100%")))
         }
-        if (length(adv)) {
-          bits <- c(bits, list(tags$details(
-            tags$summary("Advanced options",
-              style = "cursor:pointer;color:#6c757d;font-size:0.875rem;"),
-            do.call(tagList, adv))))
-        }
-        if (!length(bits)) return(NULL)
-        do.call(tagList, bits)
+        if (!length(adv)) return(NULL)
+        do.call(tagList, adv)
       })
 
       observeEvent(colnames(data()), {

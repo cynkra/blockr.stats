@@ -125,6 +125,50 @@ formula_ast_to_text <- function(state) {
   paste(trimws(deparse(f)), collapse = " ")
 }
 
+#' Build the model summary expression
+#'
+#' One `blockr.stats::model_summary()` call over the upstream model. Options
+#' left at their default are pruned from the call, so the common case exports
+#' as a bare `model_summary(model)` and only the settings the user actually
+#' changed appear in the code.
+#'
+#' Unlike the broom block this does name a blockr.stats function: the card's
+#' options travel with the value (as attributes), which is what keeps the
+#' rendered card and the returned frame from ever disagreeing.
+#'
+#' @inheritParams model_summary
+#' @return A language object.
+#' @keywords internal
+#' @noRd
+build_model_summary_call <- function(uncertainty, significance, scale,
+                                     effect_column, facts, intercept) {
+  vals <- list(
+    uncertainty = uncertainty,
+    significance = significance,
+    scale = scale,
+    effect_column = isTRUE(effect_column),
+    facts = isTRUE(facts),
+    intercept = isTRUE(intercept)
+  )
+
+  call <- blockr.core::bbquote(
+    blockr.stats::model_summary(
+      .(data),
+      uncertainty = .(u), significance = .(s), scale = .(sc),
+      effect_column = .(ec), facts = .(fa), intercept = .(ic)
+    ),
+    list(u = vals$uncertainty, s = vals$significance, sc = vals$scale,
+         ec = vals$effect_column, fa = vals$facts, ic = vals$intercept)
+  )
+
+  for (nm in names(vals)) {
+    if (identical(vals[[nm]], ms_defaults[[nm]])) {
+      call[[nm]] <- NULL
+    }
+  }
+  call
+}
+
 #' Build the standard-R broom expression for the selected output
 #'
 #' Emits plain `broom::tidy()` / `glance()` / `augment()` with the broom

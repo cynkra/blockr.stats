@@ -37,8 +37,9 @@ A block of class \code{stat_test_block}.
 \description{
 A single adaptive block for running statistical tests. Pick a
 category and test; the parameter UI adapts to the chosen test.
-Optional group-by stratification. Pure stock-Shiny r-driven block
-(no shinyWidgets / shinyjs) — the adaptive UI is a \code{renderUI}.
+Optional group-by stratification. The adaptive UI is a \code{renderUI};
+alternative / confidence level / null value live in the gear band, and
+tests that have none of them show no gear.
 }
 \examples{
 if (interactive()) {

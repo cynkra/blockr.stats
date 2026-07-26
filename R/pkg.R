@@ -3,7 +3,6 @@
 
 #' @import shiny
 #' @import blockr.core
-#' @importFrom glue glue
 #' @importFrom broom tidy glance augment
 #' @importFrom stats lm anova residuals fitted sd shapiro.test ks.test bartlett.test as.formula na.omit
 #' @importFrom utils head

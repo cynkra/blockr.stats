@@ -32,11 +32,15 @@ the renderer boundary -- feed it to the generic drilldown chart/table
 (coef plot, glance table, residual/QQ scatter).
 }
 \details{
+The verb picker is the whole face of the block. Everything else is
+verb-specific and lives in the gear band, which shows only the options
+the selected verb actually has: \code{conf.int} / \code{conf.level} for \code{tidy}
+(broom's own arguments) and QQ columns for \code{augment} (a blockr.stats
+convenience, so a QQ plot is a plain scatter). \code{glance()} has no
+options, so on \code{glance} there is no gear.
+
 The generated expression is plain \code{broom::tidy()} / \code{glance()} /
-\code{augment()} with the conveniences inlined: a \code{conf.int} fallback,
-optional QQ columns on \code{augment}, and model-aware column \code{label}
-attributes the renderers display. No blockr.stats function appears in
-the generated code.
+\code{augment()}; no blockr.stats function appears in the generated code.
 }
 \examples{
 if (interactive()) {

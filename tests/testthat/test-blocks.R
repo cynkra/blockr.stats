@@ -34,31 +34,52 @@ test_that("broom_block tidies an upstream model", {
   )
 })
 
-test_that("descriptives_block is soft-deprecated but still constructs", {
-  # Unregistered per the deprecation policy, but the constructor is kept so
-  # existing boards still load; it nudges via lifecycle::deprecate_soft().
-  expect_false("descriptives_block" %in% names(blockr.core::available_blocks()))
-  withr::local_options(lifecycle_verbosity = "warning")
-  expect_warning(
-    blk0 <- new_descriptives_block(vars = "mpg"),
-    "deprecated",
-    ignore.case = TRUE
-  )
-  expect_s3_class(blk0, "descriptives_block")
-})
-
-test_that("descriptives_block emits a tidy per-variable frame", {
-  withr::local_options(lifecycle_verbosity = "quiet")
-  blk <- new_descriptives_block(vars = c("mpg", "wt"))
+test_that("model_summary_block returns the coefficient frame for a model", {
+  blk <- new_model_summary_block()
+  m <- lm(mpg ~ wt + hp, mtcars)
   shiny::testServer(
     blockr.core:::get_s3_method("block_server", blk),
     {
       session$flushReact()
       res <- session$returned$result()
-      expect_setequal(res$variable, c("mpg", "wt"))
-      expect_true(all(c("n", "mean", "sd", "median") %in% names(res)))
+      # the block's VALUE is an ordinary tidy frame: downstream table / chart
+      # / report blocks see coefficients, not a rendered card
+      expect_s3_class(res, "data.frame")
+      expect_true(all(c("term", "estimate", "conf.low", "p.value") %in% names(res)))
+      expect_true("(Intercept)" %in% res$term)
+      expect_equal(attr(res, "ms_kind"), "Linear model")
+      expect_equal(attr(res, "ms_nobs"), 32L)
+      expect_true(isTRUE(attr(res, "ms_has_terms")))
+      expect_equal(session$returned$state$uncertainty(), "ci95")
     },
-    args = list(x = blk, data = list(data = function() mtcars))
+    args = list(x = blk, data = list(data = function() m))
+  )
+})
+
+test_that("model_summary_block options reach the expression and the value", {
+  blk <- new_model_summary_block(
+    uncertainty = "ci90", significance = "stars", intercept = FALSE
+  )
+  m <- lm(mpg ~ wt + hp, mtcars)
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      session$flushReact()
+      code <- paste(deparse(session$returned$expr()), collapse = " ")
+      expect_match(code, "blockr.stats::model_summary")
+      expect_match(code, "ci90")
+      expect_match(code, "stars")
+      # defaults are pruned from the emitted call, changed options are not
+      expect_false(grepl("scale", code))
+      expect_false(grepl("facts", code))
+
+      res <- session$returned$result()
+      expect_false("(Intercept)" %in% res$term)
+      # a 90% interval is strictly narrower than the 95% one
+      expect_true(all(res$conf.high - res$conf.low <
+                        stats::confint(m)[-1, 2] - stats::confint(m)[-1, 1]))
+    },
+    args = list(x = blk, data = list(data = function() m))
   )
 })
 
@@ -112,46 +133,3 @@ test_that("survival_block returns a survfit", {
   )
 })
 
-test_that("frequencies_block emits one-way counts", {
-  blk <- new_frequencies_block(vars = "wool")
-  shiny::testServer(
-    blockr.core:::get_s3_method("block_server", blk),
-    {
-      session$flushReact()
-      res <- session$returned$result()
-      expect_true(all(c("variable", "level", "n", "proportion") %in% names(res)))
-      expect_setequal(res$level, levels(warpbreaks$wool))
-    },
-    args = list(x = blk, data = list(data = function() warpbreaks))
-  )
-})
-
-test_that("padjust_block adds an adjusted p-value column", {
-  df <- data.frame(term = letters[1:4], p.value = c(.01, .04, .2, .5))
-  blk <- new_padjust_block(pcol = "p.value", method = "BH")
-  shiny::testServer(
-    blockr.core:::get_s3_method("block_server", blk),
-    {
-      session$flushReact()
-      res <- session$returned$result()
-      expect_true("p.adjusted" %in% names(res))
-      expect_equal(res$p.adjusted, stats::p.adjust(df$p.value, "BH"))
-    },
-    args = list(x = blk, data = list(data = function() df))
-  )
-})
-
-test_that("effect_size_block emits a tidy effect-size frame", {
-  fit <- aov(mpg ~ factor(cyl), data = mtcars)
-  blk <- new_effect_size_block(measure = "partial_eta2")
-  shiny::testServer(
-    blockr.core:::get_s3_method("block_server", blk),
-    {
-      session$flushReact()
-      res <- session$returned$result()
-      expect_true(all(c("term", "measure", "estimate") %in% names(res)))
-      expect_equal(unique(res$measure), "partial_eta2")
-    },
-    args = list(x = blk, data = list(data = function() fit))
-  )
-})

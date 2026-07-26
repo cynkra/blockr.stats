@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>blockr.stats: visual model summaries, proposals</title>
+<style>
+  :root {
+    --ink:        #111827;
+    --ink-2:      #374151;
+    --muted:      #6b7280;
+    --faint:      #9ca3af;
+    --line:       #e5e7eb;
+    --line-2:     #d1d5db;
+    --bg:         #f6f7f9;
+    --surface:    #ffffff;
+    --wash:       #f9fafb;
+    --pos:        #2563eb;   /* estimate > 0  (validated pair, see footer) */
+    --neg:        #dc3545;   /* estimate < 0 */
+    --null:       #9ca3af;   /* CI covers the null value */
+    --chip-bg:    #eff6ff;
+    --radius:     10px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px;
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.55 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1120px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); font-weight: 600;
+    margin: 48px 0 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  h3 { font-size: 16px; margin: 0 0 2px; letter-spacing: -0.005em; }
+  .lede { color: var(--ink-2); max-width: 74ch; margin: 0 0 4px; }
+  .sub  { color: var(--muted); font-size: 13.5px; max-width: 78ch; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--wash);
+         border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
+
+  /* ---- variant scaffolding ------------------------------------------- */
+  .variant { margin: 26px 0 0; }
+  .vhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .vtag {
+    font: 600 11px/1 var(--mono); letter-spacing: 0.04em;
+    color: var(--muted); background: var(--wash);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px;
+  }
+  .cap { margin-top: 10px; font-size: 13px; color: var(--muted); max-width: 90ch; }
+  .cap b { color: var(--ink-2); font-weight: 600; }
+  .cap .needs { color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+  /* the block card chrome, as rendered inside a dock panel */
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px 20px;
+  }
+  .card--tight { padding: 14px 16px; }
+
+  /* ---- headline / chips ---------------------------------------------- */
+  .headline { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .kind { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  .dot-sep { color: var(--faint); }
+  .nobs { font-size: 13px; color: var(--muted); }
+  .fitchip { margin-left: auto; text-align: right; }
+  .fitchip .k { font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+  .fitchip .v { font-size: 14px; font-weight: 600; color: var(--ink-2);
+                font-variant-numeric: tabular-nums; }
+  .fitbar { width: 88px; height: 4px; border-radius: 2px; background: var(--line);
+            margin-top: 4px; overflow: hidden; }
+  .fitbar > i { display: block; height: 100%; background: var(--pos); border-radius: 2px; }
+
+  .sig {
+    display: inline-block; min-width: 34px; text-align: center;
+    font: 600 11px/1 var(--mono); padding: 4px 6px; border-radius: 4px;
+    color: #fff; background: var(--pos);
+  }
+  .sig--5   { background: var(--line); color: var(--ink-2); }
+  .sig--1   { background: #7ea6e8; }
+  .sig--ns  { background: transparent; color: var(--faint); }
+
+  /* ---- forest --------------------------------------------------------- */
+  .forest { --plot: 420px; --lab: 168px; --val: 74px; }
+  .frow {
+    display: grid; grid-template-columns: var(--lab) var(--plot) var(--val);
+    align-items: center; column-gap: 14px; height: 30px;
+  }
+  .fterm { font-size: 13px; color: var(--ink-2); white-space: nowrap;
+           overflow: hidden; text-overflow: ellipsis; }
+  .fterm .lvl { color: var(--muted); }
+  .fplot { position: relative; height: 30px; }
+  .fzero { position: absolute; top: 3px; bottom: 3px; width: 1px; background: var(--line-2); }
+  .fci   { position: absolute; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px;
+           background: currentColor; opacity: 0.42; }
+  .fdot  { position: absolute; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px;
+           border-radius: 50%; background: currentColor; box-shadow: 0 0 0 2px var(--surface); }
+  .fdot--hollow { background: var(--surface); border: 2px solid currentColor; }
+  .fval  { font: 13px/1 var(--mono); color: var(--ink-2); text-align: right;
+           font-variant-numeric: tabular-nums; }
+  .pos { color: var(--pos); } .neg { color: var(--neg); } .nul { color: var(--null); }
+  .faxis { position: relative; height: 18px; margin-top: 2px;
+           grid-column: 2; font: 11px/1 var(--mono); color: var(--faint); }
+  .faxis span { position: absolute; transform: translateX(-50%); top: 2px; }
+  .axisrow { display: grid; grid-template-columns: var(--lab) var(--plot) var(--val);
+             column-gap: 14px; }
+
+  /* ---- key-value summary (seasonal.website homage) -------------------- */
+  .kvcols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 34px; }
+  @media (max-width: 900px) { .kvcols { grid-template-columns: 1fr; } }
+  .kvcol h4 {
+    font: 600 11px/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 4px; padding-bottom: 8px;
+  }
+  .kv { display: flex; align-items: center; gap: 10px;
+        padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .kv:last-child { border-bottom: 0; }
+  .kv .k { font-size: 13.5px; color: var(--ink-2); }
+  .kv .v { margin-left: auto; font: 13.5px/1 var(--mono); color: var(--ink);
+           font-variant-numeric: tabular-nums; }
+  .kv .v--wide { font-family: inherit; }
+  .kvsub { font-size: 12px; color: var(--faint); margin: -4px 0 0; padding-bottom: 9px;
+           border-bottom: 1px solid var(--line); }
+  .kvsub:last-child { border-bottom: 0; }
+
+  /* ---- inline-bar coefficient table ----------------------------------- */
+  table.ct { width: 100%; border-collapse: collapse; }
+  table.ct th {
+    font: 600 11px/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--faint); text-align: right; padding: 0 0 10px; font-weight: 600;
+  }
+  table.ct th:first-child { text-align: left; }
+  table.ct td { padding: 9px 0; border-top: 1px solid var(--line); font-size: 13.5px;
+                text-align: right; font-variant-numeric: tabular-nums; }
+  table.ct td:first-child { text-align: left; color: var(--ink-2); }
+  table.ct td.num { font-family: var(--mono); }
+  .cellbar { position: relative; height: 22px; width: 100%; }
+  .cellbar .mid { position: absolute; top: 2px; bottom: 2px; width: 1px; background: var(--line); }
+  .cellbar .bar { position: absolute; top: 7px; height: 8px; border-radius: 3px;
+                  background: currentColor; opacity: 0.85; }
+
+  /* ---- stat tiles ----------------------------------------------------- */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--wash); }
+  .tile .k { font-size: 11px; letter-spacing: 0.04em; color: var(--muted); text-transform: uppercase; }
+  .tile .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin-top: 2px;
+             font-variant-numeric: tabular-nums; }
+  .tile .n { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+  .meter { height: 4px; border-radius: 2px; background: var(--line-2); margin-top: 8px; overflow: hidden; }
+  .meter > i { display: block; height: 100%; background: var(--pos); }
+
+  /* ---- compact bullet rows -------------------------------------------- */
+  .bullets { --plot: 150px; }
+  .brow { display: grid; grid-template-columns: 1fr var(--plot) 66px;
+          align-items: center; column-gap: 12px; padding: 7px 0;
+          border-bottom: 1px solid var(--line); }
+  .brow:last-child { border-bottom: 0; }
+  .brow .t { font-size: 13px; color: var(--ink-2); }
+
+  /* ---- segmented toggle ------------------------------------------------ */
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px;
+         overflow: hidden; margin-left: auto; }
+  .seg span { font-size: 12px; padding: 4px 10px; color: var(--muted); background: var(--surface); }
+  .seg span.on { background: var(--chip-bg); color: var(--pos); font-weight: 600; }
+  .rout { font: 12px/1.5 var(--mono); color: var(--ink-2); background: var(--wash);
+          border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px;
+          white-space: pre; overflow-x: auto; margin: 0; }
+
+  /* ---- importance bars -------------------------------------------------- */
+  .imp { display: grid; grid-template-columns: 168px 1fr 58px; align-items: center;
+         column-gap: 14px; height: 30px; }
+  .impbar { height: 10px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .impbar > i { display: block; height: 100%; background: var(--pos); border-radius: 3px; }
+
+  /* ---- effect curve ------------------------------------------------------ */
+  .curvewrap { display: flex; gap: 18px; align-items: center; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+              margin-right: 5px; vertical-align: -1px; }
+
+  /* ---- summary block: facts stripe, off-scale marker, gear band --------- */
+  .stripe { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+            padding-bottom: 14px; margin-bottom: 4px; }
+  .stripe .nobs b { color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+  tr.offscale td { color: var(--muted); }
+  .offmark { position: absolute; top: 4px; font-size: 11px; color: var(--faint); }
+  .cellbar .fci  { position: absolute; top: 50%; height: 2px; margin-top: -1px;
+                   border-radius: 1px; background: currentColor; opacity: 0.42; }
+  .cellbar .fdot { position: absolute; top: 50%; width: 9px; height: 9px;
+                   margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: currentColor;
+                   box-shadow: 0 0 0 2px var(--surface); }
+  .gearhead { display: flex; justify-content: flex-end; }
+  .gearbtn { display: inline-flex; align-items: center; justify-content: center;
+             width: 26px; height: 26px; border-radius: 6px; font-size: 13px;
+             color: var(--pos); background: var(--chip-bg); border: 1px solid #c7dbfb; }
+  .band { border: 1px solid var(--line); border-radius: 8px;
+          padding: 12px 14px 16px; margin: 8px 0 4px; background: var(--surface); }
+  .bandtitle { font: 600 11px/1 var(--mono); letter-spacing: 0.06em;
+               text-transform: uppercase; color: var(--faint); margin-bottom: 12px; }
+  .bandgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+  .opt { display: block; }
+  .opt .lab { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .opt .sel { display: block; border: 1px solid var(--line-2); border-radius: 6px;
+              padding: 7px 10px; font-size: 13.5px; color: var(--ink-2); background: var(--wash); }
+  .checks { grid-column: 1 / -1; display: flex; gap: 18px; flex-wrap: wrap; margin-top: 2px; }
+  .ck { font-size: 13.5px; color: var(--muted); }
+  .ck.on { color: var(--ink-2); }
+  .ck.on::first-letter { color: var(--pos); }
+
+  .prose { font-size: 14.5px; color: var(--ink-2); line-height: 1.65; max-width: 70ch; }
+  .prose b { color: var(--ink); font-weight: 600; }
+
+  .foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line);
+          font-size: 12.5px; color: var(--muted); }
+  .foot code { background: transparent; border: 0; padding: 0; }
+  table.matrix { border-collapse: collapse; margin-top: 12px; font-size: 13px; width: 100%; }
+  table.matrix th, table.matrix td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.matrix th { font: 600 11px/1 var(--mono); letter-spacing: 0.05em;
+                    text-transform: uppercase; color: var(--faint); }
+  table.matrix td:first-child { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Visual model summaries</h1>
+  <p class="lede">
+    Fourteen ways to show a fitted model in a dashboard, from a bare coefficient plot to a
+    full summary card. The question underneath: how many blocks is this, and where is the
+    cut between "the coefficients" and "the model"?
+  </p>
+  <p class="sub">
+    Every variant is drawn from real output of three models, so the shapes are honest about
+    how much room the numbers need:
+    <code>lm(body_mass_g ~ flipper_length_mm + species)</code> on penguins (n = 342) and
+    <code>coxph(Surv(time, status) ~ sex + age + ph.ecog)</code> on lung (n = 227, 164 events).
+    Each caption names the <span class="needs">broom</span> verb that feeds it, which is the
+    constraint that keeps one implementation working for lm, glm, coxph and survfit alike.
+  </p>
+
+  <!-- ================================================================== -->
+  <h2>Part 1 &middot; The coefficients</h2>
+  <p class="sub">Everything here is <code>tidy()</code>: one row per term, with
+     <code>conf.int = TRUE</code>. Nothing model-class specific.</p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V1</span><h3>Forest plot</h3></div>
+    <div class="card">
+      <div class="forest">
+        <div class="frow pos">
+          <div class="fterm">flipper_length_mm</div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:202.8px;width:5.7px"></div>
+            <div class="fdot" style="left:205.7px"></div>
+          </div>
+          <div class="fval">40.7</div>
+        </div>
+        <div class="frow pos">
+          <div class="fterm">species <span class="lvl">Gentoo</span></div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:223.7px;width:174.9px"></div>
+            <div class="fdot" style="left:311.2px"></div>
+          </div>
+          <div class="fval">266.8</div>
+        </div>
+        <div class="frow neg">
+          <div class="fterm">species <span class="lvl">Chinstrap</span></div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:37.3px;width:106.0px"></div>
+            <div class="fdot" style="left:90.3px"></div>
+          </div>
+          <div class="fval">&minus;206.5</div>
+        </div>
+        <div class="axisrow">
+          <div></div>
+          <div class="faxis">
+            <span style="left:0px">&minus;400</span>
+            <span style="left:186.7px">0</span>
+            <span style="left:420px">500</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> today's preview, tightened. Sorted by estimate, intercept dropped
+      (it is a nuisance term on a different scale and it squashes everything else),
+      factor levels split off the variable name, direct value labels so colour is never the
+      only encoding. <span class="needs">tidy(conf.int = TRUE)</span>
+      &middot; <b>works for</b> lm, glm, coxph, aov.
+      <br><b>Superseded by V15:</b> the shipping card keeps model order and keeps the
+      intercept, off scale with an arrow, rather than sorting and dropping it.
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V2</span><h3>Coefficient table with an inline effect column</h3></div>
+    <div class="card">
+      <table class="ct">
+        <thead>
+          <tr><th>Term</th><th style="text-align:left">Effect</th><th>Estimate</th><th>95% CI</th><th>p</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>flipper_length_mm</td>
+            <td style="width:280px"><div class="cellbar pos"><div class="mid" style="left:112px"></div><div class="bar" style="left:112px;width:11.4px"></div></div></td>
+            <td class="num">40.71</td>
+            <td class="num">34.7 &ndash; 46.7</td>
+            <td class="num">&lt;0.001</td>
+          </tr>
+          <tr>
+            <td>species<span style="color:var(--muted)"> Gentoo</span></td>
+            <td><div class="cellbar pos"><div class="mid" style="left:112px"></div><div class="bar" style="left:112px;width:74.7px"></div></div></td>
+            <td class="num">266.81</td>
+            <td class="num">79.4 &ndash; 454.2</td>
+            <td class="num">0.005</td>
+          </tr>
+          <tr>
+            <td>species<span style="color:var(--muted)"> Chinstrap</span></td>
+            <td><div class="cellbar neg"><div class="mid" style="left:112px"></div><div class="bar" style="left:54.2px;width:57.8px"></div></div></td>
+            <td class="num">&minus;206.51</td>
+            <td class="num">&minus;320.1 &ndash; &minus;93.0</td>
+            <td class="num">&lt;0.001</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">(Intercept)</td>
+            <td><div class="cellbar nul"><div class="mid" style="left:112px"></div><div class="bar" style="left:0px;width:112px"></div></div></td>
+            <td class="num" style="color:var(--muted)">&minus;4031.48</td>
+            <td class="num" style="color:var(--muted)">&minus;5181.0 &ndash; &minus;2882.4</td>
+            <td class="num" style="color:var(--muted)">&lt;0.001</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> the numbers you would quote, with the picture as one more column
+      (the rank-table pattern). Keeps the intercept, greyed, because a table has room for it.
+      Reads well in a report; the bar column is decoration you can turn off.
+      <span class="needs">tidy(conf.int = TRUE)</span>
+      &middot; <b>as a block:</b> this is `broom tidy` piped into the existing table block with
+      a bar-cell rule, not new code.
+    </p>
+  </div>
+
+  <div class="grid2">
+    <div class="variant">
+      <div class="vhead"><span class="vtag">V3</span><h3>Compact rows</h3></div>
+      <div class="card card--tight">
+        <div class="bullets">
+          <div class="brow pos">
+            <div class="t">flipper_length_mm</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:66.7px"></div>
+              <div class="fci" style="left:72.4px;width:2.0px"></div>
+              <div class="fdot" style="left:73.4px"></div>
+            </div>
+            <div class="fval">40.7</div>
+          </div>
+          <div class="brow pos">
+            <div class="t">species Gentoo</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:66.7px"></div>
+              <div class="fci" style="left:79.9px;width:62.5px"></div>
+              <div class="fdot" style="left:111.1px"></div>
+            </div>
+            <div class="fval">266.8</div>
+          </div>
+          <div class="brow neg">
+            <div class="t">species Chinstrap</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:66.7px"></div>
+              <div class="fci" style="left:13.3px;width:37.9px"></div>
+              <div class="fdot" style="left:32.3px"></div>
+            </div>
+            <div class="fval">&minus;206.5</div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">
+        <b>What it is:</b> V1 with the axis removed, for narrow panels and sidebars. The
+        whisker is a shape cue, not a readable scale; the number carries the value.
+        <span class="needs">tidy(conf.int = TRUE)</span>
+      </p>
+    </div>
+
+    <div class="variant">
+      <div class="vhead"><span class="vtag">V4</span><h3>Ratio scale (Cox / logistic)</h3></div>
+      <div class="card card--tight">
+        <div class="forest" style="--plot:230px;--lab:74px;--val:96px">
+          <div class="frow neg">
+            <div class="fterm">sex</div>
+            <div class="fplot">
+              <div class="fzero" style="left:131.3px"></div>
+              <div class="fci" style="left:21.1px;width:82.2px"></div>
+              <div class="fdot" style="left:62.1px"></div>
+            </div>
+            <div class="fval">0.58</div>
+          </div>
+          <div class="frow nul">
+            <div class="fterm">age</div>
+            <div class="fplot">
+              <div class="fzero" style="left:131.3px"></div>
+              <div class="fci" style="left:130.4px;width:4.6px"></div>
+              <div class="fdot fdot--hollow" style="left:132.7px"></div>
+            </div>
+            <div class="fval">1.01</div>
+          </div>
+          <div class="frow pos">
+            <div class="fterm">ph.ecog</div>
+            <div class="fplot">
+              <div class="fzero" style="left:131.3px"></div>
+              <div class="fci" style="left:161.5px;width:55.7px"></div>
+              <div class="fdot" style="left:189.3px"></div>
+            </div>
+            <div class="fval">1.59</div>
+          </div>
+          <div class="axisrow" style="grid-template-columns:74px 230px 96px">
+            <div></div>
+            <div class="faxis">
+              <span style="left:44.6px">0.5</span>
+              <span style="left:131.3px">1</span>
+              <span style="left:218.0px">2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap">
+        <b>What it is:</b> the same block, log axis, reference line at 1, hazard ratios.
+        A CI crossing 1 renders hollow and grey, so "no effect" is a shape, not a colour.
+        <span class="needs">tidy(exponentiate = TRUE, conf.int = TRUE)</span>
+        &middot; the block has to know the scale is multiplicative, which broom does not tell
+        it: read it off the model class.
+      </p>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 2 &middot; The fit</h2>
+  <p class="sub">Everything here is <code>glance()</code>: one row of model-level numbers.</p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V5</span><h3>Stat tiles</h3></div>
+    <div class="card">
+      <div class="tiles">
+        <div class="tile">
+          <div class="k">Adj. R&sup2;</div>
+          <div class="v">0.781</div>
+          <div class="meter"><i style="width:78.1%"></i></div>
+        </div>
+        <div class="tile">
+          <div class="k">Residual SD</div>
+          <div class="v">375.5</div>
+          <div class="n">grams</div>
+        </div>
+        <div class="tile">
+          <div class="k">Observations</div>
+          <div class="v">342</div>
+          <div class="n">2 dropped (missing)</div>
+        </div>
+        <div class="tile">
+          <div class="k">AIC</div>
+          <div class="v">5031</div>
+          <div class="n">BIC 5051</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> the fit as four headline numbers. Only adj. R&sup2; gets a meter,
+      because it is the only one bounded 0&ndash;1; the rest would need a comparison to mean
+      anything and a bar without a scale is a lie.
+      <span class="needs">glance()</span>
+      &middot; <b>catch:</b> glance's columns differ per class (Cox has concordance and
+      events, not R&sup2;), so the tile set is a per-class lookup over glance's names.
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V6</span><h3>Same tiles, Cox model</h3></div>
+    <div class="card">
+      <div class="tiles">
+        <div class="tile">
+          <div class="k">Concordance</div>
+          <div class="v">0.637</div>
+          <div class="meter"><i style="width:63.7%"></i></div>
+        </div>
+        <div class="tile">
+          <div class="k">Events</div>
+          <div class="v">164</div>
+          <div class="n">of 227 subjects</div>
+        </div>
+        <div class="tile">
+          <div class="k">Likelihood ratio</div>
+          <div class="v">30.5</div>
+          <div class="n">p &lt; 0.001</div>
+        </div>
+        <div class="tile">
+          <div class="k">AIC</div>
+          <div class="v">1464</div>
+          <div class="n">BIC 1474</div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>Why it is here:</b> proof the tile row survives a class change without new layout
+      code. The lookup picks four names out of glance; everything else is identical.
+      <span class="needs">glance()</span>
+    </p>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 3 &middot; The summary card (seasonal.website)</h2>
+  <p class="sub">Coefficients, model facts and diagnostics side by side, with a
+     significance chip instead of a p-value column. This is the shape you liked.</p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V7</span><h3>Three-column key-value card</h3></div>
+    <div class="card">
+      <div class="kvcols">
+        <div class="kvcol">
+          <h4>Coefficients</h4>
+          <div class="kv"><span class="k">flipper_length_mm</span><span class="v">40.71</span><span class="sig">0.1%</span></div>
+          <div class="kv"><span class="k">species Gentoo</span><span class="v">266.81</span><span class="sig sig--1">1%</span></div>
+          <div class="kv"><span class="k">species Chinstrap</span><span class="v">&minus;206.51</span><span class="sig">0.1%</span></div>
+          <div class="kv"><span class="k">(Intercept)</span><span class="v">&minus;4031.48</span><span class="sig">0.1%</span></div>
+        </div>
+        <div class="kvcol">
+          <h4>Model</h4>
+          <div class="kv"><span class="k">Family</span><span class="v v--wide">Linear (lm)</span></div>
+          <div class="kv"><span class="k">Obs.</span><span class="v">342</span></div>
+          <div class="kv"><span class="k">Residual SD</span><span class="v">375.5</span></div>
+          <div class="kv"><span class="k">AIC</span><span class="v">5031.5</span></div>
+          <div class="kv"><span class="k">BIC</span><span class="v">5050.7</span></div>
+        </div>
+        <div class="kvcol">
+          <h4>Diagnostics</h4>
+          <div class="kv"><span class="k">Adj. R&sup2;</span><span class="v">0.781</span></div>
+          <div class="kv"><span class="k">F(3, 338)</span><span class="v">405.7</span><span class="sig">0.1%</span></div>
+          <p class="kvsub">H0: no predictor explains the response</p>
+          <div class="kv"><span class="k">Shapiro-Wilk</span><span class="v">0.995</span><span class="sig sig--ns">ns</span></div>
+          <p class="kvsub">W = 0.995, p = 0.31 &middot; H0: normal distr. of residuals</p>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> the seasonal.website summary, in blockr tokens. The chip is the
+      whole idea: significance as a rank (0.1% / 1% / 5% / ns), not a number nobody reads
+      to four decimals. H0 lines under the tests are what makes it readable by someone who
+      does not run these tests weekly.
+      <span class="needs">tidy() + glance()</span>, plus one diagnostic test the block runs
+      itself &middot; <b>catch:</b> the diagnostics column is the only part that is not broom.
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V8</span><h3>Key-value card with whiskers in the coefficient column</h3></div>
+    <div class="card">
+      <div class="kvcols" style="grid-template-columns:1.35fr 1fr 1fr">
+        <div class="kvcol">
+          <h4>Coefficients</h4>
+          <div class="brow pos" style="grid-template-columns:1fr 120px 62px">
+            <div class="t">flipper_length_mm</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:53.3px"></div>
+              <div class="fci" style="left:57.9px;width:1.6px"></div>
+              <div class="fdot" style="left:58.7px"></div>
+            </div>
+            <div class="fval">40.7</div>
+          </div>
+          <div class="brow pos" style="grid-template-columns:1fr 120px 62px">
+            <div class="t">species Gentoo</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:53.3px"></div>
+              <div class="fci" style="left:63.9px;width:50.0px"></div>
+              <div class="fdot" style="left:88.9px"></div>
+            </div>
+            <div class="fval">266.8</div>
+          </div>
+          <div class="brow neg" style="grid-template-columns:1fr 120px 62px">
+            <div class="t">species Chinstrap</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:53.3px"></div>
+              <div class="fci" style="left:10.7px;width:30.3px"></div>
+              <div class="fdot" style="left:25.8px"></div>
+            </div>
+            <div class="fval">&minus;206.5</div>
+          </div>
+          <div class="brow nul" style="grid-template-columns:1fr 120px 62px">
+            <div class="t" style="color:var(--muted)">(Intercept)</div>
+            <div class="fplot" style="height:22px">
+              <div class="fzero" style="left:53.3px"></div>
+              <div class="fci" style="left:0px;width:53.3px"></div>
+              <div class="fdot" style="left:0px"></div>
+            </div>
+            <div class="fval" style="color:var(--muted)">&minus;4031</div>
+          </div>
+        </div>
+        <div class="kvcol">
+          <h4>Model</h4>
+          <div class="kv"><span class="k">Family</span><span class="v v--wide">Linear (lm)</span></div>
+          <div class="kv"><span class="k">Obs.</span><span class="v">342</span></div>
+          <div class="kv"><span class="k">Residual SD</span><span class="v">375.5</span></div>
+          <div class="kv"><span class="k">AIC</span><span class="v">5031.5</span></div>
+        </div>
+        <div class="kvcol">
+          <h4>Fit</h4>
+          <div class="kv"><span class="k">Adj. R&sup2;</span><span class="v">0.781</span></div>
+          <div class="meter" style="margin:2px 0 12px"><i style="width:78.1%"></i></div>
+          <div class="kv"><span class="k">F(3, 338)</span><span class="v">405.7</span></div>
+          <p class="kvsub">p &lt; 0.001</p>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> V7 with the chip swapped for the whisker, so the coefficient column
+      shows size and uncertainty rather than a significance rank. The intercept stays but
+      runs off the scale, greyed, which is a fair picture of what it is.
+      <span class="needs">tidy(conf.int = TRUE) + glance()</span>
+    </p>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 4 &middot; Whole cards</h2>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V9</span><h3>The full card: headline, fit, coefficients</h3></div>
+    <div class="card">
+      <div class="headline">
+        <span class="kind">Linear model</span>
+        <span class="dot-sep">&middot;</span>
+        <span class="nobs">body_mass_g ~ flipper_length_mm + species</span>
+        <div class="fitchip">
+          <div class="k">adj. R&sup2;</div>
+          <div class="v">0.781</div>
+          <div class="fitbar"><i style="width:78.1%"></i></div>
+        </div>
+      </div>
+      <div class="tiles" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+        <div class="tile"><div class="k">Obs.</div><div class="v">342</div></div>
+        <div class="tile"><div class="k">Residual SD</div><div class="v">375.5</div></div>
+        <div class="tile"><div class="k">F(3, 338)</div><div class="v">405.7</div><div class="n">p &lt; 0.001</div></div>
+        <div class="tile"><div class="k">AIC</div><div class="v">5031</div></div>
+      </div>
+      <div class="forest">
+        <div class="frow pos">
+          <div class="fterm">flipper_length_mm</div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:202.8px;width:5.7px"></div>
+            <div class="fdot" style="left:205.7px"></div>
+          </div>
+          <div class="fval">40.7</div>
+        </div>
+        <div class="frow pos">
+          <div class="fterm">species <span class="lvl">Gentoo</span></div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:223.7px;width:174.9px"></div>
+            <div class="fdot" style="left:311.2px"></div>
+          </div>
+          <div class="fval">266.8</div>
+        </div>
+        <div class="frow neg">
+          <div class="fterm">species <span class="lvl">Chinstrap</span></div>
+          <div class="fplot">
+            <div class="fzero" style="left:186.7px"></div>
+            <div class="fci" style="left:37.3px;width:106.0px"></div>
+            <div class="fdot" style="left:90.3px"></div>
+          </div>
+          <div class="fval">&minus;206.5</div>
+        </div>
+        <div class="axisrow">
+          <div></div>
+          <div class="faxis">
+            <span style="left:0px">&minus;400</span>
+            <span style="left:186.7px">0</span>
+            <span style="left:420px">500</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> one block that answers "how good is it" and "what did it find" in
+      one screen. The formula in the headline is what makes the card self-explaining in a
+      report where the model block itself is not on the page.
+      <span class="needs">tidy() + glance()</span>
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V10</span><h3>The card with view switching</h3></div>
+    <div class="card">
+      <div class="headline">
+        <span class="kind">Linear model</span>
+        <span class="dot-sep">&middot;</span>
+        <span class="nobs">342 obs</span>
+        <div class="seg"><span class="on">Visual</span><span>Table</span><span>R</span></div>
+      </div>
+      <pre class="rout">Coefficients:
+                    Estimate Std. Error t value Pr(&gt;|t|)
+(Intercept)       -4031.4769   584.1478  -6.901 2.55e-11 ***
+flipper_length_mm    40.7054     3.0710  13.255  &lt; 2e-16 ***
+speciesChinstrap   -206.5101    57.7307  -3.577 0.000398 ***
+speciesGentoo       266.8096    95.2637   2.801 0.005392 **
+
+Residual standard error: 375.5 on 338 degrees of freedom
+Multiple R-squared:  0.7826,	Adjusted R-squared:  0.7807
+F-statistic: 405.7 on 3 and 338 DF,  p-value: &lt; 2.2e-16</pre>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> today's Visual/R toggle with a third stop. Same block, three
+      audiences: the card for the dashboard, the table for export, the R text for the person
+      who wants to check you.
+      <span class="needs">tidy() + glance() + summary()</span>
+      &middot; the R pane is the only part that is not portable across renderers (it is text,
+      not a frame), so it never reaches a pptx or Word report.
+    </p>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 5 &middot; Other angles</h2>
+
+  <div class="grid2">
+    <div class="variant">
+      <div class="vhead"><span class="vtag">V11</span><h3>Term importance</h3></div>
+      <div class="card card--tight">
+        <div class="imp">
+          <div class="fterm">flipper_length_mm</div>
+          <div class="impbar"><i style="width:100%"></i></div>
+          <div class="fval">75.9%</div>
+        </div>
+        <div class="imp">
+          <div class="fterm">species</div>
+          <div class="impbar"><i style="width:3.1%"></i></div>
+          <div class="fval">2.4%</div>
+        </div>
+        <div class="imp">
+          <div class="fterm" style="color:var(--muted)">Residual</div>
+          <div class="impbar"><i style="width:28.6%;background:var(--line-2)"></i></div>
+          <div class="fval" style="color:var(--muted)">21.7%</div>
+        </div>
+      </div>
+      <p class="cap">
+        <b>What it is:</b> share of total sum of squares per term, so multi-level factors
+        collapse to one bar. Answers "which variable matters", which the forest cannot
+        (its bars are on the response scale, not comparable).
+        <span class="needs">tidy(anova(fit))</span>
+        &middot; <b>catch:</b> lm and aov only; no anova table for Cox or a survfit.
+      </p>
+    </div>
+
+    <div class="variant">
+      <div class="vhead"><span class="vtag">V12</span><h3>Prose</h3></div>
+      <div class="card card--tight">
+        <p class="prose">
+          A linear model of <b>body_mass_g</b> on 342 penguins explains
+          <b>78%</b> of the variation. Each additional millimetre of flipper is worth
+          <b>+40.7 g</b> (95% CI 34.7 to 46.7). Holding flipper length fixed,
+          <b>Gentoo</b> are <b>267 g</b> heavier than Adelie and <b>Chinstrap</b>
+          <b>207 g</b> lighter. Residual spread is <b>376 g</b>.
+        </p>
+      </div>
+      <p class="cap">
+        <b>What it is:</b> the same tidy frame rendered as a sentence. Cheap to generate from
+        template strings, genuinely useful above a chart in a report, and the thing a
+        non-statistician actually reads.
+        <span class="needs">tidy() + glance()</span>
+        &middot; <b>catch:</b> "worth +40.7 g" is a causal-sounding phrasing the package
+        should not put in a user's mouth by default.
+      </p>
+    </div>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V13</span><h3>Fitted-effect view (not broom)</h3></div>
+    <div class="card">
+      <div class="curvewrap">
+        <svg width="440" height="170" viewBox="0 0 440 170" role="img"
+             aria-label="Predicted body mass against flipper length, one line per species">
+          <line x1="46" y1="140" x2="430" y2="140" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="46" y1="10"  x2="46"  y2="140" stroke="#e5e7eb" stroke-width="1"/>
+          <text x="40" y="124.4" text-anchor="end" font-size="10" fill="#9ca3af" font-family="ui-monospace,monospace">3000</text>
+          <text x="40" y="68.7"  text-anchor="end" font-size="10" fill="#9ca3af" font-family="ui-monospace,monospace">4500</text>
+          <text x="40" y="13"    text-anchor="end" font-size="10" fill="#9ca3af" font-family="ui-monospace,monospace">6000</text>
+          <text x="46"  y="158" font-size="10" fill="#9ca3af" font-family="ui-monospace,monospace">172</text>
+          <text x="430" y="158" text-anchor="end" font-size="10" fill="#9ca3af" font-family="ui-monospace,monospace">231 mm</text>
+          <!-- Adelie: -4031.5 + 40.71 x  ->  2968 g at 172, 5371 g at 231 -->
+          <line x1="46" y1="122.6" x2="430" y2="33.3" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+          <!-- Gentoo: +266.8 -->
+          <line x1="46" y1="112.7" x2="430" y2="23.4" stroke="#009E73" stroke-width="2" stroke-linecap="round"/>
+          <!-- Chinstrap: -206.5 -->
+          <line x1="46" y1="130.3" x2="430" y2="41.0" stroke="#E69F00" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <div class="legend" style="flex-direction:column;gap:6px">
+            <span><i style="background:#009E73"></i>Gentoo</span>
+            <span><i style="background:#2563eb"></i>Adelie</span>
+            <span><i style="background:#E69F00"></i>Chinstrap</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> what the model predicts, on the scale of the response, which is the
+      only view a non-modeller reads without translation. Three parallel lines here because
+      the model has no interaction, and seeing that is the point.
+      <span class="needs">predict() over a grid</span>, not tidy
+      &middot; <b>catch:</b> this is the one variant that cannot come from a tidy frame. It
+      needs the model object and a prediction grid, so it is a different block (or a chart
+      fed by augment on synthetic data).
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V14</span><h3>Model comparison</h3></div>
+    <div class="card">
+      <table class="ct">
+        <thead>
+          <tr><th>Model</th><th>Terms</th><th>Adj. R&sup2;</th><th>Residual SD</th><th>AIC</th><th>BIC</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>flipper</td><td class="num">1</td><td class="num">0.758</td>
+            <td class="num">394.3</td><td class="num">5062.9</td><td class="num">5074.4</td>
+          </tr>
+          <tr>
+            <td>flipper + species</td><td class="num">3</td>
+            <td class="num" style="font-weight:600">0.781</td>
+            <td class="num" style="font-weight:600">375.5</td>
+            <td class="num" style="font-weight:600">5031.5</td>
+            <td class="num" style="font-weight:600">5050.7</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cap">
+      <b>What it is:</b> one row per model, which is exactly what <code>glance()</code>
+      returns, stacked. Two model blocks into one comparison block, no new maths.
+      <span class="needs">glance()</span> on each fit
+      &middot; <b>as a block:</b> a variadic block over N model inputs, or the broom adapter
+      with multiple slots.
+    </p>
+  </div>
+
+  <!-- ================================================================== -->
+  <h2>Part 6 &middot; The summary block</h2>
+  <p class="sub">
+    The decision: the <b>model block</b> keeps the fitted object and prints it, nothing
+    more. Everything visual moves into a second block downstream, <b>Model summary</b>,
+    which takes the model object and renders the card. The rest of this section is what
+    that card looks like and what its gear holds.
+  </p>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V15</span><h3>The default rendering: V2 with a real forest column</h3></div>
+    <div class="card">
+      <div class="stripe">
+        <span class="kind">Linear model</span>
+        <span class="dot-sep">&middot;</span><span class="nobs">342 obs</span>
+        <span class="dot-sep">&middot;</span><span class="nobs">adj. R&sup2; <b>0.781</b></span>
+        <span class="dot-sep">&middot;</span><span class="nobs">residual SD <b>375.5</b></span>
+        <span class="dot-sep">&middot;</span><span class="nobs">AIC <b>5031</b></span>
+      </div>
+      <table class="ct">
+        <thead>
+          <tr><th>Term</th><th style="text-align:left">Effect (95% CI)</th><th>Estimate</th><th>95% CI</th><th>p</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>flipper_length_mm</td>
+            <td style="width:300px">
+              <div class="cellbar pos" style="width:280px">
+                <div class="mid" style="left:124.4px"></div>
+                <div class="fci" style="left:135.2px;width:3.8px"></div>
+                <div class="fdot" style="left:137.1px"></div>
+              </div>
+            </td>
+            <td class="num">40.71</td>
+            <td class="num">34.7 &ndash; 46.7</td>
+            <td class="num">&lt;0.001</td>
+          </tr>
+          <tr>
+            <td>species<span style="color:var(--muted)"> Gentoo</span></td>
+            <td>
+              <div class="cellbar pos" style="width:280px">
+                <div class="mid" style="left:124.4px"></div>
+                <div class="fci" style="left:149.2px;width:116.5px"></div>
+                <div class="fdot" style="left:207.4px"></div>
+              </div>
+            </td>
+            <td class="num">266.81</td>
+            <td class="num">79.4 &ndash; 454.2</td>
+            <td class="num">0.005</td>
+          </tr>
+          <tr>
+            <td>species<span style="color:var(--muted)"> Chinstrap</span></td>
+            <td>
+              <div class="cellbar neg" style="width:280px">
+                <div class="mid" style="left:124.4px"></div>
+                <div class="fci" style="left:24.9px;width:70.6px"></div>
+                <div class="fdot" style="left:60.2px"></div>
+              </div>
+            </td>
+            <td class="num">&minus;206.51</td>
+            <td class="num">&minus;320.1 &ndash; &minus;93.0</td>
+            <td class="num">&lt;0.001</td>
+          </tr>
+          <tr class="offscale">
+            <td>(Intercept)</td>
+            <td>
+              <div class="cellbar nul" style="width:280px">
+                <div class="mid" style="left:124.4px"></div>
+                <div class="offmark" style="left:0px">&#9664;</div>
+              </div>
+            </td>
+            <td class="num">&minus;4031.48</td>
+            <td class="num">&minus;5181.0 &ndash; &minus;2882.4</td>
+            <td class="num">&lt;0.001</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td></td>
+            <td>
+              <div class="faxis" style="position:relative;height:16px;width:280px">
+                <span style="left:0px">&minus;400</span>
+                <span style="left:124.4px">0</span>
+                <span style="left:280px">500</span>
+              </div>
+            </td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="cap">
+      <b>What changed from V2:</b> the bar became a dot with a confidence interval, which
+      is the whole reason to draw the column. The scale is set by the plotted terms, so the
+      intercept is off scale and says so with an arrow instead of silently rescaling
+      everyone else into a smear. One line of model facts above the table replaces the tile
+      row, because in a dashboard this block sits next to charts, not alone.
+      <span class="needs">tidy(conf.int = TRUE) + glance()</span>
+    </p>
+  </div>
+
+  <div class="variant">
+    <div class="vhead"><span class="vtag">V15g</span><h3>The gear</h3></div>
+    <div class="card">
+      <div class="gearhead"><span class="gearbtn"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M9.4 1H6.6l-.3 1.6a5 5 0 0 0-1 .6L3.8 2.6 2.4 5l1.2 1.1a5 5 0 0 0 0 1.8L2.4 9l1.4 2.4 1.5-.6q.5.4 1 .6L6.6 15h2.8l.3-1.6q.6-.2 1-.6l1.5.6L13.6 11l-1.2-1.1a5 5 0 0 0 0-1.8L13.6 7 12.2 4.6l-1.5.6a5 5 0 0 0-1-.6zM8 10.2a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4"/></svg></span></div>
+      <div class="band">
+        <div class="bandtitle">Options</div>
+        <div class="bandgrid">
+          <label class="opt"><span class="lab">Uncertainty</span>
+            <span class="sel">95% confidence interval &#9662;</span></label>
+          <label class="opt"><span class="lab">Significance</span>
+            <span class="sel">p-value column &#9662;</span></label>
+          <label class="opt"><span class="lab">Coefficient scale</span>
+            <span class="sel">Auto (ratio for glm / Cox) &#9662;</span></label>
+          <div class="checks">
+            <span class="ck on">&#10003; Effect column (forest)</span>
+            <span class="ck on">&#10003; Model facts line</span>
+            <span class="ck on">&#10003; Intercept row</span>
+          </div>
+        </div>
+      </div>
+      <div style="color:var(--faint);font-size:13px;padding:10px 0 2px">
+        &hellip; the card from V15 renders below the band &hellip;
+      </div>
+    </div>
+    <p class="cap">
+      Six controls, no face controls: the block's face is the card itself. Three selects and
+      three switches is about the ceiling for a gear, so the list below is as much about what
+      stays out.
+    </p>
+    <p class="cap">
+      <b>Settled:</b> the default rendering is V15 as drawn, intercept row included.
+      V15a is not a second default, it is the state you reach by turning the effect column
+      off and switching significance to chips. Sort order is not an option at all, see below.
+    </p>
+  </div>
+
+  <h3 style="margin-top:34px">What each option is for</h3>
+
+  <table class="matrix">
+    <thead>
+      <tr><th>Option</th><th>Values (default first)</th><th>Why it earns a slot</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Uncertainty</td>
+        <td><b>95% CI</b> &middot; 90% &middot; 99% &middot; &plusmn; standard error &middot; none</td>
+        <td>The one you asked for. It drives the whisker <em>and</em> the text column
+            together, so the two can never disagree. Note these are different things: a CI
+            is a range you would bet on, &plusmn; SE is one standard error either side
+            (about 68%), so the column header has to name which is drawn. "None" gives a
+            bare estimate column for a slide.</td>
+      </tr>
+      <tr>
+        <td>Significance</td>
+        <td><b>p-value column</b> &middot; chips (0.1% / 1% / 5%) &middot; stars &middot; off</td>
+        <td>Three audiences, one number. The p column is for the analyst, the chip is the
+            seasonal.website reading for the dashboard, stars are what a paper wants. Off
+            matters more than it sounds: with a CI drawn, significance is already visible
+            as "does the whisker cross zero", and some teams deliberately do not want
+            a threshold rendered at all.</td>
+      </tr>
+      <tr>
+        <td>Coefficient scale</td>
+        <td><b>Auto</b> &middot; raw (link scale) &middot; ratio (exponentiated)</td>
+        <td>A logistic or Cox coefficient is unreadable on the log scale and misleading if
+            you exponentiate silently. Auto means ratio for binomial/Poisson/Cox and raw for
+            lm; the override exists because someone always wants the log coefficient.
+            Changing it also flips the reference line from 0 to 1 and the axis to log.</td>
+      </tr>
+      <tr>
+        <td>Effect column</td>
+        <td><b>on</b> / off</td>
+        <td>Off turns the card into a plain numeric table, which is what you want when the
+            block sits beside a chart that already carries the picture, or when the panel is
+            narrow. The column is the first thing to lose.</td>
+      </tr>
+      <tr>
+        <td>Model facts line</td>
+        <td><b>on</b> / off</td>
+        <td>Off when the fit is reported elsewhere on the page, or when the audience should
+            not be reading R&sup2; at all. Which facts appear is per model class and not a
+            user choice: adj. R&sup2; and residual SD for lm, concordance and events for Cox.</td>
+      </tr>
+      <tr>
+        <td>Intercept row</td>
+        <td><b>on</b> / off</td>
+        <td>On by default: the summary should show the model that was fitted, and a table
+            that silently drops a row it computed is a table you cannot check against
+            <code>summary()</code>. The usual argument for hiding it, that it wrecks the
+            shared scale, is answered by the off-scale arrow rather than by deletion, since
+            the intercept never enters the plot's scale. Off for the presentation case where
+            only the offsets are the story.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:30px">What I would keep out of the gear</h3>
+  <table class="matrix">
+    <thead><tr><th>Not an option</th><th>Because</th></tr></thead>
+    <tbody>
+      <tr><td>Sort terms</td>
+        <td>Cut. A coefficient table is read against the formula that produced it, so model
+            order is the only order that lets you check one against the other. Reordering by
+            size or by p is a reading aid for one wide model that costs a permanent gear slot
+            on every narrow one, and it quietly turns the table into a ranking, which invites
+            reading the top row as the most important variable when the terms are on
+            different scales.</td></tr>
+      <tr><td>Decimal places</td>
+        <td>Auto-format from the magnitude of the column, the way the table block already
+            does. A digits spinner is a request to make it worse.</td></tr>
+      <tr><td>Term labels</td>
+        <td>Splitting <code>speciesGentoo</code> into "species Gentoo" and using column
+            labels where the data has them should always happen. Nobody prefers the raw
+            name.</td></tr>
+      <tr><td>Which glance columns</td>
+        <td>A column picker over glance is a second block (V14 comparison) pretending to be
+            an option. Per-class defaults, no picker.</td></tr>
+      <tr><td>Colours / reference line</td>
+        <td>Design-system decisions. If the sign colours are wrong they are wrong for
+            everyone.</td></tr>
+      <tr><td>R print pane</td>
+        <td>Lives in the model block now. Two blocks showing the same text is a bug, not a
+            feature.</td></tr>
+      <tr><td>Diagnostic tests</td>
+        <td>The Shapiro / Breusch-Pagan line from V7 is a different job with its own
+            assumptions. If it happens, it is a diagnostics block, not a checkbox here.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:34px">Two states worth seeing</h3>
+  <div class="grid2">
+    <div class="variant" style="margin-top:8px">
+      <div class="vhead"><span class="vtag">V15a</span><h3>Effect column off, chips on</h3></div>
+      <div class="card card--tight">
+        <table class="ct">
+          <thead><tr><th>Term</th><th>Estimate</th><th>95% CI</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>flipper_length_mm</td><td class="num">40.71</td><td class="num">34.7 &ndash; 46.7</td><td style="width:52px"><span class="sig">0.1%</span></td></tr>
+            <tr><td>species<span style="color:var(--muted)"> Gentoo</span></td><td class="num">266.81</td><td class="num">79.4 &ndash; 454.2</td><td><span class="sig sig--1">1%</span></td></tr>
+            <tr><td>species<span style="color:var(--muted)"> Chinstrap</span></td><td class="num">&minus;206.51</td><td class="num">&minus;320.1 &ndash; &minus;93.0</td><td><span class="sig">0.1%</span></td></tr>
+            <tr><td>(Intercept)</td><td class="num">&minus;4031.48</td><td class="num">&minus;5181.0 &ndash; &minus;2882.4</td><td><span class="sig">0.1%</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap">
+        The narrow-panel state: same block, effect column switched off and significance set
+        to chips. With no plot there is no scale to protect, so the intercept is just another
+        row.
+      </p>
+    </div>
+
+    <div class="variant" style="margin-top:8px">
+      <div class="vhead"><span class="vtag">V15b</span><h3>&plusmn; standard error instead of CI</h3></div>
+      <div class="card card--tight">
+        <table class="ct">
+          <thead><tr><th>Term</th><th style="text-align:left">Effect (&plusmn; SE)</th><th>Estimate</th><th>SE</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>flipper_length_mm</td>
+              <td style="width:200px"><div class="cellbar pos" style="width:180px">
+                <div class="mid" style="left:80px"></div>
+                <div class="fci" style="left:87.5px;width:1.2px"></div>
+                <div class="fdot" style="left:88.1px"></div></div></td>
+              <td class="num">40.71</td><td class="num">3.07</td>
+            </tr>
+            <tr>
+              <td>species<span style="color:var(--muted)"> Gentoo</span></td>
+              <td><div class="cellbar pos" style="width:180px">
+                <div class="mid" style="left:80px"></div>
+                <div class="fci" style="left:114.3px;width:38.1px"></div>
+                <div class="fdot" style="left:133.4px"></div></div></td>
+              <td class="num">266.81</td><td class="num">95.26</td>
+            </tr>
+            <tr>
+              <td>species<span style="color:var(--muted)"> Chinstrap</span></td>
+              <td><div class="cellbar neg" style="width:180px">
+                <div class="mid" style="left:80px"></div>
+                <div class="fci" style="left:27.2px;width:23.1px"></div>
+                <div class="fdot" style="left:38.7px"></div></div></td>
+              <td class="num">&minus;206.51</td><td class="num">57.73</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cap">
+        Shorter whiskers, and they mean something else. The header says
+        &plusmn;&nbsp;SE so the reader is not left guessing, and the text column switches
+        from a range to the standard error.
+      </p>
+    </div>
+  </div>
+
+  <p class="cap" style="margin-top:20px">
+    <b>One case the block has to survive:</b> a Kaplan-Meier fit. <code>tidy(survfit)</code>
+    returns curve points, not coefficients, so there is no coefficient table to draw. The
+    card should degrade to the facts line (n, events, median survival) and say the model has
+    no coefficients, rather than render a thousand-row table of time points.
+  </p>
+
+  <!-- ================================================================== -->
+  <h2>Where the block boundary goes</h2>
+  <p class="sub">Decided, with the alternatives recorded.</p>
+
+  <table class="matrix">
+    <thead>
+      <tr><th>Option</th><th>Blocks</th><th>Trade</th></tr>
+    </thead>
+    <tbody>
+      <tr style="background:var(--chip-bg)">
+        <td>B. Two blocks &#10003;</td>
+        <td><b>Model</b> block returns the fitted object, preview is the R print, no visual
+            and no options. <b>Model summary</b> block sits downstream, takes the object,
+            renders V15 and holds the gear.</td>
+        <td>The model block goes back to doing one thing. The card is placeable, exportable
+            and configurable without touching the fit. Costs one block in the menu and one
+            link to draw, which is the normal blockr gesture.</td>
+      </tr>
+      <tr>
+        <td>A. One card</td>
+        <td>Model block preview shows the card, with the R text behind a toggle.</td>
+        <td>Zero wiring, one screen. Rejected: fit and options get tangled into the block
+            that does the fitting, and you cannot put the summary in a different panel from
+            the model.</td>
+      </tr>
+      <tr>
+        <td>C. Renderer, not block</td>
+        <td>Broom adapter stays the only stats block; the card becomes a table/chart preset
+            over a tidy frame.</td>
+        <td>Nothing new in blockr.stats and reusable for any tidy frame. Rejected: a
+            three-block chain to see your coefficients, and glance and tidy cannot be
+            combined in one frame, so the facts line would need a second chain.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="cap" style="margin-top:18px">
+    The broom constraint is what makes the summary block portable: it needs
+    <code>tidy(conf.int = TRUE)</code> and <code>glance()</code> and nothing else, so one
+    implementation covers lm, glm, coxph, aov and anything else with a broom method. The
+    broom adapter block stays for the people who want the frame itself.
+  </p>
+
+  <div class="foot">
+    Colour: estimates use one diverging pair, <code>#2563eb</code> above the null and
+    <code>#dc3545</code> below, with grey <code>#9ca3af</code> where the interval covers the
+    null. The pair passes the six-check validator on a light surface (CVD &Delta;E 26.2
+    protan, normal-vision &Delta;E 36.1, contrast &ge; 3:1); the grey is below the contrast
+    floor by design and is therefore never the only cue, every row carries its value as
+    text. The species lines in V13 use the Okabe-Ito steps blockr.theme ships.
+    Light surface only, matching the product; these are static mockups, so hover and
+    tooltips are not wired.
+  </div>
+</div>
+</body>
+</html>

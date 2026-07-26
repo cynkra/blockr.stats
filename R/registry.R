@@ -1,40 +1,32 @@
 #' @importFrom blockr.core register_blocks new_arg_specs new_arg_spec
-#'   arg_string arg_enum
+#'   arg_string arg_enum arg_boolean
 register_stats_blocks <- function() {
   blockr.core::register_blocks(
     c(
       "new_model_block",
+      "new_model_summary_block",
       "new_broom_block",
-      "new_frequencies_block",
       "new_correlate_block",
       "new_stat_test_block",
-      "new_padjust_block",
-      "new_effect_size_block",
       "new_survival_block"
     ),
     name = c(
       "Model",
+      "Model Summary",
       "Broom Adapter",
-      "Frequencies",
       "Correlate",
       "Statistical Test",
-      "P-Value Adjustment",
-      "Effect Size",
       "Survival"
     ),
     description = c(
       "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
+      "Render a fitted model as a summary card: model facts line + coefficient table with an inline forest (estimate, CI whisker, significance chips). Feeds on the model object directly (tidy + glance inside), works for any broom-supported model; its value is the tidy coefficient frame.",
       "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
-      "Frequency counts and proportions; one-way or two-way (crosstab).",
       "Pairwise correlation matrix of numeric columns (pearson / spearman / kendall) as a tidy `var` + per-variable frame; renders as a heatmap table.",
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
-      "Adjust p-values for multiple comparisons via stats::p.adjust().",
-      "Effect sizes: Cohen's d / Hedges' g (effsize), eta^2 / partial eta^2 / omega^2 / r^2 (base) with CIs.",
       "Advanced: Kaplan-Meier / Cox PH / competing-risks (CIF). Returns the fitted survival model object."
     ),
     category = c(
-      "transform",
-      "transform",
       "transform",
       "transform",
       "transform",
@@ -44,12 +36,10 @@ register_stats_blocks <- function() {
     ),
     icon = c(
       "calculator",
+      "card-list",
       "diagram-3",
-      "bar-chart-line",
       "grid-3x3",
       "clipboard-check",
-      "sliders",
-      "rulers",
       "activity"
     ),
     guidance = c(
@@ -60,12 +50,17 @@ register_stats_blocks <- function() {
         "'response ~ predictor1 + predictor2'. weights and offset are",
         "optional column names; leave them out unless the request needs them."
       ),
+      # new_model_summary_block:
+      paste(
+        "Render a fitted model as a card. Connect it straight to a model /",
+        "survival / function block that returns a model object -- do NOT put",
+        "a broom adapter in between, this block tidies the model itself.",
+        "All six arguments are display choices; the defaults are the",
+        "intended look, so set one only when the request asks for it."
+      ),
       "", # new_broom_block
-      "", # new_frequencies_block
       "", # new_correlate_block
       "", # new_stat_test_block
-      "", # new_padjust_block
-      "", # new_effect_size_block
       ""  # new_survival_block
     ),
     arguments = list(
@@ -106,12 +101,66 @@ register_stats_blocks <- function() {
           example = NULL
         )
       ),
+      # new_model_summary_block: display-only surface, all six options.
+      new_arg_specs(
+        uncertainty = new_arg_spec(
+          paste(
+            "What the interval column and the whisker show: 'ci95' (default),",
+            "'ci90', 'ci99', 'se' (estimate +/- one standard error, about 68%,",
+            "NOT a confidence interval) or 'none'."
+          ),
+          example = "ci95",
+          type = arg_enum(c("ci95", "ci90", "ci99", "se", "none"))
+        ),
+        significance = new_arg_spec(
+          paste(
+            "How significance is shown: 'chips' (default: 0.1% / 1% / 5%",
+            "coloured badges, 10% grey), 'p' (a p-value column), 'stars', or",
+            "'none' -- with a CI drawn, significance is already visible as",
+            "'does the whisker cross the reference line'."
+          ),
+          example = "chips",
+          type = arg_enum(c("chips", "p", "stars", "none"))
+        ),
+        scale = new_arg_spec(
+          paste(
+            "'auto' (default) exponentiates to odds / rate / hazard ratios",
+            "when the model uses a log or logit link and leaves linear models",
+            "alone; 'ratio' and 'raw' force it. On the ratio scale the",
+            "reference line moves from 0 to 1 and the axis becomes log."
+          ),
+          example = "auto",
+          type = arg_enum(c("auto", "raw", "ratio"))
+        ),
+        effect_column = new_arg_spec(
+          paste(
+            "Draw the inline forest column (default TRUE). FALSE gives a plain",
+            "numeric table, for a narrow panel or beside a chart that already",
+            "carries the picture."
+          ),
+          example = TRUE,
+          type = arg_boolean()
+        ),
+        facts = new_arg_spec(
+          paste(
+            "Show the one-line model facts stripe: kind, n, and the fit",
+            "measures that suit the model class (default TRUE)."
+          ),
+          example = TRUE,
+          type = arg_boolean()
+        ),
+        intercept = new_arg_spec(
+          paste(
+            "Keep the intercept row (default TRUE). It never enters the",
+            "forest's scale, so keeping it cannot squash the other terms."
+          ),
+          example = TRUE,
+          type = arg_boolean()
+        )
+      ),
       NULL, # new_broom_block
-      NULL, # new_frequencies_block
       NULL, # new_correlate_block
       NULL, # new_stat_test_block
-      NULL, # new_padjust_block
-      NULL, # new_effect_size_block
       NULL  # new_survival_block
     ),
     package = utils::packageName(),
