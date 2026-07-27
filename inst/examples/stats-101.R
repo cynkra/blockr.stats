@@ -108,7 +108,12 @@ blockr_pkgs <- c(
   "blockr.stats",     # model + model-summary + broom blocks (this example)
   "blockr.session",   # project save / load / versions
   "blockr.assistant", # board-level chat
-  "blockr.outline"    # the narrated report
+  "blockr.outline",   # the narrated report
+  # Not used by any block placed below -- attached so its blocks, above all the
+  # Function block (write arbitrary R in a CodeMirror editor, with autocomplete
+  # and inline AI diff), are in the "+ New" picker for whoever is driving the
+  # demo. .onLoad calls register_extra_blocks(), so attaching is all it takes.
+  "blockr.extra"
 )
 
 # Loaded FIRST, before any option value or board code touches a blockr
