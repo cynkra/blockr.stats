@@ -21,18 +21,24 @@
 (function () {
   'use strict';
 
-  /** Chosen order per output id: { key, dir }. Never persisted. */
+  /**
+   * Chosen order per output id. Never persisted.
+   * @type {Record<string, { key: string, dir: string }>}
+   */
   var state = {};
 
+  /** @param {Element} el @returns {Element} */
   function hostOf(el) {
     var out = el.closest ? el.closest('.shiny-html-output') : null;
     return out || document.body;
   }
 
+  /** @param {Element} host @returns {string} */
   function keyFor(host) {
     return host.id || '__anon__';
   }
 
+  /** @param {Element} tr @param {string} key @returns {string | number | null} */
   function rowValue(tr, key) {
     var raw = tr.getAttribute('data-ms-' + key);
     if (raw === null) return null;
@@ -44,6 +50,7 @@
   /**
    * Reorder tbody rows. Pinned rows keep the bottom, missing values sink
    * below the sorted ones so an empty p-value never wins a sort.
+   * @param {Element} table @param {string} key @param {string} dir
    */
   function applySort(table, key, dir) {
     var tbody = table.querySelector('tbody');
@@ -62,11 +69,13 @@
       if (va === null && vb === null) return 0;
       if (va === null) return 1;
       if (vb === null) return -1;
-      if (typeof va === 'string') return sign * va.localeCompare(vb);
+      if (typeof va === 'string' || typeof vb === 'string') {
+        return sign * String(va).localeCompare(String(vb));
+      }
       return sign * (va - vb);
     });
 
-    rows.forEach(function (r) { tbody.appendChild(r); });
+    for (var k = 0; k < rows.length; k++) tbody.appendChild(rows[k]);
 
     table.querySelectorAll('th[data-ms-sort]').forEach(function (th) {
       var icon = th.querySelector('.blockr-sort-icon');
@@ -79,7 +88,7 @@
     });
   }
 
-  /** Restore model order: the rows carry their original index. */
+  /** Restore model order: the rows carry their original index. @param {Element} table */
   function clearSort(table) {
     var tbody = table.querySelector('tbody');
     if (!tbody) return;
@@ -87,9 +96,9 @@
     rows.sort(function (a, b) {
       return (+a.getAttribute('data-ms-row')) - (+b.getAttribute('data-ms-row'));
     });
-    rows.forEach(function (r) { tbody.appendChild(r); });
-    table.querySelectorAll('.blockr-sort-icon').forEach(function (i) {
-      i.className = 'blockr-sort-icon';
+    for (var k = 0; k < rows.length; k++) tbody.appendChild(rows[k]);
+    table.querySelectorAll('.blockr-sort-icon').forEach(function (icon) {
+      icon.className = 'blockr-sort-icon';
     });
     table.querySelectorAll('th[data-ms-sort]').forEach(function (th) {
       th.setAttribute('aria-sort', 'none');
@@ -99,6 +108,7 @@
   /**
    * Third click on the same column returns to model order, so the reader can
    * always get back to the table as the model wrote it.
+   * @param {Element} th
    */
   function onHeaderClick(th) {
     var table = th.closest('table');
@@ -106,6 +116,7 @@
     var host = hostOf(table);
     var id = keyFor(host);
     var key = th.getAttribute('data-ms-sort');
+    if (!key) return;
     var cur = state[id];
 
     var dir = 'asc';
@@ -122,14 +133,16 @@
     applySort(table, key, dir);
   }
 
-  /** Re-apply the remembered order to a freshly rendered table. */
+  /** Re-apply the remembered order to a freshly rendered table. @param {Element} table */
   function restore(table) {
     var st = state[keyFor(hostOf(table))];
     if (st) applySort(table, st.key, st.dir);
   }
 
   document.addEventListener('click', function (e) {
-    var th = e.target.closest ? e.target.closest('th[data-ms-sort]') : null;
+    // Guard the target: clicks land on text nodes and on document too.
+    var target = e.target instanceof Element ? e.target : null;
+    var th = target ? target.closest('th[data-ms-sort]') : null;
     if (th) onHeaderClick(th);
   });
 
