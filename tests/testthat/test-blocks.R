@@ -132,4 +132,3 @@ test_that("survival_block returns a survfit", {
     args = list(x = blk, data = list(data = function() survival::lung))
   )
 })
-
