@@ -151,14 +151,17 @@ build_model_summary_call <- function(uncertainty, significance, scale,
     intercept = isTRUE(intercept)
   )
 
+  # Placeholders are named for the arguments they fill, so `vals` doubles as
+  # the substitution list and every `.()` name resolves to a formal above
+  # (a bare `.(u)` reads as an undefined global to R CMD check).
   call <- blockr.core::bbquote(
     blockr.stats::model_summary(
       .(data),
-      uncertainty = .(u), significance = .(s), scale = .(sc),
-      effect_column = .(ec), facts = .(fa), intercept = .(ic)
+      uncertainty = .(uncertainty), significance = .(significance),
+      scale = .(scale), effect_column = .(effect_column),
+      facts = .(facts), intercept = .(intercept)
     ),
-    list(u = vals$uncertainty, s = vals$significance, sc = vals$scale,
-         ec = vals$effect_column, fa = vals$facts, ic = vals$intercept)
+    vals
   )
 
   for (nm in names(vals)) {

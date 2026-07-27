@@ -1,7 +1,7 @@
 {
   // Type-checks the hand-written JS in inst/js — no build step, no emit.
-  // Checking is opt-in per file via a leading `// @ts-check` comment.
-  // Run: npx -p typescript tsc
+  // Checking is opt-in per file via a leading `// @ts-check` comment;
+  // types live in inst/js/types.d.ts. Run: npx -p typescript tsc
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,
@@ -11,5 +11,5 @@
     "lib": ["es2021", "dom", "dom.iterable"],
     "types": []
   },
-  "include": ["inst/js/**/*.js"]
+  "include": ["inst/js/**/*.js", "inst/js/types.d.ts"]
 }

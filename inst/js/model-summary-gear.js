@@ -39,8 +39,11 @@
     }
   }
 
+  /** @param {string | null} id @param {unknown} value */
   function setInput(id, value) {
-    if (window.Shiny && Shiny.setInputValue) Shiny.setInputValue(id, value);
+    if (id && window.Shiny && Shiny.setInputValue) {
+      Shiny.setInputValue(id, value);
+    }
   }
 
   /**
