@@ -101,11 +101,16 @@ for (pkg in blockr_pkgs) {
 # broom.mixed for the tidy method on the fit. Fail here with a sentence rather
 # than inside a code editor with a red squiggle, or -- worse -- with "no tidy
 # method" three blocks downstream.
-for (pkg in c("glmmTMB", "broom.mixed")) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    stop("aedes-ivm needs the ", pkg, " package: install.packages('", pkg, "')",
-         call. = FALSE)
-  }
+# Named one per line, not looped: the gallery generator reads this file
+# line-by-line for the demo's dependency list, so a loop variable would go on
+# the website as a package called `pkg`.
+if (!requireNamespace("glmmTMB", quietly = TRUE)) {      # the published arm's fit
+  stop("aedes-ivm needs the glmmTMB package: install.packages('glmmTMB')",
+       call. = FALSE)
+}
+if (!requireNamespace("broom.mixed", quietly = TRUE)) {  # its tidy() method
+  stop("aedes-ivm needs the broom.mixed package: install.packages('broom.mixed')",
+       call. = FALSE)
 }
 # NOT attached. Nothing on this board calls a bare `tidy()`: the coefficient
 # step names `broom.mixed::tidy()` in full, which loads the namespace and so
