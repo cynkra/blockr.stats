@@ -72,7 +72,9 @@ build_survival_call <- function(type, state) {
                      group = grp[keep])
     }, list(tv = tv, ev = ev, ge = grp_expr)))
   }
-  f <- make_model_formula(state)
+  # Same reason as the model block: `Surv()` is a survival export, and a block
+  # evaluates with baseenv() as the parent. See qualify_model_formula().
+  f <- qualify_model_formula(make_model_formula(state))
   if (is.null(f)) {
     return(quote(NULL))
   }

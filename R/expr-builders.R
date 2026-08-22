@@ -1,3 +1,222 @@
+# Packages a formula term is allowed to reach into, in the order they are
+# tried. `stats` first because that is where `poly()` lives and `poly()` is
+# the term this exists for; `splines` next because `ns()`/`bs()` were the
+# first casualties and are still the second most likely. Anything else that
+# happens to be loaded is consulted after these, so a term naming a function
+# from the user's own attached package still fits.
+formula_fn_pkgs <- c("stats", "splines", "survival", "MASS", "mgcv")
+
+#' Find the package that exports a function name
+#'
+#' @param nm Function name, unqualified.
+#' @return Package name, or `NULL` when nothing loaded exports it.
+#' @keywords internal
+#' @noRd
+formula_fn_pkg <- function(nm) {
+  for (pkg in unique(c(formula_fn_pkgs, loadedNamespaces()))) {
+    ns <- tryCatch(asNamespace(pkg), error = function(...) NULL)
+    if (is.null(ns) || !nm %in% getNamespaceExports(ns)) {
+      next
+    }
+    if (is.function(tryCatch(get(nm, envir = ns), error = function(...) NULL))) {
+      return(pkg)
+    }
+  }
+  NULL
+}
+
+#' Namespace-qualify the functions named in a formula term
+#'
+#' EVERY FUNCTION A FORMULA TERM NAMES HAS TO BE FINDABLE AT FIT TIME, and a
+#' block does not fit in your console. `blockr.core::eval_env()` parents the
+#' evaluation environment on `baseenv()` unless the board sets the
+#' `attach_default_packages` option, so the search path is not there and
+#' neither is `stats`. `poly(x, 2)` typed into the formula widget therefore
+#' fits fine when you try it by hand and dies inside a board with
+#' `could not find function "poly"`. So does anything else outside base.
+#'
+#' `ns()`/`bs()` hit this first and were patched by name with a `sub()` on the
+#' label. This is that fix without the list: leave alone anything reachable
+#' from `baseenv()` (which is `+`, `:`, `I()`, `log()`, `scale()`, `factor()`
+#' and the rest of base), and qualify the rest with whichever loaded package
+#' exports it.
+#'
+#' The qualified name is what reaches the fit AND the exported document, where
+#' `stats::poly(...)` is the more honest reading anyway: it is a function the
+#' reader can look up. The label the WIDGET shows is untouched -- it comes
+#' from `formula_ast_to_text()`, not from here -- so the block's saved state
+#' stays unqualified and restores as the user typed it.
+#'
+#' A label that will not parse, or one naming a function nothing exports, is
+#' returned verbatim. That is the pre-existing behaviour and the error it
+#' produces is the user's typo, which is theirs to see.
+#'
+#' @param label A single term label, e.g. `"poly(Date, 2)"`.
+#' @return The label with non-base functions qualified.
+#' @keywords internal
+#' @noRd
+qualify_term_fns <- function(label) {
+  qualify <- function(e) {
+    if (!is.call(e)) {
+      return(e)
+    }
+    fn <- e[[1L]]
+    # `::`/`:::` calls are already qualified; walking into one would try to
+    # qualify the package name itself.
+    already <- is.call(fn) &&
+      as.character(fn[[1L]])[1L] %in% c("::", ":::")
+    if (is.name(fn) && !as.character(fn) %in% c("::", ":::")) {
+      nm <- as.character(fn)
+      if (!exists(nm, envir = baseenv(), mode = "function")) {
+        pkg <- formula_fn_pkg(nm)
+        if (!is.null(pkg)) {
+          e[[1L]] <- call("::", as.name(pkg), as.name(nm))
+        }
+      }
+    } else if (already) {
+      return(e)
+    }
+    for (i in seq_along(e)[-1L]) {
+      arg <- tryCatch(e[[i]], error = function(...) NULL)
+      # Empty arguments (`x[, 1]`) are not missing values you can assign back.
+      if (!is.null(arg) && !identical(arg, quote(expr = ))) {
+        e[[i]] <- qualify(arg)
+      }
+    }
+    e
+  }
+
+  tryCatch(
+    paste0(deparse(qualify(str2lang(label)), width.cutoff = 500L),
+           collapse = ""),
+    error = function(...) label
+  )
+}
+
+# Packages a formula term is allowed to reach into, in the order they are
+# tried. `stats` first because that is where `poly()` lives and `poly()` is
+# the term this exists for; `splines` next because `ns()`/`bs()` were the
+# first casualties and are still the second most likely. Anything else that
+# happens to be loaded is consulted after these, so a term naming a function
+# from the user's own attached package still fits.
+formula_fn_pkgs <- c("stats", "splines", "survival", "MASS", "mgcv")
+
+#' Find the package that exports a function name
+#'
+#' @param nm Function name, unqualified.
+#' @return Package name, or `NULL` when nothing loaded exports it.
+#' @keywords internal
+#' @noRd
+formula_fn_pkg <- function(nm) {
+  for (pkg in unique(c(formula_fn_pkgs, loadedNamespaces()))) {
+    ns <- tryCatch(asNamespace(pkg), error = function(...) NULL)
+    if (is.null(ns) || !nm %in% getNamespaceExports(ns)) {
+      next
+    }
+    if (is.function(tryCatch(get(nm, envir = ns), error = function(...) NULL))) {
+      return(pkg)
+    }
+  }
+  NULL
+}
+
+#' Namespace-qualify the functions named in a formula
+#'
+#' EVERY FUNCTION A FORMULA NAMES HAS TO BE FINDABLE AT FIT TIME, and a block
+#' does not fit in your console. `blockr.core::eval_env()` parents the
+#' evaluation environment on `baseenv()` unless the board sets the
+#' `attach_default_packages` option, so the search path is not there and
+#' neither is `stats`. `poly(x, 2)` typed into the formula widget therefore
+#' fits fine when you try it by hand and dies inside a board with
+#' `could not find function "poly"`. So does `ns()`, `bs()`, and `Surv()` on
+#' the response side of the survival block.
+#'
+#' `ns()`/`bs()` hit this first and were patched by name with a `sub()` on the
+#' term label. This is that fix without the list: leave alone anything
+#' reachable from `baseenv()` (which is `~`, `+`, `:`, `I()`, `log()`,
+#' `scale()`, `factor()` and the rest of base), and qualify the rest with
+#' whichever loaded package exports it.
+#'
+#' WHY THIS RUNS ON THE FITTING CALL AND NOT IN `make_model_formula()`, which
+#' is where the `sub()` used to live: that function is also what
+#' `formula_ast_to_text()` deparses for the widget's text box and the block's
+#' SAVED STATE. Qualifying there rewrites `poly(t, 2)` to `stats::poly(t, 2)`
+#' under the user's cursor as they type it, and stores it that way -- and
+#' `parse_term()` does not recognise a `::` call as a poly term, so the
+#' restored widget shows an opaque chip instead of a degree spinner. Qualify
+#' late: the widget and the state stay as the user wrote them, the fit and the
+#' exported document get the name that resolves.
+#'
+#' A term that names a function nothing exports is left alone. The error that
+#' produces is the user's typo, which is theirs to see.
+#'
+#' @param e A language object (a formula, a call, or a name).
+#' @return `e` with non-base function calls qualified.
+#' @keywords internal
+#' @noRd
+qualify_fn_calls <- function(e) {
+  if (!is.call(e)) {
+    return(e)
+  }
+  fn <- e[[1L]]
+  # An already-qualified call: walk no further into it, or the package name
+  # itself gets treated as a function to look up.
+  if (is.call(fn) && as.character(fn[[1L]])[1L] %in% c("::", ":::")) {
+    return(e)
+  }
+  if (is.name(fn) && !as.character(fn) %in% c("::", ":::")) {
+    nm <- as.character(fn)
+    if (!exists(nm, envir = baseenv(), mode = "function")) {
+      pkg <- formula_fn_pkg(nm)
+      if (!is.null(pkg)) {
+        e[[1L]] <- call("::", as.name(pkg), as.name(nm))
+      }
+    }
+  }
+  for (i in seq_along(e)[-1L]) {
+    arg <- tryCatch(e[[i]], error = function(...) NULL)
+    # Empty arguments (`x[, 1]`) are not values you can assign back.
+    if (!is.null(arg) && !identical(arg, quote(expr = ))) {
+      e[[i]] <- qualify_fn_calls(arg)
+    }
+  }
+  e
+}
+
+#' Qualify a formula in place, keeping its class and environment
+#'
+#' @param f A `formula`, or `NULL`.
+#' @return The formula with non-base functions qualified.
+#' @keywords internal
+#' @noRd
+qualify_model_formula <- function(f) {
+  if (!inherits(f, "formula")) {
+    return(f)
+  }
+  env <- environment(f)
+  out <- tryCatch(qualify_fn_calls(f), error = function(...) f)
+  environment(out) <- env
+  out
+}
+
+#' Qualify the functions in a single term label
+#'
+#' String in, string out. Kept beside [qualify_model_formula()] so the two
+#' share one walker; used by the tests and available for any caller holding a
+#' label rather than a formula.
+#'
+#' @param label A single term label, e.g. `"poly(Date, 2)"`.
+#' @return The label with non-base functions qualified.
+#' @keywords internal
+#' @noRd
+qualify_term_fns <- function(label) {
+  tryCatch(
+    paste0(deparse(qualify_fn_calls(str2lang(label)), width.cutoff = 500L),
+           collapse = ""),
+    error = function(...) label
+  )
+}
+
 #' Build a model formula from the structured formula-input state
 #'
 #' Assembles a `response ~ rhs` formula from the structured model produced by
@@ -25,15 +244,10 @@ make_model_formula <- function(state) {
   terms_list <- if (is.null(state$terms)) list() else state$terms
   bars_list  <- if (is.null(state$bars)) list() else state$bars
 
-  labels <- vapply(terms_list, function(t) {
-    lbl <- t$label
-    # ns()/bs() live in the splines package (not attached): emit prefixed so the
-    # fit can find them. Covers both menu- and text-added spline terms.
-    if (identical(t$kind, "spline")) {
-      lbl <- sub("^(ns|bs)\\(", "splines::\\1(", lbl)
-    }
-    lbl
-  }, character(1))
+  # Emitted verbatim. Qualification of non-base functions happens later, on
+  # the fitting call, so that this function's output stays usable as the
+  # widget's text and the block's saved state -- see qualify_model_formula().
+  labels <- vapply(terms_list, function(t) t$label, character(1))
   bars   <- vapply(bars_list, function(b) sprintf("(%s)", b$raw), character(1))
   rhs    <- c(labels, bars)
 
@@ -62,6 +276,7 @@ make_model_formula <- function(state) {
 #' @keywords internal
 #' @noRd
 build_model_call <- function(model_type, f, weights = NULL, offset = NULL) {
+  f <- qualify_model_formula(f)
   call <- switch(
     model_type,
     logistic = blockr.core::bbquote(
