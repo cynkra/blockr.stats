@@ -114,6 +114,47 @@ formula_input_server <- function(input, output, session, data, state,
     }
   })
 
+  # ...except when the block sits on a dock panel that is not on the startup
+  # view. The block's server still runs at boot -- blockr.core constructs it
+  # whenever a visible block downstream needs it -- but the container div ships
+  # with the panel, on first visit. Both pushes above therefore fire while the
+  # element does not exist, and Shiny drops a custom message whose target it
+  # cannot find. The widget's own `_pendingColumns` / `_pendingState` parking
+  # cannot save them: it keys on `document.getElementById(msg.id)`, which is
+  # null when the panel has never been rendered.
+  #
+  # So the client announces itself on bind when nothing was parked for it, and
+  # we re-send. Columns first, then state -- the order `initialize()` uses,
+  # because the response select has to be able to hold a value before the state
+  # sets one. Sending state to a widget whose options are still empty is what
+  # leaves the card showing the first column instead of the fitted response.
+  #
+  # Same fix as `blockr.dplyr::js_block_ready_name()`, done by hand because
+  # this widget predates that helper and carries its own input binding.
+  # See blockr.core#317 for the core-level fix this stands in for.
+  shiny::observeEvent(input$formula_input_ready, {
+    dat <- tryCatch(data(), error = function(e) NULL)
+
+    if (!is.null(dat)) {
+      session$sendCustomMessage(
+        "formula-columns",
+        list(
+          id = ns("formula_input"),
+          columns = build_formula_columns(dat),
+          responseMode = response_mode
+        )
+      )
+    }
+
+    session$sendCustomMessage(
+      "formula-update",
+      list(
+        id = ns("formula_input"),
+        state = normalize_formula_for_js(r_state())
+      )
+    )
+  })
+
   r_state
 }
 

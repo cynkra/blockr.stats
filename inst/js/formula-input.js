@@ -942,13 +942,37 @@
     },
     initialize: function (el) {
       el._fi = new FormulaInput(el);
+      var replayed = false;
       if (el._pendingColumns) {
         el._fi.updateColumns(el._pendingColumns);
         delete el._pendingColumns;
+        replayed = true;
       }
       if (el._pendingState) {
         el._fi.setState(el._pendingState, true);
         delete el._pendingState;
+        replayed = true;
+      }
+      // Nothing parked means one of two things: a genuinely fresh widget, or
+      // one whose columns and state were pushed before this element EXISTED --
+      // the deferred dock panel case. The handlers below park a message when
+      // the element is present but unbound; they cannot park one for an
+      // element that is not in the document yet, and Shiny drops a custom
+      // message whose target it cannot find. So announce instead and let R
+      // re-send (formula-input.R, the `formula_input_ready` observer).
+      //
+      // Without this the widget mounts with no state: `updateColumns()` calls
+      // `setOptions(opts, null)` on the response select, which slides to the
+      // first column, and the card then SHOWS a formula the model is not
+      // fitting. R is unharmed -- `getValue()` returns null until the user
+      // edits -- but the first edit would compose from the wrong response and
+      // push it, silently replacing the model.
+      //
+      // The round trip is cheap and idempotent when the widget really is
+      // fresh: `setState()` rebuilds from a full snapshot and, called silently,
+      // never fires the submit callback.
+      if (!replayed) {
+        Shiny.setInputValue(el.id + "_ready", Date.now(), { priority: "event" });
       }
     }
   });
