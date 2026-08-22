@@ -121,7 +121,7 @@ options(
   blockr.dock_is_locked = FALSE,
   blockr.tabular_display = blockr.ui::html_table_display,
   blockr.background_construction_delay = 0,
-  blockr.visible_extensions = c("dag", "minidag")
+  blockr.visible_extensions = c("dag", "outline")
 )
 
 if (dev_local) options(blockr.outline.execute = "in-process")
@@ -215,57 +215,50 @@ tidy_script <- 'broom.mixed::tidy(data, conf.int = TRUE)
 poisson_script <- 'broom::tidy(data, exponentiate = TRUE, conf.int = TRUE)
 '
 
+# The GLM arm's season picture, and the reason it exists: with
+# `eggs ~ AREA` the model has ONE fitted value per area, so the plot is two
+# flat lines. Add `+ poly(Day.ovitrap.collected, 2)` in the formula widget and
+# the same plot becomes two curves. That is the demo's cheapest proof that the
+# board is live rather than a screenshot.
+#
+# `data[["data"]]` and not `stats::model.frame(data)`: a glm keeps the frame it
+# was GIVEN in `$data`, and the model frame holds only the columns the formula
+# names -- which at the first step does not include the day. Bracket-string
+# indexing, not `$data`, so the emitter cannot mistake the component name for
+# the input it substitutes.
+glm_diag_script <- 'data.frame(
+  data[["data"]][c("Day.ovitrap.collected", "AREA", "No..eggs.AEDES")],
+  fitted = stats::fitted(data)
+)
+'
+
+# The same picture for the published arm. It needs its own block rather than a
+# column added to `gdiag` because of what recovering the day costs here: the
+# GLMM names the day inside `poly()`, so the model frame carries it as a 327x2
+# MATRIX and the raw values are gone from the frame. They are recoverable --
+# `poly()` stores its centring and scaling in `coefs`, and the first basis
+# column is a linear map of the input, so inverting it is exact (checked: max
+# error 3e-14) -- but those three lines are not something the exported document
+# should have to explain. `gdiag` stays clean and is what the report reads;
+# this block feeds the app only and is deliberately not a report item.
+glmm_season_script <- 'mf <- stats::model.frame(data)
+pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
+cfs <- attr(pol, "coefs")
+
+data.frame(
+  Day.ovitrap.collected = pol[, 1] * sqrt(cfs$norm2[3]) + cfs$alpha[1],
+  AREA = mf$AREA,
+  No..eggs.AEDES = mf$No..eggs.AEDES,
+  fitted = stats::fitted(data)
+)
+'
+
 diag_script <- 'data.frame(
   stats::model.frame(data)[c("No..eggs.AEDES", "AREA")],
   fitted = stats::fitted(data),
   resid = stats::residuals(data, type = "pearson")
 )
 '
-# A DATA BLOCK THAT READS A URL AND SAYS SO IN THE EXPORT.
-#
-# blockr has no block for "load this data with exactly this call". The nearest
-# things all fail differently:
-#   * `new_dataset_block()` emits `blockr.stats::aedes_ovitraps`, which ties the
-#     exported document to a package no reader has.
-#   * `blockr.io::new_read_block()` downloads a URL to a temp file and builds
-#     its expression around THAT path, so the document carries
-#     `/tmp/RtmpXXXX/fileYYYY.csv` -- see
-#     _inbox/2026-08-19-io-read-block-exports-temp-path-for-urls.md.
-#   * `blockr.core::new_fixed_block()` emits its expression verbatim, which is
-#     right, but it is a TRANSFORM block: it has a `data` input, nothing is
-#     linked into it at the root of a board, and so it never evaluates. Used
-#     here on 2026-08-19 it left every panel on "Waiting for a data input"
-#     while still producing a perfectly good qmd -- because the report renders
-#     the emitted code in a fresh session and never asks the board whether it
-#     ran. A dead board and a working document look identical from the download.
-#
-# So: twelve lines of `new_data_block()`, which is the supported way to make one.
-# `expr` is the call, verbatim, and `state` carries the url so the board
-# restores through `do.call(ctor, payload)`.
-new_url_csv_block <- function(url = character(), ...) {
-  blockr.core::new_data_block(
-    function(id) {
-      shiny::moduleServer(id, function(input, output, session) {
-        list(
-          expr = shiny::reactive(
-            bquote(readr::read_csv(.(url), show_col_types = FALSE))
-          ),
-          state = list(url = url)
-        )
-      })
-    },
-    function(id) {
-      shiny::tagList(
-        shiny::tags$p(
-          class = "text-muted small",
-          "Reads ", shiny::tags$code(url)
-        )
-      )
-    },
-    class = "url_csv_block",
-    ...
-  )
-}
 
 # ---------------------------------------------------------------- board ----
 
@@ -284,20 +277,22 @@ board <- new_dock_board(
     # data is the publisher's own file. For a document whose entire argument is
     # "this is reproducible", that difference IS the argument.
     #
-    # WHY A `new_fixed_block()` AND NOT `blockr.io::new_read_block()`, which is
-    # the block actually built for this. The read block downloads a URL to a
-    # temp file and then builds its expression around THAT path, so the report
-    # came out carrying
-    # `readr::read_csv(file = "/tmp/RtmpwhbpHa/filef70d45de23aa.csv")` -- a
-    # path that exists on nobody's machine, in a document whose whole point is
-    # that you can run it on yours. Verified 2026-08-19; filed as
-    # _inbox/2026-08-19-io-read-block-exports-temp-path-for-urls.md. A fixed
-    # block emits its expression verbatim, which is all this needs.
+    # `blockr.io::new_read_block()`, the block actually built for this, with
+    # `source = "path"` pointed at the publisher's own file. One block, no
+    # wrapper: "you can read data straight from a URL" is a claim the demo
+    # should be able to make by picking a block, not by shipping twelve lines
+    # of `new_data_block()` that only this board has.
     #
-    # It is a TRANSFORM block with nothing linked into it, which sounds wrong
-    # and works: the expression ignores its input, so the board treats it as a
-    # source. Worth knowing, because it is the only way currently available to
-    # put an arbitrary hand-written data-loading call at the root of a board.
+    # THE EXPORTED CHUNK NAMES THE URL, which took a fix in blockr.io to be
+    # true. The read block downloads a URL to a temp file before reading it,
+    # and used to build its expression around that path, so the qmd came out
+    # carrying `/tmp/RtmpXXXX/fileYYYY.csv` -- a path that exists on nobody
+    # else's machine, in a document whose whole argument is that you can run
+    # it on yours. A format now declares `url_ok` when its reader takes a URL
+    # (readr's do, readxl's and arrow's do not) and the emitted literal is
+    # the URL while the read still goes through the download. Filed as
+    # _inbox/2026-08-19-io-read-block-exports-temp-path-for-urls.md
+    # (BristolMyersSquibb/blockr.io#41), fixed 2026-08-22.
     #
     # The URL is the article's Additional file 2, off Springer's static-content
     # CDN. Note the CDN, not the article page: link.springer.com sits behind a
@@ -315,45 +310,75 @@ board <- new_dock_board(
     # 3.81 (95% CI 2.72-5.35), the same as from the packaged data.
     #
     # The packaged `aedes_ovitraps` stays: it is documented, typed, and works
-    # offline, which the URL does not. The board simply prefers the public
-    # source, because the board's job is to produce that document.
-    ovi = new_url_csv_block(
-      url = paste0(
+    # offline, which the URL does not.
+    ovi = blockr.io::new_read_block(
+      path = paste0(
         "https://static-content.springer.com/esm/",
         "art%3A10.1186%2Fs13071-021-04903-2/MediaObjects/",
         "13071_2021_4903_MOESM2_ESM.csv"
       ),
+      source = "path",
       block_name = "Ovitrap readings 2019 (Additional file 2)"
     ),
 
     # -- Table 1 -----------------------------------------------------------
-    # The paper's Table 1, as a plain dplyr summarise: min, median, mean and
-    # max eggs per trap in each of the six towns. Run it and the six means come
-    # out at the published 56.8 / 80.1 / 59.3 against 261.2 / 218.6 / 223.8,
-    # which is a check anyone in the room can do.
-    #
-    # THIS USED TO BE `new_summary_table_block()` FEEDING A `new_table_block()`,
-    # and the swap is about the exported document. That pair emits
-    # `with(list(data = ovi), blockr.viz::summary_table(data, vars = ...,
-    # sections = character(0), ...))` and then
-    # `blockr.viz::static_exhibit(dplyr::filter(blockr.viz::as_annotated_df(desc),
-    # TRUE))` -- correct, and three blockr calls plus a no-op filter where a
-    # reader expects one line of dplyr. The styled exhibit buys nothing here:
-    # this table is six rows of numbers, `df-print: kable` renders it, and the
-    # chunk now reads as something you would have typed.
-    desc = blockr.dplyr::new_summarize_block(
-      summaries = list(
-        list(type = "simple", name = "min_eggs",
-             func = "min", col = "No..eggs.AEDES"),
-        list(type = "simple", name = "median_eggs",
-             func = "median", col = "No..eggs.AEDES"),
-        list(type = "simple", name = "mean_eggs",
-             func = "mean", col = "No..eggs.AEDES"),
-        list(type = "simple", name = "max_eggs",
-             func = "max", col = "No..eggs.AEDES")
-      ),
-      by = list("MUNICIPALITY"),
+    # SUMMARY STATISTICS ARE A BLOCK, not a summarise you assemble by hand.
+    # This used to be a `blockr.dplyr::new_summarize_block()` carrying four
+    # explicit min/median/mean/max entries, which produced the right table and
+    # sent the wrong message: the demo's line here is "with the right block you
+    # just get it", and watching someone type four summaries contradicts it.
+    # `stats` is a vector of catalogue keys, so the shape of the table is one
+    # argument rather than four list entries.
+    desc = blockr.viz::new_summary_table_block(
+      vars = "No..eggs.AEDES",
+      by = "AREA",
+      stats = c("n", "mean_sd", "median_q1_q3", "min_max"),
+      block_name = "Eggs per trap, by area"
+    ),
+    # `new_summary_table_block()` is a TRANSFORM block: it returns the summary
+    # as an annotated frame and draws nothing itself, so on its own the panel
+    # shows the raw `.variable` / `.label` / `.indent` columns rather than the
+    # table. The table block is the renderer that turns those annotations into
+    # the exhibit. Two blocks, and still the point: the shape of the summary is
+    # two settings, not four hand-written summarise entries.
+    desc_tbl = new_table_block(block_name = "Eggs per trap, by area"),
+
+    # The same summary by TOWN. The demo does not show it -- the story is the
+    # two arms, and six rows split by municipality only invites questions about
+    # towns nobody in the room knows -- but the report's quoted paragraph gives
+    # the paper's per-town ranges, so the document keeps the table those
+    # numbers belong to. The published means are 56.8 / 80.1 / 59.3 against
+    # 261.2 / 218.6 / 223.8, which is a check anyone in the room can do.
+    desc_town = blockr.viz::new_summary_table_block(
+      vars = "No..eggs.AEDES",
+      by = "MUNICIPALITY",
+      stats = c("n", "mean_sd", "median_q1_q3", "min_max"),
       block_name = "Table 1: eggs per trap by town"
+    ),
+
+    # -- The season, as the demo shows it ----------------------------------
+    # Counts over time on a SQUARE-ROOT scale with a loess per area. Neither
+    # plot block has a `scale_y_sqrt()`, so the transform is a mutate and the
+    # axis is labelled in sqrt units. That is not a workaround with a cost:
+    # ggplot2 applies a scale transform BEFORE the stat, so `scale_y_sqrt() +
+    # geom_smooth()` fits the smoother on the square-root scale too. This is
+    # the same fit, drawn against an axis that says so.
+    ovi_sqrt = blockr.dplyr::new_mutate_block(
+      mutations = list(
+        list(name = "sqrt_eggs", expr = "sqrt(No..eggs.AEDES)")
+      ),
+      block_name = "Eggs, square-root scale"
+    ),
+    # A chart block and not a ggplot block, because this is the one plot in
+    # the board that needs a SMOOTHER: `blockr.viz` fits one per colour group
+    # (and per facet panel, since 0.2.67), `blockr.ggplot` has no such option.
+    # Not a report item -- the document keeps the ggplot pair, whose chunks
+    # read as ggplot2.
+    season_ct = blockr.viz::new_chart_block(
+      chart_type = "scatter",
+      x = "Day.ovitrap.collected", y = "sqrt_eggs",
+      color = "AREA", smoother = "loess",
+      block_name = "The season, by area (sqrt scale)"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -373,6 +398,16 @@ board <- new_dock_board(
     ),
     mcoef = new_code_block(
       script = poisson_script, block_name = "Area effect (glm), tidied"
+    ),
+
+    # The formula widget's consequence, made visible. See `glm_diag_script`.
+    mdiag = new_code_block(
+      script = glm_diag_script, block_name = "Fitted values by day (glm)"
+    ),
+    mfit = blockr.viz::new_chart_block(
+      chart_type = "scatter",
+      x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
+      block_name = "Predicted eggs through the season (glm)"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
@@ -466,6 +501,19 @@ board <- new_dock_board(
       script = diag_script, block_name = "Fitted values & residuals"
     ),
 
+    # The published arm's answer to `mfit`. See `glmm_season_script`.
+    gseason = new_code_block(
+      script = glmm_season_script, block_name = "Fitted values by day (GLMM)"
+    ),
+    gsfit = `attr<-`(
+      blockr.viz::new_chart_block(
+        chart_type = "scatter",
+        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
+        block_name = "Predicted eggs through the season (GLMM)"
+      ),
+      "visible", "inputs"
+    ),
+
     # echarts, not ggplot: these redraw whenever the GLMM refits (untick the
     # trap random effect and watch), and a chart block pushes data to a browser
     # where a ggplot block round-trips a PNG through R. `report = FALSE` -- the
@@ -516,37 +564,42 @@ board <- new_dock_board(
     )
   ),
   links = links(
-    from = c("ovi", "ovi", "ovi", "ovi", "ovi",
-             "mdl", "mdl",
-             "glmm", "glmm",
+    from = c("ovi", "ovi", "ovi", "ovi", "ovi", "ovi", "ovi",
+             "ovi_sqrt", "desc",
+             "mdl", "mdl", "mdl", "mdiag",
+             "glmm", "glmm", "glmm", "gseason",
              "gcoef", "gfix", "gratio", "gsel",
              "gdiag", "gdiag", "gdiag"),
-    to   = c("desc", "mdl", "glmm", "season_gg", "map_gg",
-             "summ", "mcoef",
-             "gcoef", "gdiag",
+    to   = c("desc", "desc_town", "ovi_sqrt", "mdl", "glmm",
+             "season_gg", "map_gg",
+             "season_ct", "desc_tbl",
+             "summ", "mcoef", "mdiag", "mfit",
+             "gcoef", "gdiag", "gseason", "gsfit",
              "gfix", "gratio", "gsel", "gtbl",
              "gfit", "gres", "resid_gg")
   ),
   stacks = stacks(
     data = new_dock_stack(
-      c("ovi", "desc", "season_gg", "map_gg"),
+      c("ovi", "desc", "desc_town", "ovi_sqrt", "season_ct",
+        "season_gg", "map_gg", "desc_tbl"),
       name = "The data", color = "#2563eb"
     ),
     simple = new_dock_stack(
-      c("mdl", "summ", "mcoef"), name = "The easy model", color = "#7c3aed"
+      c("mdl", "summ", "mcoef", "mdiag", "mfit"),
+      name = "The easy model", color = "#7c3aed"
     ),
     published = new_dock_stack(
       c("glmm", "gcoef", "gfix", "gratio", "gsel", "gtbl"),
       name = "The published model", color = "#059669"
     ),
     fit = new_dock_stack(
-      c("gdiag", "gfit", "gres", "resid_gg"),
+      c("gdiag", "gseason", "gfit", "gres", "gsfit", "resid_gg"),
       name = "The fit", color = "#d97706"
     )
   ),
   extensions = list(
     blockr.dag::new_dag_extension(),
-    blockr.outline::new_minidag_extension(),
+    blockr.outline::new_outline_extension(),
     blockr.outline::new_slides_extension(
       title = "Does mosquito control work? Evidence from across the border",
       # Presentation order, not evaluation order: open on the answer.
@@ -683,6 +736,7 @@ board <- new_dock_board(
           "non-intervention municipalities."
         )),
         list(block = "desc", code = TRUE, output = TRUE),
+        list(block = "desc_town", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "The first eggs in the season were found already in the first period ",
@@ -816,9 +870,28 @@ board <- new_dock_board(
     # top, its diagnostics tabbed below. Tabbing is free there -- both charts
     # are `report = FALSE`, so nothing depends on the un-fronted one being
     # mounted.
+    # The demo's FIRST STOP, one click from the opening view. Read, summarise,
+    # plot, in the order the talk walks them: the URL block on the left, the
+    # by-area table over the season plot on the right. `season_ct` is a real
+    # panel and not a tab, because a chart block only draws once its panel has
+    # been mounted.
+    #
+    # WHY THIS IS NOT THE ACTIVE VIEW, though the demo starts here. Making it
+    # active defers the Model panel, and the model block's formula widget does
+    # not survive a deferred mount: it comes up with no column choices, slides
+    # to the first column of the data, and displays `WGS84.LAT ~ 1` while the
+    # FIT still carries the seeded `No..eggs.AEDES ~ AREA`. The numbers stay
+    # right and the widget lies, until the first click on it -- which would
+    # push the wrong formula into the model, live, on stage. Verified both ways
+    # 2026-08-22. Same class as the lazy-panel handshake fixed in blockr.dplyr
+    # and blockr.extra; the formula widget has not had it yet.
+    Data = dock_grid(
+      "ovi", group("desc", "desc_tbl", sizes = c(1, 2)), "season_ct",
+      orientation = "horizontal", sizes = c(2, 3, 3)
+    ),
     Model = dock_grid(
-      group("mdl", "summ", sizes = c(3, 4)),
-      group("gtbl", c("gfit", "gres"), sizes = c(3, 4)),
+      group("mdl", "summ", "mfit", sizes = c(3, 2, 4)),
+      group("gtbl", c("gfit", "gres", "gsfit"), sizes = c(3, 4)),
       orientation = "horizontal", sizes = c(1, 1)
     ),
     # A real SPLIT, not tabs: an unmounted ggplot block reports no code to the
@@ -838,7 +911,7 @@ board <- new_dock_board(
       orientation = "horizontal", sizes = c(4, 2, 2, 2)
     ),
     Workflow = dock_grid(
-      panels(ext("minidag"), ext("dag")), ext("assistant"), sizes = c(2, 1)
+      panels(ext("outline"), ext("dag")), ext("assistant"), sizes = c(2, 1)
     )
   ),
   active = "Model"
