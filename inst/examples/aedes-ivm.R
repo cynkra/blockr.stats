@@ -413,13 +413,23 @@ board <- new_dock_board(
     # (and per facet panel, since 0.2.67), `blockr.ggplot` has no such option.
     # Not a report item -- the document keeps the ggplot pair, whose chunks
     # read as ggplot2.
-    season_ct = blockr.viz::new_chart_block(
-      chart_type = "scatter",
-      x = "Day.ovitrap.collected", y = "sqrt_eggs",
-      color = "AREA", smoother = "loess",
-      title = "Eggs collected",
-      subtitle = "All traps, per day, sort()",
-      block_name = "Visualization"
+    # `visible = "inputs"` and the reason is worth knowing, because it reads
+    # backwards: a chart block draws its chart in the INPUT half of the card
+    # (it is an interactive widget the user configures) and returns the plotted
+    # data frame as its OUTPUT. Left at the default both show, so the panel is
+    # a chart with a table of the same numbers underneath it. On an exhibit the
+    # table is noise -- the picture is the point, and the numbers are one panel
+    # away in Read Data.
+    season_ct = `attr<-`(
+      blockr.viz::new_chart_block(
+        chart_type = "scatter",
+        x = "Day.ovitrap.collected", y = "sqrt_eggs",
+        color = "AREA", smoother = "loess",
+        title = "Eggs collected",
+        subtitle = "All traps, per day, sort()",
+        block_name = "Visualization"
+      ),
+      "visible", "inputs"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -445,10 +455,13 @@ board <- new_dock_board(
     mdiag = new_code_block(
       script = glm_diag_script, block_name = "Fitted values by day (glm)"
     ),
-    mfit = blockr.viz::new_chart_block(
-      chart_type = "scatter",
-      x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
-      block_name = "Predicted eggs through the season (glm)"
+    mfit = `attr<-`(
+      blockr.viz::new_chart_block(
+        chart_type = "scatter",
+        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
+        block_name = "Predicted eggs through the season (glm)"
+      ),
+      "visible", "inputs"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
