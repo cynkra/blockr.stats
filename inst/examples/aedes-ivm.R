@@ -77,7 +77,6 @@ if (!exists("dev_local")) dev_local <- FALSE
 blockr_pkgs <- c(
   "blockr.ui",
   "blockr.core",
-  "blockr.dag",
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
   "blockr.dplyr",     # the sqrt mutate feeding the season chart
@@ -121,7 +120,7 @@ options(
   blockr.dock_is_locked = FALSE,
   blockr.tabular_display = blockr.ui::html_table_display,
   blockr.background_construction_delay = 0,
-  blockr.visible_extensions = c("dag", "outline")
+  blockr.visible_extensions = "outline"
 )
 
 if (dev_local) options(blockr.outline.execute = "in-process")
@@ -561,13 +560,13 @@ board <- new_dock_board(
     )
   ),
   extensions = list(
-    blockr.dag::new_dag_extension(),
+    # THE OUTLINE IS THE PIPELINE VIEW, and the only one. The DAG drew the same
+    # graph with the same edges and was harder to read at this size: a board of
+    # seventeen blocks spreads wide enough that the interesting part is offscreen
+    # unless you pan. The outline says the same thing as a list, grouped by
+    # stack, and it is already on the Data view where the demo starts. Two
+    # answers to one question is a worse demo than one answer.
     blockr.outline::new_outline_extension(),
-    blockr.outline::new_slides_extension(
-      title = "Does mosquito control work? Evidence from across the border",
-      # Presentation order, not evaluation order: open on the answer.
-      slides = "gtbl"
-    ),
     blockr.assistant::new_assistant_extension(),
     # THE REPORT EXTENSION, not the outline. Same board, a different reading of
     # it: an ordered list of items, each either a block or a paragraph of
@@ -869,13 +868,17 @@ board <- new_dock_board(
     # to be MOUNTED while the report builder is reading the board, or its chunk
     # comes out empty and the download hangs on it. One figure now, so one
     # column, in a real split rather than a tab.
+    # NO SLIDES BUILDER HERE. It is a good extension and it is the wrong one
+    # for this talk: a deck built from the board is an ALTERNATIVE to the
+    # document, and the document is the claim being made. Offering both invites
+    # the question "so which is it", which is a question with no useful answer
+    # on stage.
     Report = dock_grid(
-      panels(ext("report"), ext("slides")),
-      "resid_gg",
+      ext("report"), "resid_gg",
       orientation = "horizontal", sizes = c(2, 1)
     ),
     Workflow = dock_grid(
-      panels(ext("outline"), ext("dag")), ext("assistant"), sizes = c(2, 1)
+      ext("outline"), ext("assistant"), sizes = c(2, 1)
     )
   ),
   active = "Data"
