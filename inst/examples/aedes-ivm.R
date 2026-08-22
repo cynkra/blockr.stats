@@ -386,14 +386,14 @@ board <- new_dock_board(
         "13071_2021_4903_MOESM2_ESM.csv"
       ),
       source = "path",
-      block_name = "Ovitrap readings 2019 (Additional file 2)"
+      block_name = "Read Data"
     ),
 
     # -- Table 1 -----------------------------------------------------------
     # See `desc_script`: one gtsummary call, a dropdown for the grouping, and
     # the same table in the panel and in the document.
     desc = new_code_block(
-      script = desc_script, block_name = "Eggs per trap, by area"
+      script = desc_script, block_name = "Descriptive Stats"
     ),
 
     # -- The season, as the demo shows it ----------------------------------
@@ -407,7 +407,7 @@ board <- new_dock_board(
       mutations = list(
         list(name = "sqrt_eggs", expr = "sqrt(No..eggs.AEDES)")
       ),
-      block_name = "Eggs, square-root scale"
+      block_name = "Mutate"
     ),
     # A chart block and not a ggplot block, because this is the one plot in
     # the board that needs a SMOOTHER: `blockr.viz` fits one per colour group
@@ -418,7 +418,9 @@ board <- new_dock_board(
       chart_type = "scatter",
       x = "Day.ovitrap.collected", y = "sqrt_eggs",
       color = "AREA", smoother = "loess",
-      block_name = "The season, by area (sqrt scale)"
+      title = "Eggs collected",
+      subtitle = "All traps, per day, sort()",
+      block_name = "Visualization"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -509,41 +511,32 @@ board <- new_dock_board(
       "visible", "inputs"
     ),
 
-    # -- The document pair: blockr.ggplot blocks ----------------------------
-    # Beside the outline in Report, and ggplot because the rendered chunk
-    # should read as ggplot2 -- a recipe a reader can lift. Both keep their
-    # settings band: a ggplot block hidden to `visible = "outputs"` on a
-    # non-startup panel builds no mapping and draws nothing.
-    season_gg = blockr.ggplot::new_ggplot_block(
-      type = "point",
-      x = "Day.ovitrap.collected", y = "no.eggs.normalised.14.days",
-      color = "AREA",
-      block_name = "The season, by area"
-    ),
-    # The residual check the DOCUMENT gets. `gres` next to it is the same
-    # picture in echarts for the dashboard, and it is deliberately NOT in the
-    # report: a chart block reports its code to the builder only while its panel
-    # is MOUNTED, and `gres` lives on the un-fronted tab of a Model-view slot.
-    # Put it in the document and its chunk comes out as
-    # "# gres: waiting for R code to be generated" -- and the HTML download then
+    # -- The document's figure ---------------------------------------------
+    # ggplot and not a chart block, because the rendered chunk should read as
+    # ggplot2 -- a recipe a reader can lift. `gres` beside it is the same
+    # picture in echarts for the dashboard and is deliberately NOT in the
+    # report: a chart block reports its code to the builder only while its
+    # panel is MOUNTED, and `gres` lives on an un-fronted tab of a Model-view
+    # slot. Put it in the document and its chunk comes out as
+    # "# gres: waiting for R code to be generated", and the HTML download then
     # waits on it forever. Verified 2026-08-19, which is how this block exists.
+    #
+    # The season and trap-network ggplots that used to sit here are gone. The
+    # document's argument is the two fits, and neither picture was carrying
+    # it -- the season is on the Data view as a chart the demo actually drives,
+    # and the trap map was scene-setting the quoted text already does in words.
     resid_gg = blockr.ggplot::new_ggplot_block(
       type = "point", x = "fitted", y = "resid", color = "AREA",
       block_name = "Residuals vs fitted"
-    ),
-    map_gg = blockr.ggplot::new_ggplot_block(
-      type = "point", x = "WGS84.LNG", y = "WGS84.LAT",
-      color = "AREA",
-      block_name = "The trap network"
     )
   ),
   links = links(
-    from = c("ovi", "ovi", "ovi", "ovi", "ovi", "ovi",
+    from = c("ovi", "ovi", "ovi", "ovi",
              "ovi_sqrt",
              "mdl", "mdl", "mdl", "mdiag",
              "glmm", "glmm", "glmm", "gseason",
              "gdiag", "gdiag", "gdiag"),
-    to   = c("desc", "ovi_sqrt", "mdl", "glmm", "season_gg", "map_gg",
+    to   = c("desc", "ovi_sqrt", "mdl", "glmm",
              "season_ct",
              "summ", "mcoef", "mdiag", "mfit",
              "gtbl", "gdiag", "gseason", "gsfit",
@@ -551,8 +544,8 @@ board <- new_dock_board(
   ),
   stacks = stacks(
     data = new_dock_stack(
-      c("ovi", "desc", "ovi_sqrt", "season_ct", "season_gg", "map_gg"),
-      name = "The data", color = "#2563eb"
+      c("ovi", "desc", "ovi_sqrt", "season_ct"),
+      name = "Data", color = "#2563eb"
     ),
     simple = new_dock_stack(
       c("mdl", "summ", "mcoef", "mdiag", "mfit"),
@@ -573,7 +566,7 @@ board <- new_dock_board(
     blockr.outline::new_slides_extension(
       title = "Does mosquito control work? Evidence from across the border",
       # Presentation order, not evaluation order: open on the answer.
-      slides = c("gtbl", "season_gg", "map_gg")
+      slides = "gtbl"
     ),
     blockr.assistant::new_assistant_extension(),
     # THE REPORT EXTENSION, not the outline. Same board, a different reading of
@@ -694,7 +687,6 @@ board <- new_dock_board(
           "of 20-100 m from each other."
         )),
         list(block = "ovi", code = TRUE, output = FALSE),
-        list(block = "map_gg", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "In 2019, egg counts per ovitrap per inspection rounds of about 14 ",
@@ -717,7 +709,6 @@ board <- new_dock_board(
           "much more contained compared to the non-intervention ",
           "municipalities, without an evident peak."
         )),
-        list(block = "season_gg", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "## Statistical analysis\n\n",
@@ -851,9 +842,17 @@ board <- new_dock_board(
     # push the wrong formula into the model, live, on stage. Verified both ways
     # 2026-08-22. Same class as the lazy-panel handshake fixed in blockr.dplyr
     # and blockr.extra; the formula widget has not had it yet.
+    # THE VIEW THE TALK OPENS ON, and its shape is the demo's first minute:
+    # read on the left with the summary under it, the picture in the middle,
+    # the outline on the right so the pipeline is visible from the start
+    # rather than discovered later on the Workflow view. `Mutate` has no panel
+    # here on purpose -- it is a step, not an exhibit, and the outline lists it
+    # either way.
     Data = dock_grid(
-      "ovi", "desc", "season_ct",
-      orientation = "horizontal", sizes = c(2, 3, 3)
+      group("ovi", "desc", sizes = c(1, 2)),
+      "season_ct",
+      ext("outline"),
+      orientation = "horizontal", sizes = c(1, 1, 1)
     ),
     Model = dock_grid(
       group("mdl", "summ", "mfit", sizes = c(3, 2, 4)),
@@ -866,21 +865,20 @@ board <- new_dock_board(
     # blocks. `panels()`, not `c()`: `ext()` returns a panel_ref object and
     # `c()` on two of them dies at construction with "Unknown layout node
     # type: NULL".
-    # FOUR columns, and the fourth is not decoration. Every ggplot the document
-    # uses has to be MOUNTED while the report builder is reading the board, or
-    # its chunk comes out empty and the download hangs on it. So all three
-    # document figures share this view with the builder, in real splits rather
-    # than tabs.
+    # The second column is not decoration. Every ggplot the document uses has
+    # to be MOUNTED while the report builder is reading the board, or its chunk
+    # comes out empty and the download hangs on it. One figure now, so one
+    # column, in a real split rather than a tab.
     Report = dock_grid(
       panels(ext("report"), ext("slides")),
-      "season_gg", "map_gg", "resid_gg",
-      orientation = "horizontal", sizes = c(4, 2, 2, 2)
+      "resid_gg",
+      orientation = "horizontal", sizes = c(2, 1)
     ),
     Workflow = dock_grid(
       panels(ext("outline"), ext("dag")), ext("assistant"), sizes = c(2, 1)
     )
   ),
-  active = "Model"
+  active = "Data"
 )
 
 serve(board, plugins = custom_plugins(manage_project()))
