@@ -80,7 +80,7 @@ blockr_pkgs <- c(
   "blockr.dag",
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
-  "blockr.dplyr",     # the three blocks that reshape the tidy coefficient frame
+  "blockr.dplyr",     # the sqrt mutate feeding the season chart
   "blockr.ggplot",    # the two document figures
   "blockr.viz",       # the dashboard charts + summary/table blocks
   "blockr.stats",     # dataset + model + model-summary + broom blocks
@@ -206,6 +206,29 @@ glmmTMB::glmmTMB(
 tidy_script <- 'broom.mixed::tidy(data, conf.int = TRUE)
 '
 
+# THE COEFFICIENT TABLE, FOR BOTH ARMS, IN ONE CALL.
+#
+# `tbl_regression()` is to a fit what `tbl_summary()` is to a data frame: the
+# one function you reach for, rather than a pipeline you assemble. It reads the
+# model, exponentiates, attaches the confidence interval and the p-value, keeps
+# the reference level as its own row, and renders as gt -- on screen and in the
+# document, from the same call.
+#
+# WHAT THIS REPLACED, and it is the strongest argument for it. The published
+# arm used to go `broom.mixed::tidy()` -> filter -> mutate(exp) -> select ->
+# table block: FIVE blocks to turn a fit into four columns, three of them there
+# only because the table block renders a wide frame badly and rounds the panel
+# without rounding the report. All five are gone. The escalation story is
+# untouched -- the glmmTMB call is still hand-written R in a code block, which
+# is the point being made -- but what happens AFTER the fit is no longer a
+# pipeline the audience has to watch being built.
+#
+# The same script serves both arms, which is the exhibit: two fits of one
+# dataset, read the same way, disagreeing by a factor of seventeen on the
+# interval. 3.59 (3.51, 3.67) on the left and 3.81 (2.72, 5.35) on the right.
+regression_script <- 'gtsummary::tbl_regression(data, exponentiate = TRUE)
+'
+
 # The appendix's exhibit. `new_model_summary_block()` draws a far better card
 # in the app, but it emits `blockr.stats::model_summary(mdl)` -- the last call
 # in the document that would send a reader looking for one of our packages.
@@ -213,6 +236,51 @@ tidy_script <- 'broom.mixed::tidy(data, conf.int = TRUE)
 # GLMM, so the two arms are now read the same way as well as fitted the same
 # way. The card stays on the Model view; the document gets this.
 poisson_script <- 'broom::tidy(data, exponentiate = TRUE, conf.int = TRUE)
+'
+
+# THE DESCRIPTIVE SUMMARY, AS A STATISTICIAN WOULD WRITE IT.
+#
+# Nobody enumerates min/median/mean/max to describe a variable. They call the
+# one function their package provides and let it decide: `summary()` in base R,
+# `PROC MEANS`, `summarize` in Stata. With a grouping variable and a table
+# meant for a paper, the R answer is `gtsummary::tbl_summary()`.
+#
+# ONE BLOCK, NOT FOUR. This replaced a `new_summary_table_block()` feeding a
+# `new_table_block()` for the app, plus two more blocks emitting canonical code
+# for the document. The summary table block is a reimplementation of gtsummary
+# -- its whole vocabulary (`mean_sd`, `median_q1_q3`, `min_max`, `add_overall`)
+# is gtsummary's, and the two agree to the digit -- so once the document has to
+# carry canonical R anyway, the reimplementation earns nothing here and the
+# call itself does both jobs.
+#
+# WHERE THAT STOPS BEING TRUE: gtsummary is not fast. One variable over 327
+# rows is 0.18s and all thirteen over six groups is 0.82s, which is nothing; a
+# pharma table of hundreds of variables is another matter, and that is exactly
+# what `blockr.viz::new_summary_table_block()` is for. This board is small and
+# its document is the deliverable, so the call wins HERE. Not a general
+# recommendation.
+#
+# `group` IS A CONTROL. A top-level assignment of a plain value becomes one on
+# the card, and a factor becomes a dropdown whose levels are the choices, so
+# this line is the selector -- no blockr vocabulary in the script. The current
+# value is substituted back as a LITERAL, which is also why the export reads
+# `by = "AREA"` rather than naming a variable: passing a character variable to
+# a tidyselect argument warns, passing the string does not.
+#
+# The by-town table this board used to carry is gone, and the paragraph above
+# it never needed one: the paper reports its ranges BY AREA -- 0 to 513 against
+# 0 to 2117 -- which is exactly this table's Min, Max row.
+desc_script <- 'group <- factor("AREA", c("AREA", "MUNICIPALITY"))
+
+gtsummary::tbl_summary(
+  data,
+  by = group,
+  include = No..eggs.AEDES,
+  type = No..eggs.AEDES ~ "continuous2",
+  statistic = No..eggs.AEDES ~ c(
+    "{N_nonmiss}", "{mean} ({sd})", "{median} ({p25}, {p75})", "{min}, {max}"
+  )
+)
 '
 
 # The GLM arm's season picture, and the reason it exists: with
@@ -322,38 +390,10 @@ board <- new_dock_board(
     ),
 
     # -- Table 1 -----------------------------------------------------------
-    # SUMMARY STATISTICS ARE A BLOCK, not a summarise you assemble by hand.
-    # This used to be a `blockr.dplyr::new_summarize_block()` carrying four
-    # explicit min/median/mean/max entries, which produced the right table and
-    # sent the wrong message: the demo's line here is "with the right block you
-    # just get it", and watching someone type four summaries contradicts it.
-    # `stats` is a vector of catalogue keys, so the shape of the table is one
-    # argument rather than four list entries.
-    desc = blockr.viz::new_summary_table_block(
-      vars = "No..eggs.AEDES",
-      by = "AREA",
-      stats = c("n", "mean_sd", "median_q1_q3", "min_max"),
-      block_name = "Eggs per trap, by area"
-    ),
-    # `new_summary_table_block()` is a TRANSFORM block: it returns the summary
-    # as an annotated frame and draws nothing itself, so on its own the panel
-    # shows the raw `.variable` / `.label` / `.indent` columns rather than the
-    # table. The table block is the renderer that turns those annotations into
-    # the exhibit. Two blocks, and still the point: the shape of the summary is
-    # two settings, not four hand-written summarise entries.
-    desc_tbl = new_table_block(block_name = "Eggs per trap, by area"),
-
-    # The same summary by TOWN. The demo does not show it -- the story is the
-    # two arms, and six rows split by municipality only invites questions about
-    # towns nobody in the room knows -- but the report's quoted paragraph gives
-    # the paper's per-town ranges, so the document keeps the table those
-    # numbers belong to. The published means are 56.8 / 80.1 / 59.3 against
-    # 261.2 / 218.6 / 223.8, which is a check anyone in the room can do.
-    desc_town = blockr.viz::new_summary_table_block(
-      vars = "No..eggs.AEDES",
-      by = "MUNICIPALITY",
-      stats = c("n", "mean_sd", "median_q1_q3", "min_max"),
-      block_name = "Table 1: eggs per trap by town"
+    # See `desc_script`: one gtsummary call, a dropdown for the grouping, and
+    # the same table in the panel and in the document.
+    desc = new_code_block(
+      script = desc_script, block_name = "Eggs per trap, by area"
     ),
 
     # -- The season, as the demo shows it ----------------------------------
@@ -397,7 +437,7 @@ board <- new_dock_board(
       "visible", "outputs"
     ),
     mcoef = new_code_block(
-      script = poisson_script, block_name = "Area effect (glm), tidied"
+      script = regression_script, block_name = "Area effect (glm)"
     ),
 
     # The formula widget's consequence, made visible. See `glm_diag_script`.
@@ -419,82 +459,16 @@ board <- new_dock_board(
       script = glmm_script, block_name = "Negative binomial GLMM (custom R)"
     ),
 
-    # THE ONE-LINE STEP THAT MAKES THE DOCUMENT SELF-CONTAINED.
+    # One call, and the headline number. See `regression_script`.
     #
-    # This was a `new_broom_block()`, which is the natural blockr answer and
-    # which works perfectly well inside the app. It emits
-    # `broom::tidy(glmm, conf.int = TRUE)`, and broom has no `tidy()` method
-    # for a glmmTMB fit -- broom.mixed supplies one, as an S3 registration that
-    # only exists once broom.mixed is LOADED. The app has it loaded, so the
-    # panel was fine and the app-side render was fine. The downloaded qmd was
-    # not: rendered in a fresh R session it died at this chunk with
-    # "No `tidy()` method for objects of class <glmmTMB>" (verified
-    # 2026-08-19). A report that only renders inside the app that wrote it is
-    # not a report.
-    #
-    # A code block naming `broom.mixed::tidy()` outright fixes it, because `::`
-    # loads the namespace and that registration is what dispatch needs. No
-    # `library()` call anywhere, and the chunk still reads as one line of R.
-    # Filed as _inbox/2026-08-19-outline-report-qmd-has-no-setup-chunk.md:
-    # the emitter has no way to declare a document's packages, and
-    # fully-qualified calls cover everything except S3 registration.
-    gcoef = new_code_block(
-      script = tidy_script, block_name = "Tidy coefficients"
+    # It also settles the broom.mixed problem this arm used to have: a
+    # `broom::tidy()` of a glmmTMB fit needs broom.mixed LOADED for its S3
+    # method to exist, so the app was fine and the downloaded qmd died at that
+    # chunk. `tbl_regression()` resolves its own tidier, so the document no
+    # longer depends on which packages happened to be attached.
+    gtbl = new_code_block(
+      script = regression_script, block_name = "Area effect (GLMM)"
     ),
-
-    # THE TIDY OUTPUT IS AN ORDINARY DATA FRAME, so ordinary blocks work on it.
-    # These two are the argument in miniature: no special "model results"
-    # machinery, just a filter and a mutate.
-    #
-    # tidy() returns the variance components alongside the fixed effects. They
-    # are worth a look (the municipality SD comes out at essentially zero,
-    # which is the paper's "very little variation among municipalities"), but
-    # they are not the exhibit, and broom.mixed's confidence bounds on those
-    # rows are not to be trusted.
-    # `type = "expr"` conditions, not the value picker. The picker builds
-    # `effect %in% "fixed"`, which is right and reads like generated code; an
-    # expr condition is emitted verbatim, so the chunk says what a person would
-    # have written. It also lets one block do both jobs -- keep the fixed
-    # effects, and drop the two seasonal polynomial contrasts, for which a
-    # multiplier is meaningless. Dropping them here is what lets the next block
-    # be three clean lines instead of three `ifelse(grepl(...))` calls.
-    gfix = blockr.dplyr::new_filter_block(
-      conditions = list(
-        list(type = "expr", expr = 'effect == "fixed"'),
-        list(type = "expr", expr = '!grepl("^poly", term)')
-      ),
-      block_name = "Interpretable fixed effects"
-    ),
-
-    # A log-link coefficient is a multiplier once exponentiated, and the
-    # multiplier is the finding: how many times more eggs where nobody is
-    # controlling the mosquito. This block is what turns a model output into
-    # a sentence a public health officer can act on.
-    # A log-link coefficient is a multiplier once exponentiated, and the
-    # multiplier is the finding: how many times more eggs where nobody is
-    # controlling the mosquito. Rounded here rather than in the table block,
-    # because `new_table_block(digits = )` rounds the panel and NOT the
-    # rendered report (see _inbox/2026-08-19-viz-table-digits-ignored-on-export.md),
-    # and because the report and the panel should not be able to disagree.
-    gratio = blockr.dplyr::new_mutate_block(
-      mutations = list(
-        list(name = "times_more", expr = "round(exp(estimate), 2)"),
-        list(name = "ci_low",     expr = "round(exp(conf.low), 2)"),
-        list(name = "ci_high",    expr = "round(exp(conf.high), 2)")
-      ),
-      block_name = "As a multiplier"
-    ),
-
-    # Down to the four columns worth projecting. Not tidiness for its own sake:
-    # a tidy frame is eleven columns wide, the table block renders them in
-    # order, and `times_more` -- the entire point of the exhibit -- lands off
-    # the right-hand edge where nobody in row six will ever see it. Verified on
-    # the live board before this block existed.
-    gsel = blockr.dplyr::new_select_block(
-      columns = list("term", "times_more", "ci_low", "ci_high"),
-      block_name = "The four columns that matter"
-    ),
-    gtbl = new_table_block(digits = 2L, block_name = "Area effect (GLMM)"),
 
     # -- The fit -----------------------------------------------------------
     gdiag = new_code_block(
@@ -564,24 +538,20 @@ board <- new_dock_board(
     )
   ),
   links = links(
-    from = c("ovi", "ovi", "ovi", "ovi", "ovi", "ovi", "ovi",
-             "ovi_sqrt", "desc",
+    from = c("ovi", "ovi", "ovi", "ovi", "ovi", "ovi",
+             "ovi_sqrt",
              "mdl", "mdl", "mdl", "mdiag",
              "glmm", "glmm", "glmm", "gseason",
-             "gcoef", "gfix", "gratio", "gsel",
              "gdiag", "gdiag", "gdiag"),
-    to   = c("desc", "desc_town", "ovi_sqrt", "mdl", "glmm",
-             "season_gg", "map_gg",
-             "season_ct", "desc_tbl",
+    to   = c("desc", "ovi_sqrt", "mdl", "glmm", "season_gg", "map_gg",
+             "season_ct",
              "summ", "mcoef", "mdiag", "mfit",
-             "gcoef", "gdiag", "gseason", "gsfit",
-             "gfix", "gratio", "gsel", "gtbl",
+             "gtbl", "gdiag", "gseason", "gsfit",
              "gfit", "gres", "resid_gg")
   ),
   stacks = stacks(
     data = new_dock_stack(
-      c("ovi", "desc", "desc_town", "ovi_sqrt", "season_ct",
-        "season_gg", "map_gg", "desc_tbl"),
+      c("ovi", "desc", "ovi_sqrt", "season_ct", "season_gg", "map_gg"),
       name = "The data", color = "#2563eb"
     ),
     simple = new_dock_stack(
@@ -589,7 +559,7 @@ board <- new_dock_board(
       name = "The easy model", color = "#7c3aed"
     ),
     published = new_dock_stack(
-      c("glmm", "gcoef", "gfix", "gratio", "gsel", "gtbl"),
+      c("glmm", "gtbl"),
       name = "The published model", color = "#059669"
     ),
     fit = new_dock_stack(
@@ -736,7 +706,6 @@ board <- new_dock_board(
           "non-intervention municipalities."
         )),
         list(block = "desc", code = TRUE, output = TRUE),
-        list(block = "desc_town", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "The first eggs in the season were found already in the first period ",
@@ -792,10 +761,7 @@ board <- new_dock_board(
           "which a multiplier means nothing, so they are left out of it; they ",
           "are in the model summary above, on the scale they belong to."
         )),
-        list(block = "gcoef", code = TRUE, output = FALSE),
-        list(block = "gfix", code = TRUE, output = FALSE),
-        list(block = "gratio", code = TRUE, output = FALSE),
-        list(block = "gsel", code = TRUE, output = TRUE),
+        list(block = "gtbl", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "## Results\n\n",
@@ -886,7 +852,7 @@ board <- new_dock_board(
     # 2026-08-22. Same class as the lazy-panel handshake fixed in blockr.dplyr
     # and blockr.extra; the formula widget has not had it yet.
     Data = dock_grid(
-      "ovi", group("desc", "desc_tbl", sizes = c(1, 2)), "season_ct",
+      "ovi", "desc", "season_ct",
       orientation = "horizontal", sizes = c(2, 3, 3)
     ),
     Model = dock_grid(
