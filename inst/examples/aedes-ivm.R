@@ -114,10 +114,12 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) {      # the season figure
   stop("aedes-ivm needs the ggplot2 package: install.packages('ggplot2')",
        call. = FALSE)
 }
-# NOT attached. Nothing on this board calls a bare `tidy()`: the coefficient
-# step names `broom.mixed::tidy()` in full, which loads the namespace and so
-# registers the glmmTMB method by itself. That is deliberate -- it is what lets
-# the downloaded qmd render in a session that has never heard of this app.
+# NOT attached, and nothing on this board calls `tidy()` at all. gtsummary
+# reaches the glmmTMB tidier through broom.helpers, which loads broom.mixed
+# itself the first time a mixed model arrives at `tbl_regression()`. Checked
+# in a session where broom.mixed was unloaded: the table builds, and the
+# namespace is loaded afterwards. That is what lets the downloaded qmd render
+# in a session that has never heard of this app -- installed is enough.
 
 options(
   blockr.dock_is_locked = FALSE,
@@ -292,24 +294,22 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 # One call reads each arm, which is the exhibit: two fits of one dataset, read
 # the same way, disagreeing by a factor of seventeen on the interval. 3.59 (3.51, 3.67) on the left and 3.81 (2.72, 5.35) on the right.
 #
-# THE ONE ARGUMENT THAT IS NOT A DEFAULT, AND WHAT IT BUYS. broom.mixed's
+# THE ONE WRAPPER, AND WHY IT IS A WRAPPER AND NOT AN ARGUMENT. broom.mixed's
 # tidier names the model COMPONENT every row came from, and a glmmTMB has more
 # than one of them (the counts, and the dispersion). gtsummary reads that
-# column as a grouping variable, so the table grows a group header row reading
-# `cond` -- a group with one member -- and prints a message warning that a
-# multi-component model may not behave like an ordinary `tbl_regression`.
-# Neither is about this model or these numbers; both are gtsummary being
-# careful about a shape this table does not have. A tidier that returns the
-# conditional fixed effects and nothing else keeps gtsummary out of grouped
-# mode, and the row and the message go with it. Checked against the published
-# fit: the same seven rows, and AREA still 3.81 (2.72, 5.35).
-regression_script <- 'gtsummary::tbl_regression(
-  data,
-  exponentiate = TRUE,
-  tidy_fun = function(x, ...) {
-    fixed <- broom.mixed::tidy(x, effects = "fixed", ...)
-    fixed[setdiff(names(fixed), c("effect", "component"))]
-  }
+# column as a grouping variable, so it prints a caution that a multi-component
+# model may not behave like an ordinary `tbl_regression`, and it heads the
+# table with a group row reading `cond` -- a group with one member. The
+# caution is about `tbl_merge()` and friends on a grouped table, which this
+# board never does, so it is noise here.
+#
+# `suppressMessages()` mutes it and keeps the call one line, which is the line
+# worth showing. The price, and it is accepted rather than overlooked, is the
+# `cond` row, which is cosmetic and stays. Passing a tidier that drops the
+# component column removes both, at the cost of five lines of plumbing in the
+# script the audience reads; that trade went the other way on 2026-08-23.
+regression_script <- 'suppressMessages(
+  gtsummary::tbl_regression(data, exponentiate = TRUE)
 )
 '
 
