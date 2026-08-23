@@ -289,10 +289,28 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 # is the point being made -- but what happens AFTER the fit is no longer a
 # pipeline the audience has to watch being built.
 #
-# The same script serves both arms, which is the exhibit: two fits of one
-# dataset, read the same way, disagreeing by a factor of seventeen on the
-# interval. 3.59 (3.51, 3.67) on the left and 3.81 (2.72, 5.35) on the right.
-regression_script <- 'gtsummary::tbl_regression(data, exponentiate = TRUE)
+# One call reads each arm, which is the exhibit: two fits of one dataset, read
+# the same way, disagreeing by a factor of seventeen on the interval. 3.59 (3.51, 3.67) on the left and 3.81 (2.72, 5.35) on the right.
+#
+# THE ONE ARGUMENT THAT IS NOT A DEFAULT, AND WHAT IT BUYS. broom.mixed's
+# tidier names the model COMPONENT every row came from, and a glmmTMB has more
+# than one of them (the counts, and the dispersion). gtsummary reads that
+# column as a grouping variable, so the table grows a group header row reading
+# `cond` -- a group with one member -- and prints a message warning that a
+# multi-component model may not behave like an ordinary `tbl_regression`.
+# Neither is about this model or these numbers; both are gtsummary being
+# careful about a shape this table does not have. A tidier that returns the
+# conditional fixed effects and nothing else keeps gtsummary out of grouped
+# mode, and the row and the message go with it. Checked against the published
+# fit: the same seven rows, and AREA still 3.81 (2.72, 5.35).
+regression_script <- 'gtsummary::tbl_regression(
+  data,
+  exponentiate = TRUE,
+  tidy_fun = function(x, ...) {
+    fixed <- broom.mixed::tidy(x, effects = "fixed", ...)
+    fixed[setdiff(names(fixed), c("effect", "component"))]
+  }
+)
 '
 
 # THE SAME CALL, BUT IT HAS TO SURVIVE THE MODEL-TYPE BUTTONS.
