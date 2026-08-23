@@ -862,7 +862,12 @@ board <- new_dock_board(
     Model = dock_grid(
       group("mdl", "mcoef", sizes = c(2, 3)),
       "mfit",
-      c("glmm", "gtbl", "gseason_gg"),
+      # `panels(active =)` rather than reordering: the tabs read fit, then
+      # table, then picture, which is the order the work happens in, while the
+      # PICTURE is what the view opens on. The print-out of a glmmTMB is a wall
+      # of variance components -- honest, and not what anyone should meet
+      # first.
+      panels("glmm", "gtbl", "gseason_gg", active = "gseason_gg"),
       orientation = "horizontal", sizes = c(35, 27, 38)
     ),
     # gseason_gg is deliberately NOT given a column here, even though the
