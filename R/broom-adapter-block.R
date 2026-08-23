@@ -19,6 +19,12 @@
 #' @param output One of `"tidy"`, `"glance"`, `"augment"`.
 #' @param conf_int,conf_level Add CIs to `tidy` (default `TRUE`, `0.95`).
 #' @param qq Logical, add QQ columns to `augment` (default `FALSE`).
+#' @param parametric Logical, `tidy` a GAM's PARAMETRIC coefficients instead of
+#'   its smooth terms (default `FALSE`). Only `broom::tidy.gam` takes this;
+#'   leave it off for every other model.
+#' @param response Logical, `augment` on the RESPONSE scale rather than the
+#'   link scale (default `FALSE`). Only meaningful for a glm or gam, where
+#'   `.fitted` is otherwise log-odds / log-counts.
 #' @param ... Forwarded to [new_transform_block()].
 #' @return A transform block of class `broom_block`.
 #' @examples
@@ -31,7 +37,8 @@
 #' }
 #' @export
 new_broom_block <- function(output = "tidy", conf_int = TRUE,
-                            conf_level = 0.95, qq = FALSE, ...) {
+                            conf_level = 0.95, qq = FALSE,
+                            parametric = FALSE, response = FALSE, ...) {
   new_transform_block(
     server = function(id, data) {
       moduleServer(id, function(input, output_s, session) {
@@ -39,20 +46,26 @@ new_broom_block <- function(output = "tidy", conf_int = TRUE,
         r_conf_int   <- reactiveVal(isTRUE(conf_int))
         r_conf_level <- reactiveVal(conf_level)
         r_qq         <- reactiveVal(isTRUE(qq))
+        r_parametric <- reactiveVal(isTRUE(parametric))
+        r_response   <- reactiveVal(isTRUE(response))
 
         observeEvent(input$output, r_output(input$output))
         observeEvent(input$conf_int, r_conf_int(isTRUE(input$conf_int)))
         observeEvent(input$conf_level, r_conf_level(input$conf_level))
         observeEvent(input$qq, r_qq(isTRUE(input$qq)))
+        observeEvent(input$parametric, r_parametric(isTRUE(input$parametric)))
+        observeEvent(input$response, r_response(isTRUE(input$response)))
 
         list(
           expr = reactive({
             build_broom_call(r_output(), r_conf_int(),
-                             r_conf_level(), r_qq())
+                             r_conf_level(), r_qq(), r_parametric(),
+                             r_response())
           }),
           state = list(
             output = r_output, conf_int = r_conf_int,
-            conf_level = r_conf_level, qq = r_qq
+            conf_level = r_conf_level, qq = r_qq,
+            parametric = r_parametric, response = r_response
           )
         )
       })
@@ -90,14 +103,20 @@ new_broom_block <- function(output = "tidy", conf_int = TRUE,
                     value = isTRUE(conf_int)),
                   numericInput(ns("conf_level"), "Confidence level",
                     value = conf_level, min = 0.5, max = 0.999, step = 0.01,
-                    width = "100%")
+                    width = "100%"),
+                  checkboxInput(ns("parametric"),
+                    "Parametric terms (GAM: coefficients, not smooths)",
+                    value = isTRUE(parametric))
                 ),
                 conditionalPanel(
                   "input.output == 'augment'", ns = ns,
                   class = "blockr-settings__field--full",
                   checkboxInput(ns("qq"),
                     "QQ columns (.qq_theoretical / .qq_sample)",
-                    value = isTRUE(qq))
+                    value = isTRUE(qq)),
+                  checkboxInput(ns("response"),
+                    "Response scale (glm/gam: .fitted as a rate, not log-odds)",
+                    value = isTRUE(response))
                 )
               )
             )
@@ -113,7 +132,8 @@ new_broom_block <- function(output = "tidy", conf_int = TRUE,
     },
     class = "broom_block",
     expr_type = "bquoted",
-    allow_empty_state = c("output", "conf_int", "conf_level", "qq"),
+    allow_empty_state = c("output", "conf_int", "conf_level", "qq",
+                          "parametric", "response"),
     ...
   )
 }

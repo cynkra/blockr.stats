@@ -9,6 +9,8 @@ new_broom_block(
   conf_int = TRUE,
   conf_level = 0.95,
   qq = FALSE,
+  parametric = FALSE,
+  response = FALSE,
   ...
 )
 }
@@ -18,6 +20,14 @@ new_broom_block(
 \item{conf_int, conf_level}{Add CIs to \code{tidy} (default \code{TRUE}, \code{0.95}).}
 
 \item{qq}{Logical, add QQ columns to \code{augment} (default \code{FALSE}).}
+
+\item{parametric}{Logical, \code{tidy} a GAM's PARAMETRIC coefficients instead of
+its smooth terms (default \code{FALSE}). Only \code{broom::tidy.gam} takes this;
+leave it off for every other model.}
+
+\item{response}{Logical, \code{augment} on the RESPONSE scale rather than the
+link scale (default \code{FALSE}). Only meaningful for a glm or gam, where
+\code{.fitted} is otherwise log-odds / log-counts.}
 
 \item{...}{Forwarded to \code{\link[blockr.core:new_transform_block]{blockr.core::new_transform_block()}}.}
 }

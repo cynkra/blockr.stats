@@ -38,6 +38,7 @@ Suggests:
     car,
     glmmTMB,
     knitr,
+    mgcv,
     palmerpenguins,
     rmarkdown,
     testthat (>= 3.0.0),

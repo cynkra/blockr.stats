@@ -301,11 +301,14 @@ build_model_summary_call <- function(uncertainty, significance, scale,
 #' @param output One of `"tidy"`, `"glance"`, `"augment"`.
 #' @param conf_int,conf_level CI controls for `tidy`.
 #' @param qq Add QQ columns to `augment`.
+#' @param parametric `tidy` a GAM's parametric coefficients, not its smooths.
+#' @param response `augment` on the response scale rather than the link scale.
 #' @return A language object using only `broom` / base R.
 #' @keywords internal
 #' @noRd
 build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
-                             qq = FALSE) {
+                             qq = FALSE, parametric = FALSE,
+                             response = FALSE) {
   # The block's input must reach the exported code as the `.(data)`
   # placeholder that blockr.core substitutes with the upstream block's
   # name (this is a bquoted block). A bare `data` is bound at runtime by
@@ -319,18 +322,49 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
     glance = blockr.core::bbquote(
       as.data.frame(broom::glance(.(data))), list()
     ),
-    augment = if (isTRUE(qq)) {
-      blockr.core::bbquote({
-        out <- as.data.frame(broom::augment(.(data)))
-        if (".std.resid" %in% names(out)) {
-          qn <- stats::qqnorm(out$.std.resid, plot.it = FALSE)
-          out$.qq_theoretical <- qn$x
-          out$.qq_sample <- qn$y
-        }
-        out
-      }, list())
-    } else {
-      blockr.core::bbquote(as.data.frame(broom::augment(.(data))), list())
+    augment = {
+      # `.fitted` from a glm or gam augment is on the LINK scale by default,
+      # so a plot of it against the data is in log-odds while the data is in
+      # probabilities. `response` asks broom for the response scale instead.
+      # Off by default and only offered here: `type.predict` is a glm/gam
+      # argument, and augment.lm has no use for it.
+      ac <- if (isTRUE(response)) {
+        blockr.core::bbquote(
+          broom::augment(.(data), type.predict = "response"), list()
+        )
+      } else {
+        blockr.core::bbquote(broom::augment(.(data)), list())
+      }
+      if (isTRUE(qq)) {
+        # `.std.resid` is what an lm/glm augment gives; a gam augment stops at
+        # `.resid`, so fall back to it rather than silently emitting no QQ
+        # pair at all. The plot is a straight line either way --
+        # standardising only rescales the axis.
+        blockr.core::bbquote({
+          out <- as.data.frame(.(ac))
+          # A two-column binomial response -- cbind(hatched, non.hatched) ~
+          # ... -- survives augment as a MATRIX column, which no renderer can
+          # draw.
+          for (m in names(out)[vapply(out, is.matrix, TRUE)]) {
+            out <- cbind(out[names(out) != m], as.data.frame(out[[m]]))
+          }
+          rs <- if (".std.resid" %in% names(out)) out$.std.resid else out$.resid
+          if (!is.null(rs)) {
+            qn <- stats::qqnorm(rs, plot.it = FALSE)
+            out$.qq_theoretical <- qn$x
+            out$.qq_sample <- qn$y
+          }
+          out
+        }, list(ac = ac))
+      } else {
+        blockr.core::bbquote({
+          out <- as.data.frame(.(ac))
+          for (m in names(out)[vapply(out, is.matrix, TRUE)]) {
+            out <- cbind(out[names(out) != m], as.data.frame(out[[m]]))
+          }
+          out
+        }, list(ac = ac))
+      }
     },
     {
       cl <- conf_level
@@ -341,6 +375,15 @@ build_broom_call <- function(output, conf_int = TRUE, conf_level = 0.95,
         )
       } else {
         blockr.core::bbquote(broom::tidy(.(data)), list())
+      }
+      # `parametric` splits a GAM's two summary tables. broom::tidy.gam
+      # defaults to the SMOOTH terms (edf / ref.df / F), so the parametric
+      # coefficients -- the estimates a reader argues from, and the only ones
+      # that have a standard error to put a CI on -- are unreachable without
+      # it. Off by default: no other tidy method takes the argument, and
+      # broom's `...` would carry it to one that errors on it.
+      if (isTRUE(parametric)) {
+        tidy_call[["parametric"]] <- TRUE
       }
       # Just the tidy call. broom::tidy methods take conf.int through
       # `...` and ignore it where it does not apply (checked: survfit,
