@@ -295,6 +295,29 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 regression_script <- 'gtsummary::tbl_regression(data, exponentiate = TRUE)
 '
 
+# THE SAME CALL, BUT IT HAS TO SURVIVE THE MODEL-TYPE BUTTONS.
+#
+# The basic model's four buttons are there to be pressed, and pressing one
+# changes what `exponentiate` means. `tbl_regression(exponentiate = TRUE)`
+# errors outright on an `lm` -- "`exponentiate = TRUE` is not valid for this
+# type of model" -- so a fixed TRUE turns a click on "Linear (lm)" into a red
+# block in the middle of the demo.
+#
+# The rule is the LINK, not the class: exponentiating a coefficient is only a
+# multiplier when the link is log or logit. Poisson and logistic qualify, an lm
+# does not, and neither does the Gamma -- its default link is inverse, where
+# exp(beta) means nothing. gtsummary is happy to exponentiate the Gamma anyway;
+# this is deliberately stricter than gtsummary on that one, because a number
+# nobody can interpret is worse than a number on the log scale.
+#
+# The GLMM keeps the plain `exponentiate = TRUE` above: it is always nbinom1
+# with a log link, it is a report chunk, and the document is better for the
+# one-liner.
+basic_regression_script <- 'link <- stats::family(data)$link
+
+gtsummary::tbl_regression(data, exponentiate = link %in% c("log", "logit"))
+'
+
 # THE DESCRIPTIVE SUMMARY, AS A STATISTICIAN WOULD WRITE IT.
 #
 # Nobody enumerates min/median/mean/max to describe a variable. They call the
@@ -478,12 +501,21 @@ board <- new_dock_board(
       ),
       "visible", "inputs"
     ),
-    summ = `attr<-`(
-      new_model_summary_block(block_name = "Visual Summary"),
-      "visible", "outputs"
-    ),
+    # ONE TABLE STYLE ON THE WHOLE BOARD. A `new_model_summary_block()` used to
+    # sit here: a nicer card than this, with the effect drawn as a dot and its
+    # interval, and the fit statistics in the header. It is gone on purpose.
+    #
+    # Judged as a table it was redundant -- everything it did has a gtsummary
+    # equivalent, down to `add_glance_source_note()` for the header facts and
+    # `ggstats::ggcoef_model()` for the forest plot -- and it emitted
+    # `blockr.stats::model_summary()`, so it could never appear in a document
+    # whose whole claim is canonical R. What it cost was consistency: the
+    # descriptive table, this one and the published model's were three
+    # different-looking tables for one audience to read in eight minutes.
+    #
+    # Now they are one table three times.
     mcoef = new_code_block(
-      script = regression_script, block_name = "Model Summary"
+      script = basic_regression_script, block_name = "Model Summary"
     ),
 
     # The formula widget's consequence, made visible. See `glm_diag_script`.
@@ -532,12 +564,12 @@ board <- new_dock_board(
   links = links(
     from = c("ovi", "ovi", "ovi", "ovi",
              "ovi_sqrt",
-             "mdl", "mdl", "mdl",
+             "mdl", "mdl",
              "mdiag",
              "glmm", "glmm"),
     to   = c("desc", "ovi_sqrt", "mdl", "glmm",
              "season_ct",
-             "summ", "mdiag", "mcoef",
+             "mdiag", "mcoef",
              "mfit",
              "gtbl", "gseason_gg")
   ),
@@ -552,8 +584,7 @@ board <- new_dock_board(
     # each arm is a fit and a table, the split cost more to explain than it
     # bought.
     model = new_dock_stack(
-      c("mdl", "summ", "mdiag", "mfit", "glmm", "mcoef", "gtbl",
-        "gseason_gg"),
+      c("mdl", "mdiag", "mfit", "glmm", "mcoef", "gtbl", "gseason_gg"),
       name = "Model", color = "#7c3aed"
     )
   ),
@@ -829,7 +860,7 @@ board <- new_dock_board(
     # curve, with the published model and the fitted frame behind it. RIGHT:
     # the outline, so the pipeline stays in sight while the model moves.
     Model = dock_grid(
-      group("mdl", c("summ", "mcoef"), sizes = c(2, 3)),
+      group("mdl", "mcoef", sizes = c(2, 3)),
       "mfit",
       c("glmm", "gtbl", "gseason_gg"),
       orientation = "horizontal", sizes = c(35, 27, 38)
