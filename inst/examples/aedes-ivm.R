@@ -80,7 +80,6 @@ blockr_pkgs <- c(
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
   "blockr.dplyr",     # the sqrt mutate feeding the season chart
-  "blockr.ggplot",    # the two document figures
   "blockr.viz",       # the dashboard charts + summary/table blocks
   "blockr.stats",     # dataset + model + model-summary + broom blocks
   "blockr.session",   # project save / load / versions
@@ -109,6 +108,10 @@ if (!requireNamespace("glmmTMB", quietly = TRUE)) {      # the published arm's f
 }
 if (!requireNamespace("broom.mixed", quietly = TRUE)) {  # its tidy() method
   stop("aedes-ivm needs the broom.mixed package: install.packages('broom.mixed')",
+       call. = FALSE)
+}
+if (!requireNamespace("ggplot2", quietly = TRUE)) {      # the season figure
+  stop("aedes-ivm needs the ggplot2 package: install.packages('ggplot2')",
        call. = FALSE)
 }
 # NOT attached. Nothing on this board calls a bare `tidy()`: the coefficient
@@ -171,38 +174,102 @@ if (is.null(getOption("blockr.chat_function"))) {
 # every explanation below lives in the report's text items instead, which is
 # also how Matteo's own report reads -- a paragraph, then the code it
 # describes.
-glmm_script <- 'random_trap <- TRUE
-
-glmmTMB::glmmTMB(
+glmm_script <- 'glmmTMB::glmmTMB(
   No..eggs.AEDES ~ AREA +
     poly(Day.ovitrap.collected, degree = 2) +
     scale(ALTITUDE) +
     No..Days.ovitrap.in.field +
     (1 | MUNICIPALITY) +
-    if (random_trap) (1 | TRAP.ID.fac),
+    (1 | TRAP.ID.fac),
   family = glmmTMB::nbinom1,
   data = data
 )
 '
 
-# The per-observation frame the two diagnostic charts feed on.
+
+# The published model's RESULT, drawn the way the paper draws it: one grey line
+# per trap, faceted by arm, the fitted curve and its 95% band on top (Ravasi et
+# al. Fig. 3, refitted). This is the figure the report exists to carry.
 #
-# WHY THIS IS NOT A `new_broom_block(output = "augment")`, which is the obvious
-# choice and what stats-101 uses. The published formula wraps two
-# predictors in `poly()` and `scale()`, and those come back out of the model
-# frame as MATRIX columns. broom hands them straight through, and a data frame
-# carrying a 327x2 matrix in one cell is not something a table or a chart block
-# can draw. Four named columns of plain vectors is.
+# ITS INPUT IS THE MODEL, NOT THE DATA, because a code block takes exactly one
+# input and the fit is the thing that cannot be recomputed cheaply. The observed
+# collections come back out of the fit's model frame, inverting the poly() basis
+# the same way `glmm_season_script` used to.
 #
-# Note what this block's INPUT is: the fitted model, not a data frame. Blocks
-# pass R objects, not tables, so a code block downstream of a model gets the
-# model. `data` is the input's name inside the script and is replaced by the
-# upstream block's name on export, so the chunk in the document reads
-# `stats::predict(glmm, type = "response")` -- which is what you would have
-# written by hand.
-# Fully qualified on purpose: see the `gcoef` block for why `broom.mixed::` and
-# not `broom::` is what makes the downloaded document render on its own.
-tidy_script <- 'broom.mixed::tidy(data, conf.int = TRUE)
+# WHY predict() ON A GRID IS SAFE HERE. `poly()` and `scale()` would normally
+# re-centre themselves on whatever data they are handed, which would bend the
+# curve silently rather than error. R's predvars mechanism pins the original
+# basis and glmmTMB honours it: predicting a 40-row subset reproduces the
+# original fit to 4e-15. Verified 2026-08-22.
+#
+# THE ARM LABELS ARE NOT A FACTOR HERE. The board reads the published CSV, so
+# AREA arrives as character and levels() on it is NULL -- which silently
+# collapsed the prediction grid to zero rows the first time this ran. Derived
+# with sort(unique()) instead, which is exactly the ordering R itself gives a
+# character predictor, so the grid matches the model's own contrasts whether
+# the data came from the CSV or the packaged .rda. Verified in the app
+# 2026-08-22.
+#
+# NO CONTROLS ON PURPOSE. Every constant here is inline, because a top-level
+# assignment whose right side is a plain value becomes a control, and this
+# block had five of them -- two tickboxes, two numbers and a colour pair --
+# spread across the panel above a figure that is the only thing worth looking
+# at. This is an exhibit, not a knob board. With nothing declared there is
+# also no gear, which is the convention: no options means no gear.
+#
+# The axis is the paper's, linear and shared across the two panels. Wrap the
+# plot in ggplot2::scale_y_sqrt() if the intervention panel needs to breathe.
+
+season_gg_script <- 'mf <- stats::model.frame(data)
+pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
+cfs <- attr(pol, "coefs")
+day <- pol[, 1] * sqrt(cfs$norm2[3]) + cfs$alpha[1]
+
+area_levels <- if (is.factor(mf$AREA)) {
+  levels(mf$AREA)
+} else {
+  sort(unique(as.character(mf$AREA)))
+}
+
+grid <- expand.grid(
+  AREA = area_levels,
+  Day.ovitrap.collected = seq(min(day), max(day), length.out = 120),
+  stringsAsFactors = FALSE
+)
+grid$ALTITUDE <- attr(mf[["scale(ALTITUDE)"]], "scaled:center")
+grid$No..Days.ovitrap.in.field <- 14
+grid$MUNICIPALITY <- mf$MUNICIPALITY[1]
+grid$TRAP.ID.fac <- mf$TRAP.ID.fac[1]
+
+pred <- stats::predict(data, grid, type = "link", se.fit = TRUE, re.form = NA)
+grid$fit <- exp(pred$fit)
+grid$lower <- exp(pred$fit - 1.96 * pred$se.fit)
+grid$upper <- exp(pred$fit + 1.96 * pred$se.fit)
+
+obs <- data.frame(
+  Day.ovitrap.collected = day,
+  AREA = mf$AREA,
+  TRAP.ID.fac = mf$TRAP.ID.fac,
+  No..eggs.AEDES = mf$No..eggs.AEDES
+)
+obs <- obs[order(obs$TRAP.ID.fac, obs$Day.ovitrap.collected), ]
+
+ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
+  ggplot2::geom_line(
+    data = obs,
+    ggplot2::aes(y = No..eggs.AEDES, group = TRAP.ID.fac),
+    colour = "#9a9aa2", linewidth = 0.38, alpha = 0.75
+  ) +
+  ggplot2::geom_ribbon(
+    ggplot2::aes(ymin = lower, ymax = upper, fill = AREA), alpha = 0.25
+  ) +
+  ggplot2::geom_line(ggplot2::aes(y = fit, colour = AREA), linewidth = 1.5) +
+  ggplot2::facet_wrap(~AREA) +
+  ggplot2::scale_colour_manual(values = c("#0072B2", "#E69F00")) +
+  ggplot2::scale_fill_manual(values = c("#0072B2", "#E69F00")) +
+  ggplot2::labs(x = "Day of year", y = "Eggs per collection") +
+  ggplot2::theme_minimal(base_size = 13) +
+  ggplot2::theme(legend.position = "none")
 '
 
 # THE COEFFICIENT TABLE, FOR BOTH ARMS, IN ONE CALL.
@@ -226,15 +293,6 @@ tidy_script <- 'broom.mixed::tidy(data, conf.int = TRUE)
 # dataset, read the same way, disagreeing by a factor of seventeen on the
 # interval. 3.59 (3.51, 3.67) on the left and 3.81 (2.72, 5.35) on the right.
 regression_script <- 'gtsummary::tbl_regression(data, exponentiate = TRUE)
-'
-
-# The appendix's exhibit. `new_model_summary_block()` draws a far better card
-# in the app, but it emits `blockr.stats::model_summary(mdl)` -- the last call
-# in the document that would send a reader looking for one of our packages.
-# `exponentiate = TRUE` does on the glm exactly what the mutate does on the
-# GLMM, so the two arms are now read the same way as well as fitted the same
-# way. The card stays on the Model view; the document gets this.
-poisson_script <- 'broom::tidy(data, exponentiate = TRUE, conf.int = TRUE)
 '
 
 # THE DESCRIPTIVE SUMMARY, AS A STATISTICIAN WOULD WRITE IT.
@@ -296,34 +354,6 @@ gtsummary::tbl_summary(
 glm_diag_script <- 'data.frame(
   data[["data"]][c("Day.ovitrap.collected", "AREA", "No..eggs.AEDES")],
   fitted = stats::fitted(data)
-)
-'
-
-# The same picture for the published arm. It needs its own block rather than a
-# column added to `gdiag` because of what recovering the day costs here: the
-# GLMM names the day inside `poly()`, so the model frame carries it as a 327x2
-# MATRIX and the raw values are gone from the frame. They are recoverable --
-# `poly()` stores its centring and scaling in `coefs`, and the first basis
-# column is a linear map of the input, so inverting it is exact (checked: max
-# error 3e-14) -- but those three lines are not something the exported document
-# should have to explain. `gdiag` stays clean and is what the report reads;
-# this block feeds the app only and is deliberately not a report item.
-glmm_season_script <- 'mf <- stats::model.frame(data)
-pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
-cfs <- attr(pol, "coefs")
-
-data.frame(
-  Day.ovitrap.collected = pol[, 1] * sqrt(cfs$norm2[3]) + cfs$alpha[1],
-  AREA = mf$AREA,
-  No..eggs.AEDES = mf$No..eggs.AEDES,
-  fitted = stats::fitted(data)
-)
-'
-
-diag_script <- 'data.frame(
-  stats::model.frame(data)[c("No..eggs.AEDES", "AREA")],
-  fitted = stats::fitted(data),
-  resid = stats::residuals(data, type = "pearson")
 )
 '
 
@@ -438,138 +468,93 @@ board <- new_dock_board(
     mdl = `attr<-`(
       new_model_block(
         model_type = "poisson",
+        # NO SEASON TERM AT STARTUP, deliberately. `+ poly(Day.ovitrap.collected,
+        # 2)` is the edit Matteo makes live: the board opens on `~ AREA`, whose
+        # fitted values are two flat lines, and adding the term turns them into
+        # two curves in the panel beside it. Seeding the finished formula here
+        # would spend the demo's best twenty seconds before anyone is watching.
         formula = "No..eggs.AEDES ~ AREA",
-        block_name = "Poisson glm"
+        block_name = "Basic Model"
       ),
       "visible", "inputs"
     ),
     summ = `attr<-`(
-      new_model_summary_block(block_name = "Area effect (glm)"),
+      new_model_summary_block(block_name = "Visual Summary"),
       "visible", "outputs"
     ),
     mcoef = new_code_block(
-      script = regression_script, block_name = "Area effect (glm)"
+      script = regression_script, block_name = "Model Summary"
     ),
 
     # The formula widget's consequence, made visible. See `glm_diag_script`.
     mdiag = new_code_block(
-      script = glm_diag_script, block_name = "Fitted values by day (glm)"
+      script = glm_diag_script, block_name = "Compute Fitted"
     ),
     mfit = `attr<-`(
       blockr.viz::new_chart_block(
         chart_type = "scatter",
         x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
-        block_name = "Predicted eggs through the season (glm)"
+        block_name = "Predicted Values"
       ),
       "visible", "inputs"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
-    # Custom R in the board. Returns a glmmTMB object; the code block
-    # renders any unrecognised object as its print(), which for a glmmTMB is
-    # the formula, the family and the variance components -- a reasonable
-    # panel, and the table below is the real output.
+    # Custom R in the board, and now the whole arm in one block: it fits the
+    # published model and tabulates it in the same script, so the escalation
+    # reads as ONE step ("your method is not a block? write it") instead of a
+    # fit followed by a chain that turns the fit into something showable.
+    #
+    # It returns the FIT, and two blocks read it: `gtbl` turns it into the
+    # effect table and `gseason_gg` into the season figure. Three blocks, one
+    # per job, so the exported document gets a model chunk, a table chunk and a
+    # figure chunk instead of one script doing all three.
     glmm = new_code_block(
-      script = glmm_script, block_name = "Negative binomial GLMM (custom R)"
+      script = glmm_script, block_name = "Published Model (GLMM)"
     ),
 
-    # One call, and the headline number. See `regression_script`.
-    #
-    # It also settles the broom.mixed problem this arm used to have: a
-    # `broom::tidy()` of a glmmTMB fit needs broom.mixed LOADED for its S3
-    # method to exist, so the app was fine and the downloaded qmd died at that
-    # chunk. `tbl_regression()` resolves its own tidier, so the document no
-    # longer depends on which packages happened to be attached.
+    # The headline number. `tbl_regression()` resolves its own tidier, so the
+    # downloaded qmd does not depend on broom.mixed happening to be attached.
     gtbl = new_code_block(
-      script = regression_script, block_name = "Area effect (GLMM)"
+      script = regression_script, block_name = "Published Model Summary"
     ),
 
-    # -- The fit -----------------------------------------------------------
-    gdiag = new_code_block(
-      script = diag_script, block_name = "Fitted values & residuals"
-    ),
-
-    # The published arm's answer to `mfit`. See `glmm_season_script`.
-    gseason = new_code_block(
-      script = glmm_season_script, block_name = "Fitted values by day (GLMM)"
-    ),
-    gsfit = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter",
-        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
-        block_name = "Predicted eggs through the season (GLMM)"
-      ),
-      "visible", "inputs"
-    ),
-
-    # echarts, not ggplot: these redraw whenever the GLMM refits (untick the
-    # trap random effect and watch), and a chart block pushes data to a browser
-    # where a ggplot block round-trips a PNG through R. `report = FALSE` -- the
-    # document gets the ggplot pair instead.
-    gfit = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter", x = "No..eggs.AEDES", y = "fitted",
-        color = "AREA", identity_line = TRUE,
-        block_name = "Predicted vs actual"
-      ),
-      "visible", "inputs"
-    ),
-    gres = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter", x = "fitted", y = "resid",
-        color = "AREA", hlines = 0,
-        block_name = "Residuals vs fitted"
-      ),
-      "visible", "inputs"
-    ),
-
-    # -- The document's figure ---------------------------------------------
-    # ggplot and not a chart block, because the rendered chunk should read as
-    # ggplot2 -- a recipe a reader can lift. `gres` beside it is the same
-    # picture in echarts for the dashboard and is deliberately NOT in the
-    # report: a chart block reports its code to the builder only while its
-    # panel is MOUNTED, and `gres` lives on an un-fronted tab of a Model-view
-    # slot. Put it in the document and its chunk comes out as
-    # "# gres: waiting for R code to be generated", and the HTML download then
-    # waits on it forever. Verified 2026-08-19, which is how this block exists.
-    #
-    # The season and trap-network ggplots that used to sit here are gone. The
-    # document's argument is the two fits, and neither picture was carrying
-    # it -- the season is on the Data view as a chart the demo actually drives,
-    # and the trap map was scene-setting the quoted text already does in words.
-    resid_gg = blockr.ggplot::new_ggplot_block(
-      type = "point", x = "fitted", y = "resid", color = "AREA",
-      block_name = "Residuals vs fitted"
+    # The document's figure. See `season_gg_script`.
+    # Left at the DEFAULT visibility on purpose, so the controls show with the
+    # plot. `visible = "outputs"` gives the figure the whole panel and looks
+    # better, but the four controls live in the input half and go with it --
+    # gear included -- and hiding what a block can do is not how this project
+    # asks for the trade to be made. Maximise the panel when presenting.
+    gseason_gg = new_code_block(
+      script = season_gg_script, block_name = "Published Plot"
     )
   ),
   links = links(
     from = c("ovi", "ovi", "ovi", "ovi",
              "ovi_sqrt",
-             "mdl", "mdl", "mdl", "mdiag",
-             "glmm", "glmm", "glmm", "gseason",
-             "gdiag", "gdiag", "gdiag"),
+             "mdl", "mdl", "mdl",
+             "mdiag",
+             "glmm", "glmm"),
     to   = c("desc", "ovi_sqrt", "mdl", "glmm",
              "season_ct",
-             "summ", "mcoef", "mdiag", "mfit",
-             "gtbl", "gdiag", "gseason", "gsfit",
-             "gfit", "gres", "resid_gg")
+             "summ", "mdiag", "mcoef",
+             "mfit",
+             "gtbl", "gseason_gg")
   ),
   stacks = stacks(
     data = new_dock_stack(
       c("ovi", "desc", "ovi_sqrt", "season_ct"),
       name = "Data", color = "#2563eb"
     ),
-    simple = new_dock_stack(
-      c("mdl", "summ", "mcoef", "mdiag", "mfit"),
-      name = "The easy model", color = "#7c3aed"
-    ),
-    published = new_dock_stack(
-      c("glmm", "gtbl"),
-      name = "The published model", color = "#059669"
-    ),
-    fit = new_dock_stack(
-      c("gdiag", "gseason", "gfit", "gres", "gsfit", "resid_gg"),
-      name = "The fit", color = "#d97706"
+    # ONE model stack, not two. The board used to split "the easy model" from
+    # "the published model" and hang a third group of diagnostics off it. That
+    # was the right shape when the comparison was the whole exhibit; now that
+    # each arm is a fit and a table, the split cost more to explain than it
+    # bought.
+    model = new_dock_stack(
+      c("mdl", "summ", "mdiag", "mfit", "glmm", "mcoef", "gtbl",
+        "gseason_gg"),
+      name = "Model", color = "#7c3aed"
     )
   ),
   extensions = list(
@@ -754,7 +739,9 @@ board <- new_dock_board(
           "time (i.e. date when ovitrap collected, \"Day of the year\") was ",
           "modelled with a quadratic effect."
         )),
-        list(block = "glmm", code = TRUE, output = TRUE),
+        list(block = "glmm", code = TRUE, output = FALSE),
+        list(block = "gtbl", code = TRUE, output = TRUE),
+        list(block = "gseason_gg", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "*Note (ours).* The coefficients are on the log scale, so ",
@@ -764,7 +751,6 @@ board <- new_dock_board(
           "which a multiplier means nothing, so they are left out of it; they ",
           "are in the model summary above, on the scale they belong to."
         )),
-        list(block = "gtbl", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "## Results\n\n",
@@ -795,8 +781,6 @@ board <- new_dock_board(
           "the mean by construction, so raw residuals would show a funnel ",
           "whatever the model did."
         )),
-        list(block = "gdiag", code = TRUE, output = FALSE),
-        list(block = "resid_gg", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "## Conclusions\n\n",
@@ -817,7 +801,6 @@ board <- new_dock_board(
           "of count on area. It takes one response and one term to write."
         )),
         list(block = "mdl", code = TRUE, output = FALSE),
-        list(block = "mcoef", code = TRUE, output = TRUE),
 
         list(text = paste0(
           "It puts the effect at about 3.6 times more eggs, with a 95% ",
@@ -834,67 +817,44 @@ board <- new_dock_board(
     )
   ),
   grids = list(
-    # The comparison IS the view. Left column: the no-code arm, formula widget
-    # over coefficient card. Right column: the published arm's effect table on
-    # top, its diagnostics tabbed below. Tabbing is free there -- both charts
-    # are `report = FALSE`, so nothing depends on the un-fronted one being
-    # mounted.
-    # The demo's FIRST STOP, one click from the opening view. Read, summarise,
-    # plot, in the order the talk walks them: the URL block on the left, the
-    # by-area table over the season plot on the right. `season_ct` is a real
-    # panel and not a tab, because a chart block only draws once its panel has
-    # been mounted.
-    #
-    # WHY THIS IS NOT THE ACTIVE VIEW, though the demo starts here. Making it
-    # active defers the Model panel, and the model block's formula widget does
-    # not survive a deferred mount: it comes up with no column choices, slides
-    # to the first column of the data, and displays `WGS84.LAT ~ 1` while the
-    # FIT still carries the seeded `No..eggs.AEDES ~ AREA`. The numbers stay
-    # right and the widget lies, until the first click on it -- which would
-    # push the wrong formula into the model, live, on stage. Verified both ways
-    # 2026-08-22. Same class as the lazy-panel handshake fixed in blockr.dplyr
-    # and blockr.extra; the formula widget has not had it yet.
-    # THE VIEW THE TALK OPENS ON, and its shape is the demo's first minute:
-    # read on the left with the summary under it, the picture in the middle,
-    # the outline on the right so the pipeline is visible from the start
-    # rather than discovered later on the Workflow view. `Mutate` has no panel
-    # here on purpose -- it is a step, not an exhibit, and the outline lists it
-    # either way.
     Data = dock_grid(
       group("ovi", "desc", sizes = c(1, 2)),
       "season_ct",
       ext("outline"),
       orientation = "horizontal", sizes = c(1, 1, 1)
     ),
+    # The comparison, on one view. LEFT: the formula widget over the two ways
+    # of reading its fit -- the card and the gtsummary table, tabbed, because
+    # they say the same thing to different audiences. MIDDLE: the predicted
+    # curve, with the published model and the fitted frame behind it. RIGHT:
+    # the outline, so the pipeline stays in sight while the model moves.
     Model = dock_grid(
-      group("mdl", "summ", "mfit", sizes = c(3, 2, 4)),
-      group("gtbl", c("gfit", "gres", "gsfit"), sizes = c(3, 4)),
-      orientation = "horizontal", sizes = c(1, 1)
+      group("mdl", c("summ", "mcoef"), sizes = c(2, 3)),
+      "mfit",
+      c("glmm", "gtbl", "gseason_gg"),
+      orientation = "horizontal", sizes = c(35, 27, 38)
     ),
-    # A real SPLIT, not tabs: an unmounted ggplot block reports no code to the
-    # outline, and the Download then waits on it forever. The minidag TABS with
-    # the outline because extensions are exempt from that rule -- it binds
-    # blocks. `panels()`, not `c()`: `ext()` returns a panel_ref object and
-    # `c()` on two of them dies at construction with "Unknown layout node
-    # type: NULL".
-    # The second column is not decoration. Every ggplot the document uses has
-    # to be MOUNTED while the report builder is reading the board, or its chunk
-    # comes out empty and the download hangs on it. One figure now, so one
-    # column, in a real split rather than a tab.
-    # NO SLIDES BUILDER HERE. It is a good extension and it is the wrong one
-    # for this talk: a deck built from the board is an ALTERNATIVE to the
-    # document, and the document is the claim being made. Offering both invites
-    # the question "so which is it", which is a question with no useful answer
-    # on stage.
+    # gseason_gg is deliberately NOT given a column here, even though the
+    # document uses it. Listing one block in two grids (it already has a panel
+    # on Model) renders this whole view BLANK -- report, figure and outline
+    # all three. Verified against the pre-change board 2026-08-22.
+    #
+    # The reason it probably does not need one: the mount rule that forced
+    # document figures onto this view applies to CHART and ggplot BLOCKS, whose
+    # code is only known once the widget has drawn, whereas a code block's
+    # chunk is just its script. NOT CONFIRMED END TO END -- the builder lists
+    # the figure and no "waiting for R code" placeholder appears anywhere, but
+    # the exported qmd was not read back. Download it once and check the
+    # ggplot2 chunk is there before relying on this.
     Report = dock_grid(
-      ext("report"), "resid_gg",
+      ext("report"), ext("outline"),
       orientation = "horizontal", sizes = c(2, 1)
     ),
     Workflow = dock_grid(
       ext("outline"), ext("assistant"), sizes = c(2, 1)
     )
   ),
-  active = "Data"
+  active = "Model"
 )
 
 serve(board, plugins = custom_plugins(manage_project()))
