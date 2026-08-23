@@ -125,7 +125,16 @@ options(
   blockr.dock_is_locked = FALSE,
   blockr.tabular_display = blockr.ui::html_table_display,
   blockr.background_construction_delay = 0,
-  blockr.visible_extensions = "outline"
+  blockr.visible_extensions = "outline",
+  # No render gating: a block that leaves the screen keeps its output instead
+  # of having it torn down and re-assigned on the way back, so tabbing between
+  # the model, its table and the figure no longer greys the panel. Shiny fades
+  # a recalculating output after 500ms, and the figure re-render is slower than
+  # that, which is why it was the visible one.
+  #
+  # Costs lazy evaluation: every block on a view evaluates at startup rather
+  # than on first sight, so the GLMM fits while the app boots.
+  blockr.gate_visibility = FALSE
 )
 
 if (dev_local) options(blockr.outline.execute = "in-process")
