@@ -617,19 +617,30 @@ board <- new_dock_board(
              "mfit",
              "gtbl", "gseason_gg")
   ),
+  # FOUR STACKS, restructured in the app on 2026-08-23 and saved back here.
+  # The board shipped two ("Data" and "Model") for a while, on the argument
+  # that each model arm was only a fit and a table. Read down the outline that
+  # way and the seven-block Model stack says nothing about which blocks belong
+  # to the Poisson and which to the published GLMM, which is the one
+  # distinction the demo turns on. Splitting the import off from the
+  # descriptives does the same for the Data half: `ovi` is the block the talk
+  # points at when it says nothing is preloaded.
   stacks = stacks(
-    data = new_dock_stack(
-      c("ovi", "desc", "ovi_sqrt", "season_ct"),
-      name = "Data", color = "#2563eb"
+    import = new_dock_stack(
+      "ovi",
+      name = "Import", color = "#2563eb"
     ),
-    # ONE model stack, not two. The board used to split "the easy model" from
-    # "the published model" and hang a third group of diagnostics off it. That
-    # was the right shape when the comparison was the whole exhibit; now that
-    # each arm is a fit and a table, the split cost more to explain than it
-    # bought.
-    model = new_dock_stack(
-      c("mdl", "mdiag", "mfit", "glmm", "mcoef", "gtbl", "gseason_gg"),
-      name = "Model", color = "#7c3aed"
+    descriptives = new_dock_stack(
+      c("desc", "ovi_sqrt", "season_ct"),
+      name = "Descriptive Stats", color = "#DF8396"
+    ),
+    basic = new_dock_stack(
+      c("mdl", "mdiag", "mfit", "mcoef"),
+      name = "Basic Model", color = "#7c3aed"
+    ),
+    published = new_dock_stack(
+      c("glmm", "gtbl", "gseason_gg"),
+      name = "Published Model", color = "#DF8396"
     )
   ),
   extensions = list(
