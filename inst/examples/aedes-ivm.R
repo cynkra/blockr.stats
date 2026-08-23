@@ -647,28 +647,29 @@ board <- new_dock_board(
       #     lives in an appendix, labelled as not part of the published
       #     analysis, so nobody can mistake it for something the authors did.
       items = list(
+        # ONE PARAGRAPH, THEN THE CITATION. Everything load-bearing survives:
+        # what was refitted, who it is with, what is quoted and what is ours,
+        # the licence the quoting rests on, and that no number here is
+        # preloaded. What went is the sentence naming the two analyses this
+        # document does not reproduce, which "the first of the three" already
+        # says.
         list(text = paste0(
-          "> **About this document.** This is the first of the three analyses ",
-          "in Ravasi et al. (2021), refitted from the data the authors ",
-          "published alongside the paper. It is joint work with **Matteo ",
-          "Tanadini** (Zurich Data Scientists), a co-author of that paper, ",
-          "prepared with him for the Swiss Statistics Meeting 2026.\n\n",
-          "> The narrative below is quoted from the paper itself; the code, ",
-          "the appendix, and notes marked as notes are ours. The paper is open ",
-          "access under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) ",
-          "and is reused here on that basis:\n\n",
+          "> **About this document.** The first of the three analyses in ",
+          "Ravasi et al. (2021), refitted from the data published alongside ",
+          "the paper. It is joint work with **Matteo Tanadini** (Zurich Data ",
+          "Scientists), a co-author of that paper, prepared for the Swiss ",
+          "Statistics Meeting 2026. The narrative is quoted from the paper ",
+          "and reused under ",
+          "[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the ",
+          "code, the appendix and the notes marked as notes are ours. Nothing ",
+          "here is preloaded: the first chunk downloads Additional file 2 ",
+          "from the publisher, and every number below is computed from it ",
+          "when the document is rendered, with readr, dplyr, ggplot2, glmmTMB ",
+          "and broom.mixed, and no package of ours.\n\n",
           "> Ravasi D, Parrondo Monton D, Tanadini M, Flacio E (2021). ",
           "*Effectiveness of integrated Aedes albopictus management in ",
           "southern Switzerland*. **Parasites & Vectors** 14, 405. ",
-          "<https://doi.org/10.1186/s13071-021-04903-2>\n\n",
-          "> The paper's other two analyses, of adult females caught in Gravid ",
-          "*Aedes* Traps and of the 2012/2013 comparison, are not reproduced ",
-          "here.\n\n",
-          "> **Nothing here is preloaded.** The first chunk downloads ",
-          "Additional file 2 from the publisher, and every number below is ",
-          "computed from it when the document is rendered. Running this file ",
-          "needs readr, dplyr, ggplot2, glmmTMB and broom.mixed, and no ",
-          "package of ours."
+          "<https://doi.org/10.1186/s13071-021-04903-2>"
         )),
 
         list(text = paste0(
@@ -725,7 +726,7 @@ board <- new_dock_board(
           "Mean *Ae. albopictus* egg counts were consistently higher in the ",
           "non-intervention municipalities."
         )),
-        list(block = "desc", code = TRUE, output = TRUE),
+        list(block = "desc", code = FALSE, output = TRUE),
 
         list(text = paste0(
           "The first eggs in the season were found already in the first period ",
@@ -771,16 +772,27 @@ board <- new_dock_board(
           "modelled with a quadratic effect."
         )),
         list(block = "glmm", code = TRUE, output = FALSE),
-        list(block = "gtbl", code = TRUE, output = TRUE),
-        list(block = "gseason_gg", code = TRUE, output = TRUE),
+        list(block = "gtbl", code = FALSE, output = TRUE),
+        # THE ONE FIGURE IN THE DOCUMENT, SIZED FOR THE DOCUMENT. The board's
+        # default 8 x 4.5 is a reasonable figure and a bad two-panel figure:
+        # split across facets each panel gets under four inches, so the season
+        # is squashed and the curve reads as a bump. `column: page` (what
+        # `full_width` emits) takes the width quarto otherwise reserves for the
+        # margin and the table of contents, and a 12 x 4.5 device gives the two
+        # panels room to be the shape the data is.
+        list(block = "gseason_gg", code = FALSE, output = TRUE,
+             fig_width = 12, fig_height = 4.5, full_width = TRUE),
 
         list(text = paste0(
-          "*Note (ours).* The coefficients are on the log scale, so ",
-          "exponentiating them turns each into the factor by which the egg ",
-          "count changes. The table below keeps the terms that read that way. ",
-          "The two seasonal terms are orthogonal polynomial contrasts, for ",
-          "which a multiplier means nothing, so they are left out of it; they ",
-          "are in the model summary above, on the scale they belong to."
+          "*Note (ours).* The coefficients above are exponentiated, so each ",
+          "reads as the factor by which the egg count changes. That is the ",
+          "line the argument rests on: **3.81** times more eggs where there ",
+          "is no programme. Read the two seasonal rows with care -- they are ",
+          "orthogonal polynomial contrasts, and a multiplier on a contrast is ",
+          "not a quantity anyone can picture; they are in the table because ",
+          "they are in the model, not because they mean anything on their ",
+          "own. The figure is the same fit drawn on the scale of the data: ",
+          "one grey line per trap, the fitted curve and its 95% band by area."
         )),
 
         list(text = paste0(
@@ -804,16 +816,6 @@ board <- new_dock_board(
         )),
 
         list(text = paste0(
-          "### Model assumptions\n\n",
-          "*Note (ours).* \"Model assumptions were assessed via usual residuals ",
-          "analyses.\" The paper does not print those diagnostics, so this is ",
-          "our reconstruction of one: Pearson residuals against fitted values. ",
-          "For a negative binomial the spread of the raw residuals grows with ",
-          "the mean by construction, so raw residuals would show a funnel ",
-          "whatever the model did."
-        )),
-
-        list(text = paste0(
           "## Conclusions\n\n",
           "The results of the survey strongly support the efficacy of the IVM ",
           "programme implemented in southern Switzerland compared to ",
@@ -832,17 +834,19 @@ board <- new_dock_board(
           "of count on area. It takes one response and one term to write."
         )),
         list(block = "mdl", code = TRUE, output = FALSE),
+        list(block = "mcoef", code = FALSE, output = TRUE),
 
+        # SHORT ON PURPOSE. This paragraph used to explain why the Poisson
+        # interval is too narrow: overdispersion, ten readings of one trap
+        # counted as ten facts, nothing held constant for the season. All of it
+        # is true (the residual deviance really is about 180x its df), and it
+        # is a paragraph of statistics in a document whose argument is
+        # somewhere else. The appendix shows the quick model and moves on.
         list(text = paste0(
-          "It puts the effect at about 3.6 times more eggs, with a 95% ",
-          "interval from 3.51 to 3.67. The estimate is close to the published ",
-          "one; the interval is not. A Poisson assumes the variance equals the ",
-          "mean, and here the residual deviance is about 180 times its degrees ",
-          "of freedom. It also counts ten readings of one trap as ten ",
-          "independent observations, and holds nothing constant for a season ",
-          "that peaks in August. The published model's interval, 2.7 to 5.4, ",
-          "is roughly seventeen times wider, and it is the one the design ",
-          "supports."
+          "It puts the effect at about 3.6 times more eggs, close to the ",
+          "published 3.8. The interval is much narrower: 3.51 to 3.67, ",
+          "against 2.7 to 5.4. This section shows what the quick path gives ",
+          "you. Use the published model."
         ))
       )
     )
