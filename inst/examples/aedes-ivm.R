@@ -114,6 +114,23 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) {      # the season figure
   stop("aedes-ivm needs the ggplot2 package: install.packages('ggplot2')",
        call. = FALSE)
 }
+# EVERY TABLE ON THIS BOARD IS A gtsummary CALL -- `tbl_regression()` for the
+# two fits, `tbl_summary()` for the descriptives -- so it is a hard requirement,
+# not a nicety of the published arm.
+if (!requireNamespace("gtsummary", quietly = TRUE)) {    # every table on the board
+  stop("aedes-ivm needs the gtsummary package: install.packages('gtsummary')",
+       call. = FALSE)
+}
+# NAMED SEPARATELY THOUGH NOTHING HERE CALLS IT. gtsummary 2.x moved
+# broom.helpers to Suggests, so installing gtsummary does NOT bring it and the
+# gap stays invisible until `tbl_regression()` runs and every table block dies
+# with 'The package "broom.helpers" (>= 1.20.0) is required.' That is precisely
+# how this demo shipped to blockr.cloud with two dead blocks on 2026-08-23.
+# Declaring it here fails fast AND puts it on the website's install list.
+if (!requireNamespace("broom.helpers", quietly = TRUE)) {  # gtsummary's tidier bridge, a Suggests since gtsummary 2.x
+  stop("aedes-ivm needs the broom.helpers package: install.packages('broom.helpers')",
+       call. = FALSE)
+}
 # NOT attached, and nothing on this board calls `tidy()` at all. gtsummary
 # reaches the glmmTMB tidier through broom.helpers, which loads broom.mixed
 # itself the first time a mixed model arrives at `tbl_regression()`. Checked
