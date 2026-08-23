@@ -16,9 +16,13 @@
 #             move at once. That live re-fit is the demo.
 #   Report    the document and its figures: outline on the left, the two
 #             ggplot figures (the relationship, the Q-Q check) side by side
-#             beside it. Also where the next panel goes -- open anything
-#             from the block browser here and it lands in this row.
-#   Workflow  the DAG, with the assistant chat beside it.
+#             beside it. Behind the outline, on a tab, the DECK BUILDER --
+#             the same board read as four slides instead of as a document.
+#             Also where the next panel goes -- open anything from the block
+#             browser here and it lands in this row.
+#   Workflow  the outline (the board as a list of rows with a rail for the
+#             links), the DAG canvas on a tab behind it, assistant chat
+#             beside both.
 #
 # The data prep (penguins -> complete cases, and the summary frame behind
 # Table 1) gets NO view. Nobody wants to sit and look at it; it still runs,
@@ -32,6 +36,18 @@
 #                     a plain-language description; the Report panel renders
 #                     the lot to html / pptx / pdf, code and figures
 #                     included. This is the reproducible artefact.
+#
+#                     The same panel is also the workflow editor. It
+#                     lists the blocks as rows with a commit-graph rail for
+#                     the links, and does everything the DAG canvas does
+#                     without asking anyone to read a graph layout, so it is
+#                     mounted on Workflow as well as on Report.
+#
+#                     Beside it, the DECK BUILDER
+#                     (`new_slides_extension()`): pick the blocks whose
+#                     output is a slide, drag them into order, download pptx
+#                     or HTML. Slide order is independent of evaluation
+#                     order, so a deck can open on its conclusion.
 #   blockr.assistant  a board-level chat that can read the board and add,
 #                     link and lay out blocks. "Add an interaction between
 #                     flipper length and species" is a sentence, not a
@@ -131,7 +147,12 @@ options(
   # The outline projects the board into a document; with a construction
   # delay the report panel sits on "Evaluating..." until every block has
   # been visited. 0 = build eagerly.
-  blockr.background_construction_delay = 0
+  blockr.background_construction_delay = 0,
+  # A panel opened from the block browser lands in the LAST ACTIVE GROUP,
+  # and only the panels named here are exempt. The default is the DAG
+  # alone; the outline is a workflow editor for the same reason, so a new
+  # block must not stack on top of it either. Mount names, not classes.
+  blockr.visible_extensions = c("dag", "outline")
 )
 
 # Report rendering. quarto executes the document in a FRESH R session, which
@@ -327,6 +348,27 @@ board <- new_dock_board(
   ),
   extensions = list(
     blockr.dag::new_dag_extension(),
+    # The slide builder: pick the blocks whose output becomes a slide, drag
+    # them into order, download pptx or HTML. Deliberately narrower than the
+    # outline -- Christoph's read is that the full narrated report is
+    # overpowered for the everyday case, and "which four exhibits do I show
+    # on Tuesday" is the everyday case.
+    #
+    # Seeded with the four exhibits that carry the story, in PRESENTATION
+    # order, which is not evaluation order: the deck opens on the answer
+    # (the coefficients) and shows the sample afterwards. It can do that
+    # because `export_deck_qmd()` emits every block's code up front as
+    # hidden chunks and a slide carries only its exhibit expression -- where
+    # the outline's document order IS its evaluation order.
+    #
+    # The two dashboard charts are left out on purpose. A blockr.viz chart
+    # exports through the shared exhibit path and comes out as a TABLE, not
+    # a picture; the two ggplots are the figures here, same division of
+    # labour as the report.
+    blockr.outline::new_slides_extension(
+      title = "What drives a penguin's body mass?",
+      slides = c("summ", "desc_tbl", "relation", "qqp")
+    ),
     blockr.assistant::new_assistant_extension(),
     blockr.outline::new_outline_extension(
       title = "What drives a penguin's body mass?",
@@ -344,6 +386,16 @@ board <- new_dock_board(
       # drift from the code that produced it. `report = FALSE` keeps a
       # plumbing step out of the document without removing it from the
       # board.
+      #
+      # SPELL OUT `report = TRUE` ON EVERY BLOCK THAT BELONGS IN THE
+      # DOCUMENT. The outline's default is OFF (blockr.outline's
+      # `ann_report()`, R/export.R): a board is not a report until someone
+      # says what is in it, so a fresh board opens empty rather than on 80
+      # rows to be excluded one by one. A board that only spells out its
+      # EXCLUSIONS -- which this one did until 2026-08-11 -- therefore
+      # renders an empty document and a "11 outside the document" count,
+      # with no error anywhere. The flags below are exhaustive on purpose:
+      # every block says which side it is on.
       annotations = list(
         peng = list(
           description = paste(
@@ -367,14 +419,16 @@ board <- new_dock_board(
             "The sample, described: mean (SD) of each measurement, overall",
             "and by species. Gentoos are the heavy ones, and the gap is",
             "large enough that species has to enter the model."
-          )
+          ),
+          report = TRUE
         ),
         mdl = list(
           description = paste(
             "Fit body mass as a linear function of **flipper length**,",
             "**bill length** and **species**. Flipper length carries most",
             "of the signal; the species terms shift the intercept."
-          )
+          ),
+          report = TRUE
         ),
         summ = list(
           description = paste(
@@ -383,7 +437,8 @@ board <- new_dock_board(
             "terms are the baseline differences that size alone does not",
             "explain. An interval clear of zero is the significance chip",
             "beside it."
-          )
+          ),
+          report = TRUE
         ),
         aug = list(report = FALSE),
         # The two dashboard charts stay OUT of the document: the report
@@ -413,14 +468,16 @@ board <- new_dock_board(
             "coloured by species. The upward slope is the flipper effect;",
             "the three offset clouds are the species differences the model",
             "estimates."
-          )
+          ),
+          report = TRUE
         ),
         qqp = list(
           description = paste(
             "The standardised residuals against normal quantiles. Points on",
             "the diagonal mean the normal assumption behind the intervals",
             "above holds; the tails are where it usually gives."
-          )
+          ),
+          report = TRUE
         )
       ),
       stack_annotations = list(
@@ -473,11 +530,27 @@ board <- new_dock_board(
     # the height and its settings band (which a deferred ggplot has to keep,
     # see above) leaves nothing for the plot. Side by side each gets the full
     # column height, and the band costs width it can afford.
+    #
+    # The deck builder TABS with the outline rather than taking a fourth
+    # column: two readings of the same board, one at a time, and a fourth
+    # column would leave the figures too narrow to be worth showing. Tabbing
+    # an extension is free -- the mounting rule above binds BLOCKS, which
+    # report their code only while drawn. `relation` and `qqp` keep their own
+    # columns, so both stay mounted whichever tab is up, and the outline's
+    # Download demands what it needs anyway.
+    # `panels()`, NOT `c()`: a bare character vector tabs fine (see the two
+    # charts above), but `ext()` returns a `panel_ref` OBJECT and `c()` on
+    # two of them concatenates their fields into an unclassed list, which
+    # dies at board construction with "Unknown layout node type: NULL".
+    # `panels()` is the constructor that takes refs.
     Report = dock_grid(
-      ext("outline"), "relation", "qqp",
+      panels(ext("outline"), ext("slides")), "relation", "qqp",
       orientation = "horizontal", sizes = c(4, 3, 3)
     ),
-    Workflow = dock_grid(ext("dag"), ext("assistant"), sizes = c(2, 1))
+    # Outline fronted, DAG on the tab behind it, assistant beside both.
+    Workflow = dock_grid(
+      panels(ext("outline"), ext("dag")), ext("assistant"), sizes = c(2, 1)
+    )
   ),
   active = "Model"
 )
