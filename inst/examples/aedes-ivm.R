@@ -803,14 +803,13 @@ board <- new_dock_board(
 
         list(text = paste0(
           "*Note (ours).* The coefficients above are exponentiated, so each ",
-          "reads as the factor by which the egg count changes. That is the ",
-          "line the argument rests on: **3.81** times more eggs where there ",
-          "is no programme. Read the two seasonal rows with care -- they are ",
-          "orthogonal polynomial contrasts, and a multiplier on a contrast is ",
-          "not a quantity anyone can picture; they are in the table because ",
-          "they are in the model, not because they mean anything on their ",
-          "own. The figure is the same fit drawn on the scale of the data: ",
-          "one grey line per trap, the fitted curve and its 95% band by area."
+          "one is the factor by which the egg count changes: **3.81** times ",
+          "more eggs where there is no programme. Read the two seasonal rows ",
+          "with care. They are orthogonal polynomial contrasts, and a ",
+          "multiplier on a contrast is hard to interpret; they are in the ",
+          "table because they are in the model. The figure is the same fit ",
+          "drawn on the scale of the data: one grey line per trap, the ",
+          "fitted curve and its 95% band by area."
         )),
 
         list(text = paste0(
@@ -846,10 +845,10 @@ board <- new_dock_board(
 
         list(text = paste0(
           "## Appendix: the obvious model\n\n",
-          "*This section is not part of the published analysis.* It is ours, ",
-          "and it exists to show what the shortcut costs.\n\n",
-          "Egg counts are counts, so the first reach is a Poisson regression ",
-          "of count on area. It takes one response and one term to write."
+          "*This section is not part of the published analysis.* We fitted it ",
+          "ourselves, to compare with the model above.\n\n",
+          "Egg counts are counts, so the obvious model is a Poisson ",
+          "regression of eggs on area: one response, one predictor."
         )),
         list(block = "mdl", code = TRUE, output = FALSE),
         list(block = "mcoef", code = FALSE, output = TRUE),
@@ -863,8 +862,7 @@ board <- new_dock_board(
         list(text = paste0(
           "It puts the effect at about 3.6 times more eggs, close to the ",
           "published 3.8. The interval is much narrower: 3.51 to 3.67, ",
-          "against 2.7 to 5.4. This section shows what the quick path gives ",
-          "you. Use the published model."
+          "against 2.7 to 5.4. Use the published model."
         ))
       )
     )
