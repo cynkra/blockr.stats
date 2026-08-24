@@ -510,7 +510,7 @@ board <- new_dock_board(
     # because no plot block had a `scale_y_sqrt()`, feeding a
     # `blockr.viz::new_chart_block()`, because only the chart block could fit
     # a smoother. Both are `new_ggplot_block()` options now (blockr.ggplot
-    # 0.1.1.9002), so the mutate is gone and the axis reads in eggs instead
+    # 0.1.1.9003), so the mutate is gone and the axis reads in eggs instead
     # of in sqrt(eggs).
     #
     # THE FIT IS UNCHANGED, which is the argument for a scale over a mutate:
@@ -523,23 +523,32 @@ board <- new_dock_board(
     # a report item. It is not one: the document's figure is the published
     # model's, and this is the descriptive picture the talk points at.
     #
-    # Left at the DEFAULT visibility. The chart block carried
-    # `visible = "inputs"` because it drew its widget in the input half and
-    # returned a data frame; a ggplot block is the other way round, so the
-    # plot IS the output and the mapping controls sit above it. Maximise the
-    # panel when presenting.
-    season_ct = blockr.ggplot::new_ggplot_block(
-      type = "point",
-      x = "Day.ovitrap.collected",
-      y = "No..eggs.AEDES",
-      color = "AREA",
-      smoother = "loess",
-      y_trans = "sqrt",
-      title = "Eggs collected",
-      subtitle = "All traps, per day, square-root axis",
-      xlab = "Day of year",
-      ylab = "Eggs per collection",
-      block_name = "Visualization"
+    # `visible = "outputs"`, and it reads backwards from the chart block it
+    # replaced: that one carried `visible = "inputs"` because it drew its
+    # WIDGET in the input half and returned a data frame. A ggplot block is
+    # the other way round -- the plot is the output, the mapping controls are
+    # the input -- so the same intent, "show me the picture and nothing else",
+    # is the opposite value.
+    #
+    # This is the view the talk opens on, the picture is the point, and the
+    # chart-type tiles plus three pickers took the top third of the panel.
+    # The gear goes with them; `mfit` on the Model view keeps its controls, so
+    # the board still shows what a ggplot block can do.
+    season_ct = `attr<-`(
+      blockr.ggplot::new_ggplot_block(
+        type = "point",
+        x = "Day.ovitrap.collected",
+        y = "No..eggs.AEDES",
+        color = "AREA",
+        smoother = "loess",
+        y_trans = "sqrt",
+        title = "Eggs collected",
+        subtitle = "All traps, per day, square-root axis",
+        xlab = "Day of year",
+        ylab = "Eggs per collection",
+        block_name = "Visualization"
+      ),
+      "visible", "outputs"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
