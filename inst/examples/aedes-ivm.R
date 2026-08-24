@@ -207,7 +207,7 @@ if (is.null(getOption("blockr.chat_function"))) {
 # every explanation below lives in the report's text items instead, which is
 # also how Matteo's own report reads -- a paragraph, then the code it
 # describes.
-glmm_script <- 'glmmTMB::glmmTMB(
+glmm_script <- "glmmTMB::glmmTMB(
   No..eggs.AEDES ~ AREA +
     poly(Day.ovitrap.collected, degree = 2) +
     scale(ALTITUDE) +
@@ -217,7 +217,7 @@ glmm_script <- 'glmmTMB::glmmTMB(
   family = glmmTMB::nbinom1,
   data = data
 )
-'
+"
 
 
 # The published model's RESULT, drawn the way the paper draws it: one grey line
@@ -345,10 +345,10 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 # `cond` row, which is cosmetic and stays. Passing a tidier that drops the
 # component column removes both, at the cost of five lines of plumbing in the
 # script the audience reads; that trade went the other way on 2026-08-23.
-regression_script <- 'suppressMessages(
+regression_script <- "suppressMessages(
   gtsummary::tbl_regression(data, exponentiate = TRUE)
 )
-'
+"
 
 # THE SAME CALL, BUT IT HAS TO SURVIVE THE MODEL-TYPE BUTTONS.
 #
