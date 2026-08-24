@@ -531,9 +531,10 @@ board <- new_dock_board(
     # is the opposite value.
     #
     # This is the view the talk opens on, the picture is the point, and the
-    # chart-type tiles plus three pickers took the top third of the panel.
-    # The gear goes with them; `mfit` on the Model view keeps its controls, so
-    # the board still shows what a ggplot block can do.
+    # chart-type tiles plus three pickers took the top third of the panel. The
+    # gear goes with them. Both ggplot blocks on this board are exhibits and
+    # both are set this way; what a block can do is shown by the two that ARE
+    # control surfaces, the formula widget and the read block.
     season_ct = `attr<-`(
       blockr.ggplot::new_ggplot_block(
         type = "point",
@@ -588,23 +589,30 @@ board <- new_dock_board(
     mdiag = new_code_block(
       script = glm_diag_script, block_name = "Compute Fitted"
     ),
-    # The same swap as the season chart, and here it needed nothing new: a
-    # plain scatter of the fitted values, no smoother, no transform. It is a
+    # The same swap as the season chart, and here it needed nothing new but
+    # the axis: a plain scatter of the fitted values, no smoother. It is a
     # ggplot block so that both pictures on this board are made the same way
-    # and emit the same kind of code.
-    mfit = blockr.ggplot::new_ggplot_block(
-      type = "point",
-      x = "Day.ovitrap.collected",
-      y = "fitted",
-      color = "AREA",
-      # Same square-root axis as the other two figures. The Poisson fit puts
-      # the two arms four-fold apart, so a linear axis pins the intervention
-      # arm to the bottom of the panel and the demo's whole point -- that the
-      # formula edit moves BOTH curves -- is invisible in one of them.
-      y_trans = "sqrt",
-      xlab = "Day of year",
-      ylab = "Fitted eggs per collection",
-      block_name = "Predicted Values"
+    # and emit the same kind of code, and `visible = "outputs"` for the same
+    # reason as the season chart -- the panel beside the formula widget is
+    # what the audience watches while the formula changes, and the pickers
+    # above it are not part of that.
+    mfit = `attr<-`(
+      blockr.ggplot::new_ggplot_block(
+        type = "point",
+        x = "Day.ovitrap.collected",
+        y = "fitted",
+        color = "AREA",
+        # Same square-root axis as the other two figures. The Poisson fit
+        # puts the two arms four-fold apart, so a linear axis pins the
+        # intervention arm to the bottom of the panel and the demo's whole
+        # point -- that the formula edit moves BOTH curves -- is invisible
+        # in one of them.
+        y_trans = "sqrt",
+        xlab = "Day of year",
+        ylab = "Fitted eggs per collection",
+        block_name = "Predicted Values"
+      ),
+      "visible", "outputs"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
