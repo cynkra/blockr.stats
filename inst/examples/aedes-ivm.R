@@ -250,8 +250,13 @@ glmm_script <- 'glmmTMB::glmmTMB(
 # at. This is an exhibit, not a knob board. With nothing declared there is
 # also no gear, which is the convention: no options means no gear.
 #
-# The axis is the paper's, linear and shared across the two panels. Wrap the
-# plot in ggplot2::scale_y_sqrt() if the intervention panel needs to breathe.
+# THE AXIS IS SQUARE-ROOT, shared across the two panels. The paper's is
+# linear, and on a linear axis the intervention panel is a flat line along the
+# bottom: the counts differ by a factor of four, so whatever scale shows the
+# non-intervention peak flattens the arm the study is about. The transform is
+# display only here -- these are drawn values, not fitted ones, so nothing
+# about the model changes -- and it matches the descriptive chart beside it,
+# which is the comparison a reader makes.
 
 season_gg_script <- 'mf <- stats::model.frame(data)
 pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
@@ -298,6 +303,7 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
   ) +
   ggplot2::geom_line(ggplot2::aes(y = fit, colour = AREA), linewidth = 1.5) +
   ggplot2::facet_wrap(~AREA) +
+  ggplot2::scale_y_sqrt() +
   ggplot2::scale_colour_manual(values = c("#0072B2", "#E69F00")) +
   ggplot2::scale_fill_manual(values = c("#0072B2", "#E69F00")) +
   ggplot2::labs(x = "Day of year", y = "Eggs per collection") +
@@ -582,6 +588,11 @@ board <- new_dock_board(
       x = "Day.ovitrap.collected",
       y = "fitted",
       color = "AREA",
+      # Same square-root axis as the other two figures. The Poisson fit puts
+      # the two arms four-fold apart, so a linear axis pins the intervention
+      # arm to the bottom of the panel and the demo's whole point -- that the
+      # formula edit moves BOTH curves -- is invisible in one of them.
+      y_trans = "sqrt",
       xlab = "Day of year",
       ylab = "Fitted eggs per collection",
       block_name = "Predicted Values"
