@@ -79,13 +79,12 @@ blockr_pkgs <- c(
   "blockr.core",
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
-  # Neither is used by a block on this board any more (the sqrt mutate and
-  # the two chart blocks became ggplot blocks). Both stay loaded so the
-  # block browser still offers them: a demo that says "add a block" should
-  # have the obvious blocks to add.
+  # blockr.dplyr and blockr.ggplot are loaded although no block uses them,
+  # so the block browser still offers them: a demo that says "add a block"
+  # should have the obvious blocks to add.
   "blockr.dplyr",
-  "blockr.viz",
-  "blockr.ggplot",    # the season chart and the predicted-values chart
+  "blockr.viz",       # the season chart and the predicted-values chart
+  "blockr.ggplot",
   "blockr.stats",     # dataset + model + model-summary + broom blocks
   "blockr.session",   # project save / load / versions
   "blockr.assistant", # board-level chat
@@ -255,8 +254,9 @@ glmm_script <- "glmmTMB::glmmTMB(
 # bottom: the counts differ by a factor of four, so whatever scale shows the
 # non-intervention peak flattens the arm the study is about. The transform is
 # display only here -- these are drawn values, not fitted ones, so nothing
-# about the model changes -- and it matches the descriptive chart beside it,
-# which is the comparison a reader makes.
+# about the model changes. The two chart blocks on the board draw a linear
+# axis, since a chart block has no scale transform, so this figure is the one
+# place the intervention arm is readable at its own size.
 
 season_gg_script <- 'mf <- stats::model.frame(data)
 pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
@@ -504,52 +504,42 @@ board <- new_dock_board(
     ),
 
     # -- The season, as the demo shows it ----------------------------------
-    # Counts over time on a SQUARE-ROOT scale with a loess per area, in ONE
-    # block. This was two blocks and a different package until 2026-08-24: a
-    # `blockr.dplyr::new_mutate_block()` computing `sqrt(No..eggs.AEDES)`,
-    # because no plot block had a `scale_y_sqrt()`, feeding a
-    # `blockr.viz::new_chart_block()`, because only the chart block could fit
-    # a smoother. Both are `new_ggplot_block()` options now (blockr.ggplot
-    # 0.1.1.9003), so the mutate is gone and the axis reads in eggs instead
-    # of in sqrt(eggs).
+    # Counts over time with a loess per area, drawn by a CHART BLOCK. It was
+    # a `blockr.ggplot::new_ggplot_block()` with `y_trans = "sqrt"` for a few
+    # hours on 2026-08-24, and went back on the look: the chart block renders
+    # the picture the talk wants to show.
     #
-    # THE FIT IS UNCHANGED, which is the argument for a scale over a mutate:
-    # ggplot2 applies a scale transform BEFORE the stat, so `scale_y_sqrt() +
-    # geom_smooth()` fits the loess on the square-root scale, exactly as it
-    # was fitted when the column carried the transform. Same curve, drawn
-    # against an axis in the data's own units.
+    # THE PRICE IS THE SQUARE-ROOT AXIS, taken deliberately. The chart block
+    # has no scale transform, and the mutate that used to fake one
+    # (`sqrt(No..eggs.AEDES)` in a `blockr.dplyr::new_mutate_block()`) is not
+    # coming back, because it labelled the axis in sqrt(eggs) and cost a
+    # block. So the counts are drawn raw: the non-intervention peak sets the
+    # scale and the intervention arm sits low in the panel, which is the
+    # paper's own linear picture. The published figure below keeps its
+    # `scale_y_sqrt()`; it is a hand-written script, so it can.
     #
-    # It also emits plain ggplot2 now, so unlike the chart block it COULD be
-    # a report item. It is not one: the document's figure is the published
-    # model's, and this is the descriptive picture the talk points at.
+    # The y axis therefore reads `No..eggs.AEDES`, the publisher's column
+    # name. The chart block takes no axis labels. That is the name the
+    # audience has just been shown in the read block.
     #
-    # `visible = "outputs"`, and it reads backwards from the chart block it
-    # replaced: that one carried `visible = "inputs"` because it drew its
-    # WIDGET in the input half and returned a data frame. A ggplot block is
-    # the other way round -- the plot is the output, the mapping controls are
-    # the input -- so the same intent, "show me the picture and nothing else",
-    # is the opposite value.
+    # `visible = "inputs"` reads backwards and is right: a chart block draws
+    # its chart in the INPUT half of the card (it is an interactive widget the
+    # user configures) and returns the plotted data frame as its OUTPUT. Left
+    # at the default both show, so the panel is a chart with a table of the
+    # same numbers underneath it. On an exhibit the table is noise.
     #
-    # This is the view the talk opens on, the picture is the point, and the
-    # chart-type tiles plus three pickers took the top third of the panel. The
-    # gear goes with them. Both ggplot blocks on this board are exhibits and
-    # both are set this way; what a block can do is shown by the two that ARE
-    # control surfaces, the formula widget and the read block.
+    # Not a report item -- the document keeps the ggplot pair, whose chunks
+    # read as ggplot2.
     season_ct = `attr<-`(
-      blockr.ggplot::new_ggplot_block(
-        type = "point",
-        x = "Day.ovitrap.collected",
-        y = "No..eggs.AEDES",
-        color = "AREA",
-        smoother = "loess",
-        y_trans = "sqrt",
+      blockr.viz::new_chart_block(
+        chart_type = "scatter",
+        x = "Day.ovitrap.collected", y = "No..eggs.AEDES",
+        color = "AREA", smoother = "loess",
         title = "Eggs collected",
-        subtitle = "All traps, per day, square-root axis",
-        xlab = "Day of year",
-        ylab = "Eggs per collection",
+        subtitle = "All traps, per day",
         block_name = "Visualization"
       ),
-      "visible", "outputs"
+      "visible", "inputs"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -589,30 +579,18 @@ board <- new_dock_board(
     mdiag = new_code_block(
       script = glm_diag_script, block_name = "Compute Fitted"
     ),
-    # The same swap as the season chart, and here it needed nothing new but
-    # the axis: a plain scatter of the fitted values, no smoother. It is a
-    # ggplot block so that both pictures on this board are made the same way
-    # and emit the same kind of code, and `visible = "outputs"` for the same
-    # reason as the season chart -- the panel beside the formula widget is
-    # what the audience watches while the formula changes, and the pickers
-    # above it are not part of that.
+    # A chart block for the same reason as the season chart, and with the same
+    # cost: no square-root axis. The Poisson fit puts the two arms four-fold
+    # apart, so the intervention curve sits low in the panel. Both curves
+    # still move when the formula changes, which is what the audience is
+    # watching.
     mfit = `attr<-`(
-      blockr.ggplot::new_ggplot_block(
-        type = "point",
-        x = "Day.ovitrap.collected",
-        y = "fitted",
-        color = "AREA",
-        # Same square-root axis as the other two figures. The Poisson fit
-        # puts the two arms four-fold apart, so a linear axis pins the
-        # intervention arm to the bottom of the panel and the demo's whole
-        # point -- that the formula edit moves BOTH curves -- is invisible
-        # in one of them.
-        y_trans = "sqrt",
-        xlab = "Day of year",
-        ylab = "Fitted eggs per collection",
+      blockr.viz::new_chart_block(
+        chart_type = "scatter",
+        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
         block_name = "Predicted Values"
       ),
-      "visible", "outputs"
+      "visible", "inputs"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
