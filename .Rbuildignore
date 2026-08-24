@@ -4,3 +4,4 @@
 ^\.github$
 ^\.lintr$
 ^tsconfig\.json$
+^data-raw$

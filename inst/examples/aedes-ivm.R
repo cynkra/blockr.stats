@@ -79,8 +79,13 @@ blockr_pkgs <- c(
   "blockr.core",
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
-  "blockr.dplyr",     # the sqrt mutate feeding the season chart
-  "blockr.viz",       # the dashboard charts + summary/table blocks
+  # Neither is used by a block on this board any more (the sqrt mutate and
+  # the two chart blocks became ggplot blocks). Both stay loaded so the
+  # block browser still offers them: a demo that says "add a block" should
+  # have the obvious blocks to add.
+  "blockr.dplyr",
+  "blockr.viz",
+  "blockr.ggplot",    # the season chart and the predicted-values chart
   "blockr.stats",     # dataset + model + model-summary + broom blocks
   "blockr.session",   # project save / load / versions
   "blockr.assistant", # board-level chat
@@ -202,7 +207,7 @@ if (is.null(getOption("blockr.chat_function"))) {
 # every explanation below lives in the report's text items instead, which is
 # also how Matteo's own report reads -- a paragraph, then the code it
 # describes.
-glmm_script <- 'glmmTMB::glmmTMB(
+glmm_script <- "glmmTMB::glmmTMB(
   No..eggs.AEDES ~ AREA +
     poly(Day.ovitrap.collected, degree = 2) +
     scale(ALTITUDE) +
@@ -212,7 +217,7 @@ glmm_script <- 'glmmTMB::glmmTMB(
   family = glmmTMB::nbinom1,
   data = data
 )
-'
+"
 
 
 # The published model's RESULT, drawn the way the paper draws it: one grey line
@@ -245,8 +250,13 @@ glmm_script <- 'glmmTMB::glmmTMB(
 # at. This is an exhibit, not a knob board. With nothing declared there is
 # also no gear, which is the convention: no options means no gear.
 #
-# The axis is the paper's, linear and shared across the two panels. Wrap the
-# plot in ggplot2::scale_y_sqrt() if the intervention panel needs to breathe.
+# THE AXIS IS SQUARE-ROOT, shared across the two panels. The paper's is
+# linear, and on a linear axis the intervention panel is a flat line along the
+# bottom: the counts differ by a factor of four, so whatever scale shows the
+# non-intervention peak flattens the arm the study is about. The transform is
+# display only here -- these are drawn values, not fitted ones, so nothing
+# about the model changes -- and it matches the descriptive chart beside it,
+# which is the comparison a reader makes.
 
 season_gg_script <- 'mf <- stats::model.frame(data)
 pol <- mf[["poly(Day.ovitrap.collected, degree = 2)"]]
@@ -293,6 +303,7 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
   ) +
   ggplot2::geom_line(ggplot2::aes(y = fit, colour = AREA), linewidth = 1.5) +
   ggplot2::facet_wrap(~AREA) +
+  ggplot2::scale_y_sqrt() +
   ggplot2::scale_colour_manual(values = c("#0072B2", "#E69F00")) +
   ggplot2::scale_fill_manual(values = c("#0072B2", "#E69F00")) +
   ggplot2::labs(x = "Day of year", y = "Eggs per collection") +
@@ -334,10 +345,10 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 # `cond` row, which is cosmetic and stays. Passing a tidier that drops the
 # component column removes both, at the cost of five lines of plumbing in the
 # script the audience reads; that trade went the other way on 2026-08-23.
-regression_script <- 'suppressMessages(
+regression_script <- "suppressMessages(
   gtsummary::tbl_regression(data, exponentiate = TRUE)
 )
-'
+"
 
 # THE SAME CALL, BUT IT HAS TO SURVIVE THE MODEL-TYPE BUTTONS.
 #
@@ -493,40 +504,52 @@ board <- new_dock_board(
     ),
 
     # -- The season, as the demo shows it ----------------------------------
-    # Counts over time on a SQUARE-ROOT scale with a loess per area. Neither
-    # plot block has a `scale_y_sqrt()`, so the transform is a mutate and the
-    # axis is labelled in sqrt units. That is not a workaround with a cost:
+    # Counts over time on a SQUARE-ROOT scale with a loess per area, in ONE
+    # block. This was two blocks and a different package until 2026-08-24: a
+    # `blockr.dplyr::new_mutate_block()` computing `sqrt(No..eggs.AEDES)`,
+    # because no plot block had a `scale_y_sqrt()`, feeding a
+    # `blockr.viz::new_chart_block()`, because only the chart block could fit
+    # a smoother. Both are `new_ggplot_block()` options now (blockr.ggplot
+    # 0.1.1.9003), so the mutate is gone and the axis reads in eggs instead
+    # of in sqrt(eggs).
+    #
+    # THE FIT IS UNCHANGED, which is the argument for a scale over a mutate:
     # ggplot2 applies a scale transform BEFORE the stat, so `scale_y_sqrt() +
-    # geom_smooth()` fits the smoother on the square-root scale too. This is
-    # the same fit, drawn against an axis that says so.
-    ovi_sqrt = blockr.dplyr::new_mutate_block(
-      mutations = list(
-        list(name = "sqrt_eggs", expr = "sqrt(No..eggs.AEDES)")
-      ),
-      block_name = "Mutate"
-    ),
-    # A chart block and not a ggplot block, because this is the one plot in
-    # the board that needs a SMOOTHER: `blockr.viz` fits one per colour group
-    # (and per facet panel, since 0.2.67), `blockr.ggplot` has no such option.
-    # Not a report item -- the document keeps the ggplot pair, whose chunks
-    # read as ggplot2.
-    # `visible = "inputs"` and the reason is worth knowing, because it reads
-    # backwards: a chart block draws its chart in the INPUT half of the card
-    # (it is an interactive widget the user configures) and returns the plotted
-    # data frame as its OUTPUT. Left at the default both show, so the panel is
-    # a chart with a table of the same numbers underneath it. On an exhibit the
-    # table is noise -- the picture is the point, and the numbers are one panel
-    # away in Read Data.
+    # geom_smooth()` fits the loess on the square-root scale, exactly as it
+    # was fitted when the column carried the transform. Same curve, drawn
+    # against an axis in the data's own units.
+    #
+    # It also emits plain ggplot2 now, so unlike the chart block it COULD be
+    # a report item. It is not one: the document's figure is the published
+    # model's, and this is the descriptive picture the talk points at.
+    #
+    # `visible = "outputs"`, and it reads backwards from the chart block it
+    # replaced: that one carried `visible = "inputs"` because it drew its
+    # WIDGET in the input half and returned a data frame. A ggplot block is
+    # the other way round -- the plot is the output, the mapping controls are
+    # the input -- so the same intent, "show me the picture and nothing else",
+    # is the opposite value.
+    #
+    # This is the view the talk opens on, the picture is the point, and the
+    # chart-type tiles plus three pickers took the top third of the panel. The
+    # gear goes with them. Both ggplot blocks on this board are exhibits and
+    # both are set this way; what a block can do is shown by the two that ARE
+    # control surfaces, the formula widget and the read block.
     season_ct = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter",
-        x = "Day.ovitrap.collected", y = "sqrt_eggs",
-        color = "AREA", smoother = "loess",
+      blockr.ggplot::new_ggplot_block(
+        type = "point",
+        x = "Day.ovitrap.collected",
+        y = "No..eggs.AEDES",
+        color = "AREA",
+        smoother = "loess",
+        y_trans = "sqrt",
         title = "Eggs collected",
-        subtitle = "All traps, per day, sort()",
+        subtitle = "All traps, per day, square-root axis",
+        xlab = "Day of year",
+        ylab = "Eggs per collection",
         block_name = "Visualization"
       ),
-      "visible", "inputs"
+      "visible", "outputs"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -566,13 +589,30 @@ board <- new_dock_board(
     mdiag = new_code_block(
       script = glm_diag_script, block_name = "Compute Fitted"
     ),
+    # The same swap as the season chart, and here it needed nothing new but
+    # the axis: a plain scatter of the fitted values, no smoother. It is a
+    # ggplot block so that both pictures on this board are made the same way
+    # and emit the same kind of code, and `visible = "outputs"` for the same
+    # reason as the season chart -- the panel beside the formula widget is
+    # what the audience watches while the formula changes, and the pickers
+    # above it are not part of that.
     mfit = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter",
-        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
+      blockr.ggplot::new_ggplot_block(
+        type = "point",
+        x = "Day.ovitrap.collected",
+        y = "fitted",
+        color = "AREA",
+        # Same square-root axis as the other two figures. The Poisson fit
+        # puts the two arms four-fold apart, so a linear axis pins the
+        # intervention arm to the bottom of the panel and the demo's whole
+        # point -- that the formula edit moves BOTH curves -- is invisible
+        # in one of them.
+        y_trans = "sqrt",
+        xlab = "Day of year",
+        ylab = "Fitted eggs per collection",
         block_name = "Predicted Values"
       ),
-      "visible", "inputs"
+      "visible", "outputs"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
@@ -607,12 +647,10 @@ board <- new_dock_board(
   ),
   links = links(
     from = c("ovi", "ovi", "ovi", "ovi",
-             "ovi_sqrt",
              "mdl", "mdl",
              "mdiag",
              "glmm", "glmm"),
-    to   = c("desc", "ovi_sqrt", "mdl", "glmm",
-             "season_ct",
+    to   = c("desc", "season_ct", "mdl", "glmm",
              "mdiag", "mcoef",
              "mfit",
              "gtbl", "gseason_gg")
@@ -631,7 +669,7 @@ board <- new_dock_board(
       name = "Import", color = "#2563eb"
     ),
     descriptives = new_dock_stack(
-      c("desc", "ovi_sqrt", "season_ct"),
+      c("desc", "season_ct"),
       name = "Descriptive Stats", color = "#DF8396"
     ),
     basic = new_dock_stack(
@@ -947,7 +985,11 @@ board <- new_dock_board(
       ext("outline"), ext("assistant"), sizes = c(2, 1)
     )
   ),
-  active = "Model"
+  # OPEN ON DATA. The talk starts by pointing at `ovi` and saying nothing is
+  # preloaded, so the first thing on screen should be the import, the
+  # descriptive table and the season chart -- not a fitted model the audience
+  # has not been told about yet.
+  active = "Data"
 )
 
 serve(board, plugins = custom_plugins(manage_project()))
