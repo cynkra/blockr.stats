@@ -79,8 +79,13 @@ blockr_pkgs <- c(
   "blockr.core",
   "blockr.dock",
   "blockr.io",        # the read block that fetches the published CSV
-  "blockr.dplyr",     # the sqrt mutate feeding the season chart
-  "blockr.viz",       # the dashboard charts + summary/table blocks
+  # Neither is used by a block on this board any more (the sqrt mutate and
+  # the two chart blocks became ggplot blocks). Both stay loaded so the
+  # block browser still offers them: a demo that says "add a block" should
+  # have the obvious blocks to add.
+  "blockr.dplyr",
+  "blockr.viz",
+  "blockr.ggplot",    # the season chart and the predicted-values chart
   "blockr.stats",     # dataset + model + model-summary + broom blocks
   "blockr.session",   # project save / load / versions
   "blockr.assistant", # board-level chat
@@ -493,40 +498,42 @@ board <- new_dock_board(
     ),
 
     # -- The season, as the demo shows it ----------------------------------
-    # Counts over time on a SQUARE-ROOT scale with a loess per area. Neither
-    # plot block has a `scale_y_sqrt()`, so the transform is a mutate and the
-    # axis is labelled in sqrt units. That is not a workaround with a cost:
+    # Counts over time on a SQUARE-ROOT scale with a loess per area, in ONE
+    # block. This was two blocks and a different package until 2026-08-24: a
+    # `blockr.dplyr::new_mutate_block()` computing `sqrt(No..eggs.AEDES)`,
+    # because no plot block had a `scale_y_sqrt()`, feeding a
+    # `blockr.viz::new_chart_block()`, because only the chart block could fit
+    # a smoother. Both are `new_ggplot_block()` options now (blockr.ggplot
+    # 0.1.1.9002), so the mutate is gone and the axis reads in eggs instead
+    # of in sqrt(eggs).
+    #
+    # THE FIT IS UNCHANGED, which is the argument for a scale over a mutate:
     # ggplot2 applies a scale transform BEFORE the stat, so `scale_y_sqrt() +
-    # geom_smooth()` fits the smoother on the square-root scale too. This is
-    # the same fit, drawn against an axis that says so.
-    ovi_sqrt = blockr.dplyr::new_mutate_block(
-      mutations = list(
-        list(name = "sqrt_eggs", expr = "sqrt(No..eggs.AEDES)")
-      ),
-      block_name = "Mutate"
-    ),
-    # A chart block and not a ggplot block, because this is the one plot in
-    # the board that needs a SMOOTHER: `blockr.viz` fits one per colour group
-    # (and per facet panel, since 0.2.67), `blockr.ggplot` has no such option.
-    # Not a report item -- the document keeps the ggplot pair, whose chunks
-    # read as ggplot2.
-    # `visible = "inputs"` and the reason is worth knowing, because it reads
-    # backwards: a chart block draws its chart in the INPUT half of the card
-    # (it is an interactive widget the user configures) and returns the plotted
-    # data frame as its OUTPUT. Left at the default both show, so the panel is
-    # a chart with a table of the same numbers underneath it. On an exhibit the
-    # table is noise -- the picture is the point, and the numbers are one panel
-    # away in Read Data.
-    season_ct = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter",
-        x = "Day.ovitrap.collected", y = "sqrt_eggs",
-        color = "AREA", smoother = "loess",
-        title = "Eggs collected",
-        subtitle = "All traps, per day, sort()",
-        block_name = "Visualization"
-      ),
-      "visible", "inputs"
+    # geom_smooth()` fits the loess on the square-root scale, exactly as it
+    # was fitted when the column carried the transform. Same curve, drawn
+    # against an axis in the data's own units.
+    #
+    # It also emits plain ggplot2 now, so unlike the chart block it COULD be
+    # a report item. It is not one: the document's figure is the published
+    # model's, and this is the descriptive picture the talk points at.
+    #
+    # Left at the DEFAULT visibility. The chart block carried
+    # `visible = "inputs"` because it drew its widget in the input half and
+    # returned a data frame; a ggplot block is the other way round, so the
+    # plot IS the output and the mapping controls sit above it. Maximise the
+    # panel when presenting.
+    season_ct = blockr.ggplot::new_ggplot_block(
+      type = "point",
+      x = "Day.ovitrap.collected",
+      y = "No..eggs.AEDES",
+      color = "AREA",
+      smoother = "loess",
+      y_trans = "sqrt",
+      title = "Eggs collected",
+      subtitle = "All traps, per day, square-root axis",
+      xlab = "Day of year",
+      ylab = "Eggs per collection",
+      block_name = "Visualization"
     ),
 
     # -- Arm 1: the no-code model ------------------------------------------
@@ -566,13 +573,18 @@ board <- new_dock_board(
     mdiag = new_code_block(
       script = glm_diag_script, block_name = "Compute Fitted"
     ),
-    mfit = `attr<-`(
-      blockr.viz::new_chart_block(
-        chart_type = "scatter",
-        x = "Day.ovitrap.collected", y = "fitted", color = "AREA",
-        block_name = "Predicted Values"
-      ),
-      "visible", "inputs"
+    # The same swap as the season chart, and here it needed nothing new: a
+    # plain scatter of the fitted values, no smoother, no transform. It is a
+    # ggplot block so that both pictures on this board are made the same way
+    # and emit the same kind of code.
+    mfit = blockr.ggplot::new_ggplot_block(
+      type = "point",
+      x = "Day.ovitrap.collected",
+      y = "fitted",
+      color = "AREA",
+      xlab = "Day of year",
+      ylab = "Fitted eggs per collection",
+      block_name = "Predicted Values"
     ),
 
     # -- Arm 2: the escalation ---------------------------------------------
@@ -607,12 +619,10 @@ board <- new_dock_board(
   ),
   links = links(
     from = c("ovi", "ovi", "ovi", "ovi",
-             "ovi_sqrt",
              "mdl", "mdl",
              "mdiag",
              "glmm", "glmm"),
-    to   = c("desc", "ovi_sqrt", "mdl", "glmm",
-             "season_ct",
+    to   = c("desc", "season_ct", "mdl", "glmm",
              "mdiag", "mcoef",
              "mfit",
              "gtbl", "gseason_gg")
@@ -631,7 +641,7 @@ board <- new_dock_board(
       name = "Import", color = "#2563eb"
     ),
     descriptives = new_dock_stack(
-      c("desc", "ovi_sqrt", "season_ct"),
+      c("desc", "season_ct"),
       name = "Descriptive Stats", color = "#DF8396"
     ),
     basic = new_dock_stack(
