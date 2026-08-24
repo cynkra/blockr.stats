@@ -957,7 +957,11 @@ board <- new_dock_board(
       ext("outline"), ext("assistant"), sizes = c(2, 1)
     )
   ),
-  active = "Model"
+  # OPEN ON DATA. The talk starts by pointing at `ovi` and saying nothing is
+  # preloaded, so the first thing on screen should be the import, the
+  # descriptive table and the season chart -- not a fitted model the audience
+  # has not been told about yet.
+  active = "Data"
 )
 
 serve(board, plugins = custom_plugins(manage_project()))
