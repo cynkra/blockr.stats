@@ -65,12 +65,6 @@
   margin: 3px 0;
 }
 
-/* The survival gear's header: no space of its own below the gear, the tray
-   (or the next row) supplies it. */
-.formula-surv-gear {
-  margin-bottom: 0;
-}
-
 /* Predictors fill the space beside the inline intercept toggle */
 .blockr-row-content > .formula-control {
   flex: 1 1 auto;

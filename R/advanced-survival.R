@@ -125,6 +125,16 @@ new_survival_block <- function(type = "km", time_var = character(),
           input, output, session, data, init_state, response_mode = "surv"
         )
 
+        # Which value of the event column counts as the event (default: the
+        # column is read as 0/1). Set in the gear; the widget gets it back
+        # through the formula state.
+        observeEvent(input$event_level, {
+          st <- r_state()
+          lvl <- trimws(input$event_level %||% "")
+          st$response$eventLevel <- if (nzchar(lvl)) lvl else NULL
+          r_state(st)
+        }, ignoreInit = TRUE)
+
         list(
           expr = reactive(build_survival_call(r_type(), r_state())),
           state = list(
@@ -146,13 +156,24 @@ new_survival_block <- function(type = "km", time_var = character(),
       })
     },
     ui = function(id) {
+      ns <- NS(id)
+      lvl <- init_state$response$eventLevel
       tagList(
         stats_controls_dep(),
         div(
-          class = "block-container blockr-stats-face",
-          segmented_field(NS(id, "surv_type"), "Survival model",
-                          choices = type_choices, selected = type),
-          formula_input_ui(id, response_mode = "surv")
+          class = "block-container",
+          gear_tray(
+            ns,
+            text_field(ns("event_level"), "Event value", lvl,
+                       placeholder = "1"),
+            label = "Survival settings"
+          ),
+          div(
+            class = "blockr-stats-face",
+            segmented_field(ns("surv_type"), "Survival model",
+                            choices = type_choices, selected = type),
+            formula_input_ui(id, response_mode = "surv")
+          )
         )
       )
     },

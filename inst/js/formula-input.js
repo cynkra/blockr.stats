@@ -5,8 +5,8 @@
  * view/editor: chip edits produce already-canonical terms; the text field is
  * the round-trip path (raw text -> R parse_formula() -> normalized state back).
  *
- * Requires Blockr.Select, Blockr.icons, Blockr.gearTray, Blockr.textCommit,
- * Blockr.tooltip (blockr.ui) and Blockr.Input (blockr.dplyr).
+ * Requires Blockr.Select, Blockr.icons, Blockr.tooltip (blockr.ui) and
+ * Blockr.Input (blockr.dplyr).
  */
 (function () {
   "use strict";
@@ -75,52 +75,9 @@
     this.el.innerHTML = "";
     this.el.classList.add("formula-input");
     if (this.responseMode === "surv") {
+      // The "which value counts as the event" setting lives in the block's
+      // gear (R/advanced-survival.R) and reaches the widget through setState.
       this.el.classList.add("formula-input--surv");
-
-      // The gear and its tray (blockr.ui's Blockr.gearTray) hold the rare
-      // "which value counts as the event" setting: a text field that
-      // commits on Enter or blur.
-      var gearHeader = document.createElement("div");
-      gearHeader.className = "blockr-gear-header formula-surv-gear";
-      var gearBtn = document.createElement("button");
-      gearBtn.type = "button";
-      gearBtn.className = "blockr-gear-btn";
-      gearBtn.innerHTML = Blockr.icons.gear;
-      gearHeader.appendChild(gearBtn);
-      this.el.appendChild(gearHeader);
-
-      var tray = document.createElement("div");
-      tray.className = "blockr-settings blockr-settings--beak";
-      var grid = document.createElement("div");
-      grid.className = "blockr-settings__grid";
-      var field = document.createElement("div");
-      field.className = "blockr-settings__field";
-      var fieldLabel = document.createElement("span");
-      fieldLabel.className = "blockr-label";
-      fieldLabel.textContent = "Event value";
-      var commitWrap = document.createElement("div");
-      commitWrap.className = "blockr-commit-field";
-      this._eventLevelInput = document.createElement("input");
-      this._eventLevelInput.type = "text";
-      this._eventLevelInput.className = "blockr-text-input";
-      this._eventLevelInput.placeholder = "1";
-      commitWrap.appendChild(this._eventLevelInput);
-      field.appendChild(fieldLabel);
-      field.appendChild(commitWrap);
-      grid.appendChild(field);
-      tray.appendChild(grid);
-      this.el.appendChild(tray);
-      this._eventLevelCommit = Blockr.textCommit(this._eventLevelInput, {
-        onCommit: function (value) {
-          self.response.eventLevel = value.trim() || null;
-          self._sync();
-        }
-      });
-      Blockr.gearTray(tray, gearBtn, { label: "Survival settings" });
-      // A builder affordance: eventLevel has no formula-text spelling, so the
-      // gear travels with the chips rather than hovering over the text field.
-      this._builderEls.push(gearHeader);
-      this._builderEls.push(tray);
     }
 
     var predHost = document.createElement("div");
@@ -881,10 +838,6 @@
       }
       if (this._statusSelect) {
         this._statusSelect.setOptions(this._colOptions(), r.event || null);
-      }
-      if (this._eventLevelCommit) {
-        var lvl = this.response.eventLevel;
-        this._eventLevelCommit.sync(lvl == null ? "" : String(lvl));
       }
     } else {
       var rv = typeof this.response === "string" ? this.response : null;
