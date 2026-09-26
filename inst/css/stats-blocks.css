@@ -1,0 +1,41 @@
+/* blockr.stats: the few rules its R-rendered blocks add to blockr.ui's
+   controls (blockr.ui::controls_dep()). Tokens only. */
+
+/* A block's face: fields stacked at full width, 16px apart (the grid's row
+   gap). Spacing is a margin on each field rather than a flex gap, so a
+   uiOutput with nothing in it takes no space. It must not be hidden
+   either: Shiny suspends an output it cannot see, and an empty one would
+   then never fill. */
+.blockr-stats-face .blockr-stats-field,
+.blockr-stats-face > .formula-input-container {
+  margin-top: 16px;
+}
+
+.blockr-stats-face > :first-child {
+  margin-top: 0;
+}
+
+.blockr-stats-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* A segmented control fills its field; its segments share the width. */
+.blockr-stats-control .blockr-segmented {
+  display: flex;
+  width: 100%;
+}
+
+/* Number fields hide the spinner arrows and commit like text; the arrow
+   keys still step. */
+.blockr-stats-control input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.blockr-stats-control input[type="number"]::-webkit-inner-spin-button,
+.blockr-stats-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

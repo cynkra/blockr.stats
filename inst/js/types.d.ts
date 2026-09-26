@@ -4,47 +4,58 @@
  * Dev-tooling only: type-checked via tsconfig.json / `tsc`, never referenced
  * by an htmlDependency and never run in the browser.
  *
- * blockr.stats reuses blockr.dplyr's shared JS (blockr-core.js +
- * blockr-select.js) at runtime, so the Blockr namespace below declares only
- * the slice this package consumes — it is intentionally a subset of
- * blockr.dplyr's own types.d.ts, and should grow only as the JS here does.
+ * The shared controls come from blockr.ui (blockr-ui.js, blockr-select.js,
+ * loaded by blockr.ui::controls_dep()); Blockr.Input, the code field with
+ * autocomplete, still comes from blockr.dplyr. The Blockr namespace below
+ * declares only the slice this package consumes: a subset of blockr.ui's
+ * own types.d.ts, to grow only as the JS here does.
  */
 
-/* --- Blockr.Select (blockr-select.js, blockr.dplyr) --- */
+/* --- Blockr.Select (blockr-select.js, blockr.ui) --- */
 
 /** Option entry: a bare value string, or {value, label} for a muted label. */
 type BlockrSelectOption = string | { value: string; label?: string };
 
-interface BlockrSelectSingleHandle {
+interface BlockrSelectHandleBase {
   /** Root element (already appended to the container). */
   el: HTMLDivElement;
-  getValue(): string;
   setOptions(
     opts: BlockrSelectOption[] | BlockrSelectOption | null | undefined,
-    sel?: string | null
+    sel?: string | string[] | null
   ): void;
+  updateOptions(
+    opts: BlockrSelectOption[] | BlockrSelectOption | null | undefined,
+    sel?: string | string[] | null
+  ): void;
+  setValue(value: string | string[] | null): void;
   destroy(): void;
 }
 
-interface BlockrSelectSingleConfig {
+interface BlockrSelectSingleHandle extends BlockrSelectHandleBase {
+  getValue(): string;
+}
+
+interface BlockrSelectMultiHandle extends BlockrSelectHandleBase {
+  getValue(): string[];
+}
+
+interface BlockrSelectConfig {
   options?: BlockrSelectOption[];
-  /** Initial value (null/undefined: first option). */
-  selected?: string | null;
+  selected?: string | string[] | null;
   placeholder?: string;
-  onChange?: (value: string) => void;
+  bordered?: boolean;
+  allowEmpty?: boolean;
+  onChange?: (value: any) => void;
   [opt: string]: unknown;
 }
 
 interface BlockrSelectStatic {
-  single(
-    container: HTMLElement,
-    config: BlockrSelectSingleConfig
-  ): BlockrSelectSingleHandle;
+  single(container: HTMLElement, config: BlockrSelectConfig): BlockrSelectSingleHandle;
+  multi(container: HTMLElement, config: BlockrSelectConfig): BlockrSelectMultiHandle;
 }
 
-/* --- Blockr.checkbox (settings-band.js, vendored from blockr.viz) --- */
+/* --- Small controls (blockr-ui.js, blockr.ui) --- */
 
-/** Handle returned by Blockr.checkbox. */
 interface BlockrCheckboxHandle {
   el: HTMLLabelElement;
   input: HTMLInputElement;
@@ -52,15 +63,52 @@ interface BlockrCheckboxHandle {
   get(): boolean;
 }
 
+interface BlockrSegmentedHandle {
+  el: HTMLDivElement;
+  set(value: string): void;
+  get(): string;
+}
+
+interface BlockrGearTrayHandle {
+  set(open: boolean): void;
+  toggle(): void;
+  isOpen(): boolean;
+}
+
+interface BlockrTextCommitHandle {
+  chip: HTMLButtonElement;
+  commit(): void;
+  sync(value: string): void;
+}
+
 interface BlockrNamespace {
   /** Shared select component; absent until blockr-select.js has loaded. */
   Select?: BlockrSelectStatic;
-  /** Design-system checkbox factory (settings-band.js). */
+  icons: Record<string, string>;
   checkbox(
     label: string,
     checked: boolean,
     onChange: (checked: boolean) => void
   ): BlockrCheckboxHandle;
+  segmented(
+    options: { value: string; label: string; title?: string }[],
+    selected: string,
+    onChange: (value: string) => void,
+    opts?: { size?: 'xs'; label?: string }
+  ): BlockrSegmentedHandle;
+  gearTray(
+    band: HTMLElement,
+    gear: HTMLButtonElement,
+    opts?: { label?: string }
+  ): BlockrGearTrayHandle;
+  textCommit(
+    input: HTMLInputElement,
+    opts: { onCommit: (value: string) => void }
+  ): BlockrTextCommitHandle;
+  tooltip: {
+    set(el: Element, content: string): void;
+    clear(el: Element): void;
+  };
   /** The namespace carries members this package does not consume. */
   [member: string]: unknown;
 }
@@ -78,7 +126,6 @@ declare const Shiny: {
 };
 
 interface Window {
-  // Optional: the mount code guards on their presence before using them.
   Blockr?: BlockrNamespace;
   Shiny?: typeof Shiny;
 }

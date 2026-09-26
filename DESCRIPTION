@@ -1,6 +1,6 @@
 Package: blockr.stats
 Title: Statistical Blocks for blockr
-Version: 0.1.2.9002
+Version: 0.1.2.9004
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
@@ -23,7 +23,8 @@ Imports:
     shiny,
     shinyWidgets,
     blockr.core (>= 0.1.2),
-    blockr.dplyr,
+    blockr.dplyr (>= 0.2.0.9031),
+    blockr.ui (>= 0.0.1.9030),
     broom,
     cmprsk,
     dplyr,
@@ -46,5 +47,6 @@ Suggests:
 VignetteBuilder: knitr
 Remotes:
     BristolMyersSquibb/blockr.core,
-    BristolMyersSquibb/blockr.dplyr
+    BristolMyersSquibb/blockr.dplyr,
+    BristolMyersSquibb/blockr.ui
 Config/testthat/edition: 3
