@@ -1,66 +1,11 @@
-#' CSS Utilities for blockr.stats Blocks
+#' CSS for the blocks' outputs
 #'
-#' Provides centralized CSS functions for consistent block styling.
-#' Based on blockr.dplyr patterns.
+#' The R print of the model and survival blocks, and the model summary card.
+#' Tokens only: blockr.ui's theme defines them ([blockr.ui::theme_dep()],
+#' attached with each output).
 #'
 #' @noRd
 NULL
-
-#' Responsive grid layout CSS for blocks
-#'
-#' Creates CSS for responsive grid layout with consistent styling.
-#' This is the foundation CSS that **must** be loaded by all blocks.
-#'
-#' @return HTML style tag with responsive grid CSS
-#' @noRd
-css_responsive_grid <- function() {
-  tags$style(HTML(
-    "
-    .block-container {
-      width: 100%;
-      padding-bottom: 10px;
-    }
-
-    /* One shared grid across the whole form */
-    .block-form-grid {
-      display: grid;
-      gap: 15px;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    }
-
-    /* Flatten wrappers so all controls share the same tracks */
-    .block-section,
-    .block-section-grid {
-      display: contents;
-    }
-
-    /* Headings/help span full width in grid */
-    .block-section h4,
-    .block-help-text {
-      grid-column: 1 / -1;
-    }
-
-    .block-section:not(:first-child) {
-      margin-top: 20px;
-    }
-
-    .block-input-wrapper {
-      width: 100%;
-    }
-
-    .block-input-wrapper .form-group {
-      margin-bottom: 10px;
-    }
-
-    /* Help text styling */
-    .block-help-text {
-      color: #6c757d;
-      font-size: 0.875rem;
-      margin-bottom: 10px;
-    }
-    "
-  ))
-}
 
 #' Model summary card CSS
 #'
@@ -74,19 +19,18 @@ css_model_summary <- function() {
   tags$style(HTML(
     "
     .smb-card {
-      font-size: var(--blockr-font-size-base, 0.875rem);
-      color: var(--blockr-color-text-primary, #111827);
+      font-size: var(--blockr-font-size-base);
+      color: var(--blockr-color-text-default);
       padding: 4px 2px;
     }
-    .smb-empty { padding: 16px; color: var(--blockr-color-text-muted, #6b7280); }
 
     .smb-rtext {
       margin: 0; padding: 10px 12px;
-      background: var(--blockr-color-bg-subtle, #f9fafb);
-      border-radius: var(--blockr-radius-md, 6px);
-      font-family: var(--blockr-font-mono, 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace);
-      font-size: var(--blockr-font-size-xs, 0.75rem);
-      color: var(--blockr-color-text-secondary, #374151);
+      background: var(--blockr-color-bg-subtle);
+      border-radius: var(--blockr-radius-md);
+      font-family: var(--blockr-font-mono);
+      font-size: var(--blockr-font-size-sm);
+      color: var(--blockr-color-text-default);
       overflow-x: auto; white-space: pre;
     }
     "
@@ -96,9 +40,10 @@ css_model_summary <- function() {
 #' Model summary block card CSS
 #'
 #' Styles `model_summary_card()`: the facts stripe, the coefficient table and
-#' the inline forest column (track, reference line, whisker, dot, axis).
-#' `--blockr-*` tokens with literal fallbacks, so the card also renders
-#' standalone in a dev harness or a knitted report.
+#' the inline forest column (track, reference line, whisker, dot, axis). The
+#' table takes the design system's table style: 13px semibold headers with a
+#' rule under each, 30px rows, no rules in the body, the hover wash, sort
+#' bars.
 #'
 #' @return HTML style tag.
 #' @noRd
@@ -106,14 +51,21 @@ css_summary_card <- function() {
   tags$style(HTML(
     "
     .msc-card {
-      font-size: var(--blockr-font-size-base, 0.875rem);
-      color: var(--blockr-color-text-primary, #111827);
-      padding: 2px 2px 6px;
+      /* The forest's mark colours: an effect above the reference, below it,
+         and one not told apart from none. Local names for meaning tokens,
+         so the three can move to blockr.theme's data colours together. */
+      --blockr-stats-mark-positive: var(--blockr-color-border-accent);
+      --blockr-stats-mark-negative: var(--blockr-color-border-danger);
+      --blockr-stats-mark-null: var(--blockr-color-text-disabled);
+
+      font-size: var(--blockr-font-size-base);
+      color: var(--blockr-color-text-default);
+      padding: 2px 0 6px;
     }
-    .msc-empty, .msc-note {
-      padding: 14px 2px;
-      color: var(--blockr-color-text-muted, #6b7280);
-      font-size: var(--blockr-font-size-sm, 0.8125rem);
+    .msc-note {
+      padding: 14px 0;
+      color: var(--blockr-color-text-muted);
+      font-size: var(--blockr-font-size-sm);
     }
 
     /* Don't blink on an update. Shiny fades a recalculating output to 30%
@@ -133,145 +85,133 @@ css_summary_card <- function() {
     .msc-facts {
       display: flex; flex-wrap: wrap; align-items: baseline;
       gap: 6px 16px; padding: 2px 0 10px;
-      font-size: var(--blockr-font-size-sm, 0.8125rem);
-      color: var(--blockr-color-text-muted, #6b7280);
+      font-size: var(--blockr-font-size-sm);
+      color: var(--blockr-color-text-muted);
     }
     .msc-id {
-      font-weight: var(--blockr-font-weight-medium, 500);
-      color: var(--blockr-color-text-secondary, #374151);
+      font-weight: var(--blockr-font-weight-medium);
+      color: var(--blockr-color-text-default);
     }
-    .msc-n { font-weight: var(--blockr-font-weight-normal, 400); color: var(--blockr-color-text-muted, #6b7280); }
+    .msc-n {
+      font-weight: var(--blockr-font-weight-normal);
+      color: var(--blockr-color-text-muted);
+    }
     .msc-fit { margin-left: auto; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
     .msc-pair { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .msc-pair b {
-      color: var(--blockr-color-text-secondary, #374151);
-      font-weight: var(--blockr-font-weight-medium, 500);
+      color: var(--blockr-color-text-default);
+      font-weight: var(--blockr-font-weight-medium);
     }
-    .msc-sep { color: var(--blockr-grey-300, #d1d5db); }
+    .msc-sep { color: var(--blockr-color-border-strong); }
 
-    /* coefficient table. The header is blockr's column header, the same
-       recipe as blockr.ui's table preview and blockr.viz's table block: 14px
-       medium in primary ink, numeric columns right-aligned off the column
-       type. No sub-label tier -- the interval belongs in the name it
-       qualifies. */
+    /* The coefficient table, in the design system's table style. */
     .msc-ct { width: 100%; border-collapse: collapse; }
-    .msc-ct thead tr { border-bottom: 1px solid var(--blockr-color-border, #e5e7eb); }
     .msc-ct th {
-      padding: 0 0 7px; text-align: left; vertical-align: bottom;
-      font-weight: var(--blockr-font-weight-medium, 500);
-      color: var(--blockr-color-text-primary, #111827);
+      padding: 7px 0; text-align: left; vertical-align: bottom;
+      font-size: var(--blockr-font-size-sm);
+      font-weight: var(--blockr-font-weight-semibold);
+      color: var(--blockr-color-text-default);
       white-space: nowrap;
+      /* A rule under each column header, 12px short of the next column,
+         in place of one rule across the header. None under the term
+         column, which holds the row labels. */
+      background-image: linear-gradient(var(--blockr-color-border-strong), var(--blockr-color-border-strong));
+      background-repeat: no-repeat;
+      background-size: calc(100% - 12px) 1px;
+      background-position: left bottom;
     }
+    .msc-ct th:first-child { background-image: none; }
+    .msc-ct th.dt-col-num { text-align: right; background-position: right bottom; }
     .msc-ct .blockr-col-name {
       display: inline-block; max-width: 100%;
-      font-size: 14px; font-weight: var(--blockr-font-weight-medium, 500);
-      color: var(--blockr-color-text-primary, #111827);
       overflow: hidden; text-overflow: ellipsis;
     }
-    .msc-ct th.dt-col-num { text-align: right; }
-    .msc-ct th.dt-col-num .dt-th-namerow { justify-content: flex-end; }
-    .msc-ct .dt-th-namerow { display: flex; align-items: center; gap: 4px; }
+    .msc-ct .dt-th-namerow { display: inline-flex; align-items: center; gap: 4px; }
+    /* On a right-aligned column the cue goes before the name, so the name
+       stays over its numbers. */
+    .msc-ct th.dt-col-num .dt-th-namerow { flex-direction: row-reverse; }
 
     /* Sorting is a browser-side reading aid (see inst/js/model-summary-sort.js):
-       useful with many predictors, never stored, never in the exported code.
-       The icon box is ALWAYS 12px wide, exactly as the html preview does it:
-       the arrow appears inside space that was already reserved, so setting or
-       clearing a sort never changes a column width. No hover hint -- the
-       preview has none, and a hint that grows the box shifts the whole table
-       under the pointer. Hover feedback is the row tint, which costs no
-       layout. */
-    .msc-ct th.blockr-sortable { cursor: pointer; user-select: none; transition: background-color 0.15s ease; }
-    .msc-ct th.blockr-sortable:hover { background-color: var(--blockr-color-bg-subtle, #f9fafb); }
+       never stored, never in the exported code. The cue is the design
+       system's sort bars, drawn top to bottom short to long for ascending,
+       long to short for descending, in the accent on the sorted column. An
+       unsorted column shows the ascending bars, muted, on hover. The 12px box
+       is always reserved, so a sort never moves a column. */
+    .msc-ct th.blockr-sortable {
+      cursor: pointer; user-select: none;
+      transition: background-color var(--blockr-transition);
+    }
+    .msc-ct th.blockr-sortable:hover { background-color: var(--blockr-color-bg-hover); }
     .msc-ct .blockr-sort-icon {
-      display: inline-block; width: 12px; height: 12px;
-      font-size: 10px; line-height: 12px; text-align: center;
+      flex: none; width: 12px; height: 12px;
+      visibility: hidden;
+      color: var(--blockr-color-text-muted);
+      background-color: currentColor;
+      -webkit-mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
+      mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h3M2 6h5.5M2 9h8'/%3E%3C/svg%3E\") no-repeat center / 12px 12px;
     }
-    .msc-ct .blockr-sort-icon-asc::after { content: '\\2191'; color: var(--blockr-grey-700, #374151); }
-    .msc-ct .blockr-sort-icon-desc::after { content: '\\2193'; color: var(--blockr-grey-700, #374151); }
+    .msc-ct th.blockr-sortable:hover .blockr-sort-icon { visibility: visible; }
+    .msc-ct .blockr-sort-icon-asc,
+    .msc-ct .blockr-sort-icon-desc {
+      visibility: visible;
+      color: var(--blockr-color-text-accent);
+    }
+    .msc-ct .blockr-sort-icon-desc {
+      -webkit-mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
+      mask-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M2 3h8M2 6h5.5M2 9h3'/%3E%3C/svg%3E\");
+    }
+
+    /* 30px rows: 20px of text and 5px above and below. No rules in the
+       body; the hover wash carries the eye along a row. */
+    .msc-ct tbody tr { transition: background-color var(--blockr-transition); }
+    .msc-ct tbody tr:hover { background-color: var(--blockr-color-bg-hover); }
     .msc-ct td {
-      padding: 7px 0; vertical-align: middle;
-      border-bottom: 1px solid var(--blockr-grey-100, #f3f4f6);
+      padding: 5px 0; line-height: 20px; vertical-align: middle;
     }
-    .msc-ct tbody tr:last-child td { border-bottom: none; }
-    .msc-term {
-      white-space: nowrap; padding-right: 16px !important;
-      color: var(--blockr-color-text-secondary, #374151);
-    }
+    /* Side padding: the card keeps its own, tighter than the preview's 12px
+       per cell, so the table fits a half-width panel: 16px between columns,
+       none at the card's edges. */
+    .msc-ct .msc-term { padding-right: 16px; }
+    .msc-ct td.msc-num { padding-left: 16px; }
+    .msc-ct td.msc-sig { padding-left: 12px; }
+    .msc-term { white-space: nowrap; color: var(--blockr-color-text-default); }
     /* ONE grey for quiet text, everywhere: the factor level after its
        variable, the intercept row, the axis ticks and the facts-line labels.
-       It is text-muted rather than text-subtle because some of that text is
-       DATA (the intercept's estimate and interval) and text-subtle does not
-       carry enough contrast to read numbers off. The separate, lighter grey in
-       this card belongs to the MARK, not to text: a dot or whisker greys when
-       the term is not distinguishable from zero, which is a data colour beside
-       the blue and the red. So grey text reads as quieter, a grey mark reads
-       as no effect, and the two can no longer be confused. */
-    .msc-lvl { color: var(--blockr-color-text-muted, #6b7280); }
+       The mark grey (--blockr-stats-mark-null) is a data colour and stays
+       apart from it: grey text reads as quieter, a grey mark reads as no
+       effect. */
+    .msc-lvl { color: var(--blockr-color-text-muted); }
+    /* Muted text never sits on the hover wash: on a hovered row it turns
+       default. */
+    .msc-ct tbody tr:hover .msc-lvl,
+    .msc-ct tbody tr.msc-int:hover td { color: var(--blockr-color-text-default); }
     .msc-num {
       text-align: right; white-space: nowrap;
-      padding-left: 16px !important;
       font-variant-numeric: tabular-nums;
     }
     .msc-sig {
-      text-align: right; white-space: nowrap;
-      padding-left: 12px !important; width: 1%;
+      text-align: right; white-space: nowrap; width: 1%;
       font-variant-numeric: tabular-nums;
     }
     /* the intercept is a nuisance term: present, and quiet in the same grey
        as every other quiet thing */
-    .msc-int td { color: var(--blockr-color-text-muted, #6b7280); }
+    .msc-int td { color: var(--blockr-color-text-muted); }
 
-    /* Significance chips are the house two-tone badge: the same recipe
-       blockr.dock uses for the package name in Block details
-       (.badge-two-tone) -- 2px 8px, 10px, 4px radius, tinted fill inside a
-       1px border. Only the tint changes with the level. A solid fill was
-       shouting: three chips per row, on every row.
-
-       The ladder: 5% / 1% / 0.1% are all COLOURED, deepening one step at a
-       time, because 5% is the line most applied fields actually read; a grey
-       chip there would dismiss the very terms the reader is looking for. The
-       10% level (the dot in R's stars) does get a chip, in the neutral grey
-       badge: worth marking as borderline, not worth reading as a result.
-       Above 10%, no chip at all.
-
-       The three blue steps are one alpha ramp on the primary rather than
-       three separate hues, so the increase reads as intensity. Alpha of the
-       primary is established house practice (--blockr-focus-ring,
-       --blockr-color-primary-subtle in viz). */
-    /* One box for every level. The labels differ in width (four characters
-       for 0.1%, two for 1%) and a chip that shrinks with its label makes the
-       weaker levels read as physically smaller findings. Fixed min-width and
-       centred text, so only colour varies down the column.
-
-       min-width is the widest label's OWN width and not a round number:
-       measured at 40.8px for the 0.1% label with this font and padding, so
-       4.1em at 10px. Any more and the chip carries surplus air that the
-       package badge in Block details does not, which is what made it read as
-       a size bigger than the rest of the house. Height, font and padding
-       already match that badge exactly. */
+    /* Significance levels are neutral badges (design system, Badges): an
+       18px capsule, 11px weight 500, bg-subtle inside a border-default
+       edge, text-muted. One width for every level, so a shorter label does
+       not read as a smaller finding. */
     .msc-chip {
-      display: inline-block; box-sizing: border-box;
-      min-width: 4.1em; padding: 2px 8px; text-align: center;
-      font-size: 0.625rem; border-radius: var(--blockr-radius-sm, 4px);
-      white-space: nowrap;
-      background-color: rgba(37, 99, 235, 0.22);
-      border: 1px solid rgba(37, 99, 235, 0.62);
-      color: var(--blockr-blue-700, #1d4ed8);
-    }
-    .msc-chip--1 {
-      background-color: rgba(37, 99, 235, 0.13);
-      border-color: rgba(37, 99, 235, 0.38);
-      color: var(--blockr-blue-700, #1d4ed8);
-    }
-    .msc-chip--5 {
-      background-color: rgba(37, 99, 235, 0.06);
-      border-color: rgba(37, 99, 235, 0.20);
-      color: var(--blockr-blue-600, #2563eb);
-    }
-    .msc-chip--10 {
-      background-color: var(--blockr-grey-100, #f3f4f6);
-      border-color: var(--blockr-color-border, #e5e7eb);
-      color: var(--blockr-color-text-muted, #6b7280);
+      display: inline-flex; align-items: center; justify-content: center;
+      box-sizing: border-box; height: 18px; min-width: 42px;
+      padding: 0 7px;
+      font-size: 11px; font-weight: var(--blockr-font-weight-medium);
+      line-height: 1; white-space: nowrap;
+      border-radius: var(--blockr-radius-pill);
+      background: var(--blockr-color-bg-subtle);
+      border: 1px solid var(--blockr-color-border-default);
+      color: var(--blockr-color-text-muted);
+      font-variant-numeric: tabular-nums;
     }
 
     /* inline forest column */
@@ -279,7 +219,7 @@ css_summary_card <- function() {
     .msc-track { position: relative; height: 16px; }
     .msc-ref {
       position: absolute; top: 0; bottom: 0; width: 1px;
-      background: var(--blockr-grey-300, #d1d5db);
+      background: var(--blockr-color-border-strong);
     }
     .msc-whisk {
       position: absolute; top: 50%; height: 2px; min-width: 2px;
@@ -288,41 +228,26 @@ css_summary_card <- function() {
     .msc-dot {
       position: absolute; top: 50%; width: 8px; height: 8px;
       border-radius: 50%; transform: translate(-50%, -50%);
-      box-shadow: 0 0 0 2px #fff;
+      box-shadow: 0 0 0 2px var(--blockr-color-bg-surface);
     }
-    /* off-scale marker: the term ran past the axis, the axis did not move */
-    /* the off-scale arrow is a mark, so it takes the mark grey */
+    /* off-scale marker: the term ran past the axis, the axis did not move.
+       It is a mark, so it takes the mark grey. */
     .msc-off {
       position: absolute; top: 50%; transform: translateY(-50%);
       font-size: 9px; line-height: 1;
-      color: var(--blockr-color-text-subtle, #9ca3af);
+      color: var(--blockr-stats-mark-null);
     }
 
     /* shared axis under the forest column */
     .msc-axis { position: relative; height: 15px; }
     .msc-axis span {
       position: absolute; top: 0; transform: translateX(-50%);
-      font-size: var(--blockr-font-size-xs, 0.75rem);
-      color: var(--blockr-color-text-muted, #6b7280);
+      font-size: var(--blockr-font-size-xs);
+      color: var(--blockr-color-text-muted);
       font-variant-numeric: tabular-nums; white-space: nowrap;
     }
-    .msc-ct tfoot td { border-bottom: none; padding-top: 2px; }
+    .msc-ct tfoot td { padding-top: 2px; }
+    .msc-ct tfoot tr:hover { background: none; }
     "
   ))
-}
-
-#' Force single-column layout for a block
-#'
-#' @param block_name Character string, name of the block
-#' @return HTML style tag with single-column grid CSS
-#' @noRd
-css_single_column <- function(block_name) {
-  tags$style(HTML(sprintf(
-    "
-    .%s-block-container .block-form-grid {
-      grid-template-columns: 1fr !important;
-    }
-    ",
-    block_name
-  )))
 }

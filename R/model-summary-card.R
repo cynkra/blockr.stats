@@ -17,7 +17,8 @@
 #' @export
 model_summary_card <- function(res) {
   if (is.null(res)) {
-    return(tags$div(class = "msc-card msc-empty", "Connect a fitted model."))
+    return(tags$p(class = "blockr-empty blockr-empty--block",
+                  "Connect a fitted model."))
   }
   opts <- attr(res, "ms_opts") %||% ms_defaults
   facts <- if (isTRUE(opts$facts)) ms_facts_line(res) else NULL
@@ -159,9 +160,9 @@ ms_table <- function(res, opts) {
   tags$table(
     class = "msc-ct blockr-table",
     tags$thead(tags$tr(
-      # The blockr column header (blockr.ui's table preview + viz's table
-      # block): 14px medium in primary ink, numeric columns right-aligned.
-      # No sub-label tier -- the interval belongs in the name it qualifies.
+      # The design system's column header: 13px semibold, numeric columns
+      # right-aligned. No sub-label tier -- the interval belongs in the name
+      # it qualifies.
       ms_th("Term", "term", sortable = TRUE),
       if (!is.null(geom)) ms_th(ms_effect_header(opts), "effect"),
       ms_th(head_est, "estimate", numeric = TRUE, sortable = TRUE),
@@ -289,9 +290,9 @@ ms_sig_cell <- function(p, opts) {
 }
 
 # Four levels, matching the stars: 0.1% / 1% / 5% are the conventional
-# thresholds and all three are coloured, because in most applied fields 5% IS
-# the line attention is paid to. The 10% level (R's ".") gets a chip too, but a
-# grey one -- it is worth marking as "borderline", not as a result.
+# thresholds, and the 10% level (R's ".") is marked as well. Each is a neutral
+# badge (the design system keeps significance levels neutral); the level
+# classes stay on the markup for anything that wants to tell them apart.
 ms_chip_label <- function(p) {
   if (p < 0.001) {
     "0.1%"
@@ -361,7 +362,7 @@ ms_effect_cell <- function(est, lo, hi, p, geom, ref) {
       tags$div(
         class = paste0("msc-off msc-off--", side),
         style = if (side == "left") "left:0;" else "right:0;",
-        title = "off scale",
+        role = "img", `aria-label` = "off scale",
         if (side == "left") "\u25c0" else "\u25b6"
       )))
   }
@@ -402,9 +403,9 @@ ms_colour <- function(est, lo, hi, p, ref) {
   # is a third data colour beside the blue and the red, and it has to recede
   # from both. Grey text elsewhere in the card means "quieter"; grey here means
   # "no effect", and keeping the two tones apart keeps the two meanings apart.
-  if (covers) return("var(--blockr-color-text-subtle, #9ca3af)")
-  if (est >= ref) "var(--blockr-blue-600, #2563eb)" else
-    "var(--blockr-color-danger, #dc2626)"
+  if (covers) return("var(--blockr-stats-mark-null)")
+  if (est >= ref) "var(--blockr-stats-mark-positive)" else
+    "var(--blockr-stats-mark-negative)"
 }
 
 ms_axis_row <- function(geom) {

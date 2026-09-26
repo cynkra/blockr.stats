@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * model-summary-sort.js — click-to-sort for the model summary card.
+ * model-summary-sort.js: click-to-sort for the model summary card.
  *
  * Deliberately browser-only. Sorting a coefficient table is a reading aid for
  * a model with many predictors ("show me the biggest effects", "the weakest
@@ -85,7 +85,20 @@
         (on ? ' blockr-sort-icon-' + dir : '');
       th.setAttribute('aria-sort',
         on ? (dir === 'asc' ? 'ascending' : 'descending') : 'none');
+      setTip(th, on ? (dir === 'asc' ? 'Sorted ascending' : 'Sorted descending')
+        : null);
     });
+  }
+
+  /**
+   * The sorted header says its sort in the light tooltip (blockr.ui's
+   * Blockr.tooltip); the others have none.
+   * @param {Element} th @param {string | null} text
+   */
+  function setTip(th, text) {
+    var B = /** @type {any} */ (window).Blockr;
+    if (!B || !B.tooltip) return;
+    if (text) B.tooltip.set(th, text); else B.tooltip.clear(th);
   }
 
   /** Restore model order: the rows carry their original index. @param {Element} table */
@@ -102,6 +115,7 @@
     });
     table.querySelectorAll('th[data-ms-sort]').forEach(function (th) {
       th.setAttribute('aria-sort', 'none');
+      setTip(th, null);
     });
   }
 

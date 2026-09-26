@@ -20,7 +20,7 @@ register_stats_blocks <- function() {
     ),
     description = c(
       "Fit a regression model (lm / glm) from a formula. Returns the fitted model object for downstream broom adapters.",
-      "Render a fitted model as a summary card: model facts line + coefficient table with an inline forest (estimate, CI whisker, significance chips). Feeds on the model object directly (tidy + glance inside), works for any broom-supported model; its value is the tidy coefficient frame.",
+      "Render a fitted model as a summary card: model facts line + coefficient table with an inline forest (estimate, CI whisker, significance badges). Feeds on the model object directly (tidy + glance inside), works for any broom-supported model; its value is the tidy coefficient frame.",
       "Tidy a fitted model: tidy (coefficients) / glance (fit) / augment (per-observation, optional QQ columns) / anova (ANOVA-as-model, SS type I/II/III).",
       "Pairwise correlation matrix of numeric columns (pearson / spearman / kendall) as a tidy `var` + per-variable frame; renders as a heatmap table.",
       "Adaptive hypothesis test: normality, mean/median (incl. paired), variance, correlation, categorical independence, nonparametric. Stratified, tidy output.",
@@ -114,8 +114,8 @@ register_stats_blocks <- function() {
         ),
         significance = new_arg_spec(
           paste(
-            "How significance is shown: 'chips' (default: 0.1% / 1% / 5%",
-            "coloured badges, 10% grey), 'p' (a p-value column), 'stars', or",
+            "How significance is shown: 'chips' (default: a badge at 0.1% /",
+            "1% / 5% / 10%), 'p' (a p-value column), 'stars', or",
             "'none' -- with a CI drawn, significance is already visible as",
             "'does the whisker cross the reference line'."
           ),

@@ -218,13 +218,14 @@ test_that("the p-value decides the colour in every uncertainty state", {
   blue <- ms_colour(1, 0.5, 1.5, p = 0.001, ref = 0)
   grey <- ms_colour(1, 0.5, 1.5, p = 0.064, ref = 0)
   # a +/- SE whisker clear of the reference must not repaint a p = 0.064 term
-  expect_match(grey, "subtle")
-  expect_match(blue, "blue")
+  expect_match(grey, "mark-null")
+  expect_match(blue, "mark-positive")
 
   # with no p at all, the interval is the fallback
-  expect_match(ms_colour(1, -0.2, 2, p = NA_real_, ref = 0), "subtle")
-  expect_match(ms_colour(1, 0.5, 2, p = NA_real_, ref = 0), "blue")
-  expect_match(ms_colour(-1, -2, -0.5, p = NA_real_, ref = 0), "danger")
+  expect_match(ms_colour(1, -0.2, 2, p = NA_real_, ref = 0), "mark-null")
+  expect_match(ms_colour(1, 0.5, 2, p = NA_real_, ref = 0), "mark-positive")
+  expect_match(ms_colour(-1, -2, -0.5, p = NA_real_, ref = 0),
+               "mark-negative")
 })
 
 test_that("the emitted call prunes defaults and keeps changes", {
