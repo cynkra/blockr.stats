@@ -84,35 +84,12 @@ new_model_block <- function(
     },
     ui = function(id) {
       tagList(
-        css_responsive_grid(),
-        css_single_column("model"),
+        stats_controls_dep(),
         div(
-          class = "block-container model-block-container",
-          div(
-            class = "block-form-grid",
-            div(
-              class = "block-section",
-              div(
-                class = "block-section-grid",
-                div(
-                  class = "block-input-wrapper formula-model-type",
-                  style = "grid-column: 1 / -1;",
-                  shinyWidgets::radioGroupButtons(
-                    NS(id, "model_type"),
-                    label = "Model type",
-                    choices = model_choices,
-                    selected = model_type,
-                    size = "sm"
-                  )
-                ),
-                div(
-                  class = "block-input-wrapper",
-                  style = "grid-column: 1 / -1;",
-                  formula_input_ui(id)
-                )
-              )
-            )
-          )
+          class = "block-container blockr-stats-face",
+          select_field(NS(id, "model_type"), "Model type",
+                       choices = model_choices, selected = model_type),
+          formula_input_ui(id)
         )
       )
     },
@@ -127,7 +104,8 @@ new_model_block <- function(
 #' @export
 block_output.model_block <- function(x, result, session) {
   renderUI({
-    tagList(css_model_summary(), model_summary_html(result))
+    tagList(blockr.ui::theme_dep(), css_model_summary(),
+            model_summary_html(result))
   })
 }
 

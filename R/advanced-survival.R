@@ -147,35 +147,12 @@ new_survival_block <- function(type = "km", time_var = character(),
     },
     ui = function(id) {
       tagList(
-        css_responsive_grid(),
-        css_single_column("model"),
+        stats_controls_dep(),
         div(
-          class = "block-container model-block-container",
-          div(
-            class = "block-form-grid",
-            div(
-              class = "block-section",
-              div(
-                class = "block-section-grid",
-                div(
-                  class = "block-input-wrapper formula-model-type",
-                  style = "grid-column: 1 / -1;",
-                  shinyWidgets::radioGroupButtons(
-                    NS(id, "surv_type"),
-                    label = "Survival model",
-                    choices = type_choices,
-                    selected = type,
-                    size = "sm"
-                  )
-                ),
-                div(
-                  class = "block-input-wrapper",
-                  style = "grid-column: 1 / -1;",
-                  formula_input_ui(id, response_mode = "surv")
-                )
-              )
-            )
-          )
+          class = "block-container blockr-stats-face",
+          segmented_field(NS(id, "surv_type"), "Survival model",
+                          choices = type_choices, selected = type),
+          formula_input_ui(id, response_mode = "surv")
         )
       )
     },
@@ -192,7 +169,8 @@ new_survival_block <- function(type = "km", time_var = character(),
 #' @export
 block_output.survival_block <- function(x, result, session) {
   renderUI({
-    tagList(css_model_summary(), model_summary_html(result))
+    tagList(blockr.ui::theme_dep(), css_model_summary(),
+            model_summary_html(result))
   })
 }
 

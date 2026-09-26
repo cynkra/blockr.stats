@@ -1,14 +1,11 @@
+/* The formula-input widget (model and survival blocks). Tokens only, apart
+   from the derived-term tag colours, which wait on a design decision. */
+
 .formula-input {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
-}
-
-.formula-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 /* Equation pill: [response] ~ [predictors] inside the shared .blockr-row.
@@ -17,7 +14,7 @@
   width: 150px;
   min-width: 110px;
   flex-shrink: 0;
-  border-right: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-right: 1px solid var(--blockr-color-border-default);
   padding-right: 8px;
 }
 
@@ -30,8 +27,8 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px; /* match the pill's horizontal padding */
-  margin-bottom: 2px;
-  line-height: 1; /* no leading below the label text -> tight gap to the pill */
+  margin-bottom: -6px; /* 4px from label to pill, as for every field */
+  line-height: 1;
 }
 
 .formula-surv-head .blockr-label {
@@ -64,38 +61,14 @@
 }
 
 .formula-surv-pill .formula-seg-divider {
-  border-left: 1px solid var(--blockr-color-border, #e5e7eb);
+  border-left: 1px solid var(--blockr-color-border-default);
   margin: 3px 0;
 }
 
-.formula-field__label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--bs-secondary-color, #6c757d);
-  opacity: 0.85;
-  margin: 0;
-}
-
-/* event-value input lives in the gear-header, revealed by the gear */
-.formula-surv__adv-input {
-  margin-right: 8px;
-  width: 120px;
-  padding: 2px 6px;
-  font-size: 0.78rem;
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  border-radius: 5px;
-}
-
-.formula-tilde {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  color: var(--bs-secondary-color, #9ca3af);
-}
-
-.formula-tilde svg {
-  display: block;
+/* The survival gear's header: no space of its own below the gear, the tray
+   (or the next row) supplies it. */
+.formula-surv-gear {
+  margin-bottom: 0;
 }
 
 /* Predictors fill the space beside the inline intercept toggle */
@@ -104,45 +77,8 @@
   min-width: 0;
 }
 
-/* Inline intercept: the leading 1 (include) / 0 (drop) of the RHS */
-/* Model-type segmented buttons — subtle, like the Visual/R toggle (a touch
-   bigger). Light-blue active, muted gray inactive; content-width, not loud. */
-/* the radioGroupButtons label ("Model type" / "Survival model") matches the
-   canonical .blockr-label font, like every other label */
-.formula-model-type .control-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--blockr-grey-500, #6b7280);
-  margin-bottom: 0.25rem;
-}
-
-.formula-model-type .btn-group-container-sw {
-  width: auto;
-}
-
-.formula-model-type .btn.radiobtn {
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 4px 12px;
-  background: #fff;
-  color: var(--bs-secondary-color, #6c757d);
-  border-color: var(--blockr-color-border, #e5e7eb);
-  box-shadow: none;
-}
-
-.formula-model-type .btn.radiobtn:hover {
-  background: var(--bs-tertiary-bg, #eef1f4);
-  color: var(--bs-body-color, #374151);
-}
-
-.formula-model-type .btn.radiobtn.active,
-.formula-model-type .btn.radiobtn:active,
-.formula-model-type .btn.radiobtn.focus,
-.formula-model-type input:checked + .btn.radiobtn {
-  background: #e7f1ff;
-  color: var(--blockr-color-primary, #2563eb);
-  border-color: #b6d4fe;
-  box-shadow: none;
+.formula-control {
+  width: 100%;
 }
 
 /* Intercept: a click-through toggle button. Active = intercept included
@@ -152,11 +88,11 @@
   appearance: none;
   margin-right: 6px;
   padding: 2px 8px;
-  border-radius: 5px;
-  border: 1px solid var(--blockr-color-border, #e5e7eb);
-  background: var(--bs-tertiary-bg, #eef1f4);
-  color: var(--bs-body-color, #374151);
-  font-size: 0.72rem;
+  border-radius: var(--blockr-radius-sm);
+  border: 1px solid var(--blockr-color-border-default);
+  background: var(--blockr-color-bg-hover);
+  color: var(--blockr-color-text-default);
+  font-size: var(--blockr-font-size-xs);
   line-height: 1.4;
   white-space: nowrap;
   cursor: pointer;
@@ -164,18 +100,24 @@
 }
 
 .formula-icept:hover {
-  border-color: var(--blockr-color-primary, #2563eb);
+  border-color: var(--blockr-color-border-strong);
+}
+
+.formula-icept:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
 }
 
 .formula-icept--off {
   background: transparent;
-  color: var(--bs-secondary-color, #9ca3af);
+  color: var(--blockr-color-text-muted);
   text-decoration: line-through;
 }
 
 /* Derived terms (interactions / transforms / splines / opaque / random
-   effects) rendered as chips inside the predictors select — slightly
-   different colors so they read as "not a plain column". */
+   effects) render as tags inside the predictors select, tinted by kind so
+   they read as "not a plain column". The tints are literal colours for now:
+   what replaces them is an open design question. */
 .formula-tag--derived {
   gap: 4px;
 }
@@ -198,161 +140,59 @@
   border-color: #d8b4fe;
 }
 
-.formula-tag__remove {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  opacity: 0.55;
-}
-
-.formula-tag__remove:hover {
-  opacity: 1;
-  color: var(--blockr-color-danger, #dc3545);
-}
-
-.formula-row__label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--bs-secondary-color, #6c757d);
-}
-
-.formula-control {
-  width: 100%;
-}
-
-.formula-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-height: 30px;
-  padding: 6px;
-  border: 1px dashed var(--bs-border-color, #dee2e6);
-  border-radius: 6px;
-}
-
-.formula-chips-empty {
-  font-size: 0.8rem;
-  color: var(--bs-secondary-color, #adb5bd);
-  font-style: italic;
-}
-
-.formula-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.82rem;
-  font-family: var(--bs-font-monospace, monospace);
-  background: var(--bs-tertiary-bg, #eef1f4);
-  border: 1px solid var(--bs-border-color, #dee2e6);
-}
-
-.formula-chip--factor {
-  background: #e7f1ff;
-  border-color: #b6d4fe;
-}
-
-.formula-chip--interaction {
-  background: #fff3cd;
-  border-color: #ffe69c;
-}
-
-.formula-chip--poly,
-.formula-chip--spline,
-.formula-chip--transform {
-  background: #e8f7ef;
-  border-color: #b7e4c7;
-}
-
-.formula-chip--opaque,
-.formula-chip--bar {
-  background: #f3e8ff;
-  border-color: #d8b4fe;
-}
-
-.formula-chip__remove {
-  display: inline-flex;
-  cursor: pointer;
-  color: var(--bs-secondary-color, #6c757d);
-  opacity: 0.6;
-}
-
-.formula-chip__remove:hover {
-  opacity: 1;
-  color: var(--bs-danger, #dc3545);
-}
-
-.formula-intercept {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  margin: 0;
-}
-
 .formula-text-row {
   margin-top: 0;
 }
 
 /* Footer row below the input: the build-menu trigger ("+ interaction /
-   transform", styled like the filter block's "+ Add condition" link) on the
-   left and the </> mode toggle hard right. Geometry is entirely
-   .blockr-add-row's (space-between, min-height 30px) so this row matches
-   summarize's exactly — do not add justify-content or gap here. */
+   transform", the quiet add button) on the left and the builder/code switch
+   hard right. Geometry is entirely .blockr-add-row's. */
 .formula-add-row {
   margin-top: -2px;
 }
 
-.formula-add-link {
-  font-size: 0.8rem;
-}
-
-/* The toggle is blockr.dplyr's .blockr-add-link-expr (22x22, bordered, grey at
-   rest, blue on hover), reused as-is. Two deltas, both forced by this being a
-   <button> rather than summarize's <span> — kept a button so it is
-   keyboard-operable:
-   1. the UA's default button padding (1px 6px) squeezes the 14x14 icon to
-      8x14, so it has to be zeroed;
-   2. dplyr has no pressed state, since there the button adds a row rather
-      than switching a view. */
+/* The builder/code switch is a pressed icon button (design system): the
+   tool look at rest, the accent tint while the formula text is showing.
+   The edge is drawn inset so pressing it does not change its size. */
 .formula-code-btn {
   padding: 0;
 }
 
-/* Pressed = the formula text is showing. Same blue at 8% fill as
-   .blockr-gear-active, so "this control is on" reads the same package-wide. */
 .formula-code-btn--on,
 .formula-code-btn--on:hover {
-  color: var(--blockr-color-primary, #2563eb);
-  border-color: rgba(37, 99, 235, 0.3);
-  background: rgba(37, 99, 235, 0.08);
+  color: var(--blockr-color-text-accent);
+  background: var(--blockr-color-bg-accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--blockr-color-border-accent-subtle);
 }
 
-/* Floating build menu (interactions / transforms / splines). Rounded,
-   shadowed, appended to <body> and positioned in JS. */
+/* Floating build menu (interactions / transforms / splines), on the menu
+   surface. Its sub-panels hold form controls, which the design system does
+   not place in a menu; how they should work is an open question. */
 .formula-menu {
   position: fixed;
   z-index: 2000;
   min-width: 200px;
-  padding: 4px;
-  background: var(--bs-body-bg, #fff);
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  border-radius: 8px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.16);
-  font-size: 0.85rem;
+  padding: 6px;
+  background: var(--blockr-color-bg-raised);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-lg);
+  box-shadow: var(--blockr-shadow-md);
+  font-size: var(--blockr-font-size-base);
+  color: var(--blockr-color-text-default);
 }
 
 .formula-menu__item {
-  padding: 6px 10px;
-  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: var(--blockr-radius-md);
   cursor: pointer;
   user-select: none;
 }
 
 .formula-menu__item:hover {
-  background: var(--bs-tertiary-bg, #eef1f4);
-  color: var(--blockr-color-primary, #2563eb);
+  background: var(--blockr-color-bg-hover);
 }
 
 .formula-menu__head {
@@ -360,7 +200,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 6px 6px;
-  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  border-bottom: 1px solid var(--blockr-color-border-default);
   margin-bottom: 6px;
 }
 
@@ -369,16 +209,16 @@
   align-items: center;
   cursor: pointer;
   transform: rotate(90deg);
-  color: var(--bs-secondary-color, #6c757d);
+  color: var(--blockr-color-text-muted);
 }
 
 .formula-menu__back:hover {
-  color: var(--blockr-color-primary, #2563eb);
+  color: var(--blockr-color-text-default);
 }
 
 .formula-menu__title {
-  font-weight: 600;
-  color: var(--bs-secondary-color, #6c757d);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-muted);
 }
 
 .formula-menu__body {
@@ -396,21 +236,23 @@
   gap: 6px;
   margin: 0;
   cursor: pointer;
-  font-family: var(--bs-font-monospace, monospace);
+  font-family: var(--blockr-font-mono);
+  font-size: var(--blockr-font-size-sm);
 }
 
 .formula-menu__select {
   width: 100%;
   padding: 4px 6px;
-  border: 1px solid var(--bs-border-color, #dee2e6);
-  border-radius: 5px;
-  background: var(--bs-body-bg, #fff);
-  font-size: 0.85rem;
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: var(--blockr-radius-md);
+  background: var(--blockr-color-bg-field);
+  color: var(--blockr-color-text-default);
+  font-size: var(--blockr-font-size-sm);
 }
 
 .formula-menu__note {
-  font-size: 0.8rem;
-  color: var(--bs-secondary-color, #6c757d);
+  font-size: var(--blockr-font-size-sm);
+  color: var(--blockr-color-text-muted);
   font-style: italic;
   padding: 2px;
 }
@@ -420,7 +262,7 @@
   justify-content: flex-end;
   padding: 8px 6px 4px;
   margin-top: 4px;
-  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  border-top: 1px solid var(--blockr-color-border-default);
 }
 
 .formula-menu__confirm {

@@ -21,7 +21,6 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
     shiny,
-    shinyWidgets,
     blockr.core (>= 0.1.2),
     blockr.dplyr (>= 0.2.0.9031),
     blockr.ui (>= 0.0.1.9030),

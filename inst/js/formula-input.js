@@ -1,11 +1,12 @@
 /**
- * formula-input.js — interactive R-formula builder (blockr.stats).
+ * formula-input.js: interactive R-formula builder (blockr.stats).
  *
  * Single source of truth lives in R (terms()-based parser). This widget is the
  * view/editor: chip edits produce already-canonical terms; the text field is
  * the round-trip path (raw text -> R parse_formula() -> normalized state back).
  *
- * Requires Blockr.Select / Blockr.Input / Blockr.icons (blockr.dplyr deps).
+ * Requires Blockr.Select, Blockr.icons, Blockr.gearTray, Blockr.textCommit,
+ * Blockr.tooltip (blockr.ui) and Blockr.Input (blockr.dplyr).
  */
 (function () {
   "use strict";
@@ -27,6 +28,9 @@
     }
     return resp;
   };
+
+  // The Enter button's armed label, as blockr.ui's Blockr.textCommit draws it.
+  var ENTER_LABEL = 'Enter <span class="blockr-kbd">\u21b5</span>';
 
   // Function autocomplete for the formula text editor (same shape as the
   // filter block's expression categories).
@@ -73,37 +77,50 @@
     if (this.responseMode === "surv") {
       this.el.classList.add("formula-input--surv");
 
-      // Gear at top-right (blockr.dplyr .blockr-gear-header pattern): the rare
-      // "which value = event" control, revealed as a small inline input.
+      // The gear and its tray (blockr.ui's Blockr.gearTray) hold the rare
+      // "which value counts as the event" setting: a text field that
+      // commits on Enter or blur.
       var gearHeader = document.createElement("div");
       gearHeader.className = "blockr-gear-header formula-surv-gear";
-      this._eventLevelInput = document.createElement("input");
-      this._eventLevelInput.type = "text";
-      this._eventLevelInput.className = "formula-surv__adv-input";
-      this._eventLevelInput.placeholder = "event value = …";
-      this._eventLevelInput.style.display = "none";
-      this._eventLevelInput.addEventListener("input", function () {
-        self.response.eventLevel = self._eventLevelInput.value.trim() || null;
-        self._sync();
-      });
       var gearBtn = document.createElement("button");
       gearBtn.type = "button";
       gearBtn.className = "blockr-gear-btn";
       gearBtn.innerHTML = Blockr.icons.gear;
-      gearBtn.title = "Which value counts as the event (default: 1)";
-      gearBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var show = self._eventLevelInput.style.display === "none";
-        self._eventLevelInput.style.display = show ? "" : "none";
-        gearBtn.classList.toggle("blockr-gear-active", show);
-        if (show) self._eventLevelInput.focus();
-      });
-      gearHeader.appendChild(this._eventLevelInput);
       gearHeader.appendChild(gearBtn);
       this.el.appendChild(gearHeader);
+
+      var tray = document.createElement("div");
+      tray.className = "blockr-settings blockr-settings--beak";
+      var grid = document.createElement("div");
+      grid.className = "blockr-settings__grid";
+      var field = document.createElement("div");
+      field.className = "blockr-settings__field";
+      var fieldLabel = document.createElement("span");
+      fieldLabel.className = "blockr-label";
+      fieldLabel.textContent = "Event value";
+      var commitWrap = document.createElement("div");
+      commitWrap.className = "blockr-commit-field";
+      this._eventLevelInput = document.createElement("input");
+      this._eventLevelInput.type = "text";
+      this._eventLevelInput.className = "blockr-text-input";
+      this._eventLevelInput.placeholder = "1";
+      commitWrap.appendChild(this._eventLevelInput);
+      field.appendChild(fieldLabel);
+      field.appendChild(commitWrap);
+      grid.appendChild(field);
+      tray.appendChild(grid);
+      this.el.appendChild(tray);
+      this._eventLevelCommit = Blockr.textCommit(this._eventLevelInput, {
+        onCommit: function (value) {
+          self.response.eventLevel = value.trim() || null;
+          self._sync();
+        }
+      });
+      Blockr.gearTray(tray, gearBtn, { label: "Survival settings" });
       // A builder affordance: eventLevel has no formula-text spelling, so the
       // gear travels with the chips rather than hovering over the text field.
       this._builderEls.push(gearHeader);
+      this._builderEls.push(tray);
     }
 
     var predHost = document.createElement("div");
@@ -175,7 +192,6 @@
       this._iceptEl = document.createElement("button");
       this._iceptEl.type = "button";
       this._iceptEl.className = "formula-icept";
-      this._iceptEl.title = "Click to include or drop the intercept";
       this._iceptEl.addEventListener("click", function (e) {
         e.preventDefault();
         self.intercept = !self.intercept;
@@ -263,8 +279,8 @@
     this._textConfirm = document.createElement("button");
     this._textConfirm.type = "button";
     this._textConfirm.className = "blockr-expr-confirm";
-    this._textConfirm.innerHTML = "Enter ↵";
-    this._textConfirm.title = "Apply formula";
+    this._textConfirm.innerHTML = ENTER_LABEL;
+    this._textConfirm.setAttribute("aria-label", "Apply formula (Enter)");
     var doConfirm = function () {
       var t = self._text.getValue();
       if (t && t.indexOf("~") !== -1) {
@@ -313,7 +329,9 @@
     if (this._codeBtn) {
       this._codeBtn.classList.toggle("formula-code-btn--on", on);
       this._codeBtn.setAttribute("aria-pressed", on ? "true" : "false");
-      this._codeBtn.title = on ? "Back to the builder" : "Edit as formula text";
+      var tip = on ? "Back to the builder" : "Edit as formula text";
+      this._codeBtn.setAttribute("aria-label", tip);
+      Blockr.tooltip.set(this._codeBtn, tip);
     }
     if (on) this._closeMenu();
   };
@@ -395,7 +413,7 @@
       b.innerHTML = Blockr.icons.confirm;
     } else {
       b.classList.remove("confirmed");
-      b.innerHTML = "Enter ↵";
+      b.innerHTML = ENTER_LABEL;
     }
   };
 
@@ -613,11 +631,11 @@
 
   // True when an interaction over exactly `vars` already exists.
   FormulaInput.prototype._hasInteraction = function (vars) {
-    var key = vars.slice().sort().join(" ");
+    var key = vars.slice().sort().join("\u0000");
     return this.terms.some(function (t) {
       return (
         t.kind === "interaction" &&
-        (t.vars || []).slice().sort().join(" ") === key
+        (t.vars || []).slice().sort().join("\u0000") === key
       );
     });
   };
@@ -864,10 +882,9 @@
       if (this._statusSelect) {
         this._statusSelect.setOptions(this._colOptions(), r.event || null);
       }
-      if (this._eventLevelInput) {
+      if (this._eventLevelCommit) {
         var lvl = this.response.eventLevel;
-        this._eventLevelInput.value = lvl == null ? "" : String(lvl);
-        this._eventLevelInput.style.display = lvl == null ? "none" : "";
+        this._eventLevelCommit.sync(lvl == null ? "" : String(lvl));
       }
     } else {
       var rv = typeof this.response === "string" ? this.response : null;

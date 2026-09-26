@@ -18,7 +18,8 @@
 #' @noRd
 model_summary_html <- function(model, ...) {
   if (is.null(model)) {
-    return(tags$div(class = "smb-card smb-empty", "Pick variables to fit a model."))
+    return(tags$p(class = "blockr-empty blockr-empty--block",
+                  "Pick variables to fit a model."))
   }
 
   rtext <- tryCatch({

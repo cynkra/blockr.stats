@@ -26,8 +26,9 @@ formula_input_dep <- function() {
 
 #' Formula-input widget: UI container
 #'
-#' Pulls the shared blockr JS primitives (from blockr.dplyr) and the
-#' formula-input dependency, then the namespaced container the JS binds to.
+#' Pulls blockr.ui's shared controls, the code field with autocomplete
+#' (`Blockr.Input`, which still lives in blockr.dplyr) and the formula-input
+#' dependency, then the namespaced container the JS binds to.
 #'
 #' @param id Module id (namespace).
 #' @param response_mode `"single"` (one response column) or `"surv"`
@@ -36,9 +37,7 @@ formula_input_dep <- function() {
 #' @export
 formula_input_ui <- function(id, response_mode = "single") {
   htmltools::tagList(
-    blockr.dplyr::blockr_core_js_dep(),
-    blockr.dplyr::blockr_blocks_css_dep(),
-    blockr.dplyr::blockr_select_dep(),
+    blockr.ui::controls_dep(),
     blockr.dplyr::blockr_input_dep(),
     formula_input_dep(),
     shiny::div(

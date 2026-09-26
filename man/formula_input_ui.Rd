@@ -16,6 +16,7 @@ formula_input_ui(id, response_mode = "single")
 A UI tagList.
 }
 \description{
-Pulls the shared blockr JS primitives (from blockr.dplyr) and the
-formula-input dependency, then the namespaced container the JS binds to.
+Pulls blockr.ui's shared controls, the code field with autocomplete
+(\code{Blockr.Input}, which still lives in blockr.dplyr) and the formula-input
+dependency, then the namespaced container the JS binds to.
 }
