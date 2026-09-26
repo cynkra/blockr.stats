@@ -20,8 +20,8 @@
 #'
 #' @param uncertainty What the interval column and whisker show: `"ci95"`
 #'   (default), `"ci90"`, `"ci99"`, `"se"` or `"none"`.
-#' @param significance `"chips"` (default; 0.1% / 1% / 5% coloured, 10%
-#'   grey), `"p"` (a p-value column), `"stars"` or `"none"`.
+#' @param significance `"chips"` (default; a neutral badge at 0.1% / 1% / 5%
+#'   / 10%), `"p"` (a p-value column), `"stars"` or `"none"`.
 #' @param scale `"auto"` (default), `"raw"` or `"ratio"`.
 #' @param effect_column,facts,intercept Show the forest column / the model
 #'   facts line / the intercept row (all `TRUE` by default).
@@ -81,75 +81,50 @@ new_model_summary_block <- function(uncertainty = "ci95",
     ui = function(id) {
       ns <- NS(id)
       tagList(
-        blockr.dplyr::blockr_core_js_dep(),
-        blockr.dplyr::blockr_blocks_css_dep(),
-        blockr.dplyr::blockr_select_dep(),
-        settings_band_dep(),
-        model_summary_gear_dep(),
+        stats_controls_dep(),
         div(
           class = "block-container",
           # No face controls: the card in the output slot is the block's face,
-          # so everything configurable sits behind the gear. The controls
-          # themselves are the design-system components (Blockr.Select +
-          # Blockr.checkbox), mounted by model-summary-gear.js into the
-          # containers below -- no selectize, no Bootstrap form-check.
-          div(
-            class = "blockr-gear-header",
-            tags$button(id = ns("gear"), type = "button",
-                        class = "blockr-gear-btn", title = "Options")
-          ),
-          div(
-            id = ns("band"),
-            class = "blockr-settings blockr-settings--beak",
-            div(class = "blockr-settings__title", "Options"),
-            div(
-              class = "blockr-settings__grid",
-              ms_select_field(
-                ns("uncertainty"), "Uncertainty",
-                c(
-                  "95% confidence interval" = "ci95",
-                  "90% confidence interval" = "ci90",
-                  "99% confidence interval" = "ci99",
-                  "estimate \u00b1 one standard error (~68%)" = "se",
-                  "estimate only, no interval" = "none"
-                ),
-                uncertainty
+          # so everything configurable sits behind the gear.
+          gear_tray(
+            ns,
+            select_field(
+              ns("uncertainty"), "Uncertainty",
+              c(
+                "95% confidence interval" = "ci95",
+                "90% confidence interval" = "ci90",
+                "99% confidence interval" = "ci99",
+                "estimate \u00b1 one standard error (~68%)" = "se",
+                "estimate only, no interval" = "none"
               ),
-              ms_select_field(
-                ns("significance"), "Significance",
-                c(
-                  "chips: 0.1% / 1% / 5% / 10%" = "chips",
-                  "a p-value column" = "p",
-                  "stars: *** / ** / * / ." = "stars",
-                  "not shown" = "none"
-                ),
-                significance
+              uncertainty, label_only = FALSE, size = "large"
+            ),
+            select_field(
+              ns("significance"), "Significance",
+              c(
+                "badges: 0.1% / 1% / 5% / 10%" = "chips",
+                "a p-value column" = "p",
+                "stars: *** / ** / * / ." = "stars",
+                "not shown" = "none"
               ),
-              ms_select_field(
-                ns("scale"), "Coefficient scale",
-                c(
-                  "ratio for glm / Cox, raw for lm" = "auto",
-                  "raw, on the link scale" = "raw",
-                  "exponentiated, reference at 1" = "ratio"
-                ),
-                scale
+              significance, label_only = FALSE, size = "large"
+            ),
+            select_field(
+              ns("scale"), "Coefficient scale",
+              c(
+                "ratio for glm / Cox, raw for lm" = "auto",
+                "raw, on the link scale" = "raw",
+                "exponentiated, reference at 1" = "ratio"
               ),
-              ms_check_field(list(
-                list(input = ns("effect_column"),
-                     label = "Effect column (forest)",
-                     checked = isTRUE(effect_column)),
-                list(input = ns("facts"),
-                     label = "Model facts line",
-                     checked = isTRUE(facts)),
-                list(input = ns("intercept"),
-                     label = "Intercept row",
-                     checked = isTRUE(intercept))
-              ))
-            )
+              scale, label_only = FALSE, size = "large"
+            ),
+            checkbox_field(ns("effect_column"), "Effect column (forest)",
+                           effect_column),
+            checkbox_field(ns("facts"), "Model facts line", facts),
+            checkbox_field(ns("intercept"), "Intercept row", intercept),
+            label = "Summary settings"
           )
-        ),
-        gear_band_script(ns),
-        ms_gear_mount_script(ns)
+        )
       )
     },
     class = "model_summary_block",
@@ -164,6 +139,7 @@ new_model_summary_block <- function(uncertainty = "ci95",
 block_output.model_summary_block <- function(x, result, session) {
   renderUI({
     tagList(
+      blockr.ui::theme_dep(),
       css_summary_card(),
       # The sort travels with the card, not with the controls: it is a
       # property of the rendered table, and it is browser-only.

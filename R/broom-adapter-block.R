@@ -7,7 +7,7 @@
 #' (coef plot, glance table, residual/QQ scatter).
 #'
 #' The verb picker is the whole face of the block. Everything else is
-#' verb-specific and lives in the gear band, which shows only the options
+#' verb-specific and lives in the gear tray, which shows only the options
 #' the selected verb actually has: `conf.int` / `conf.level` for `tidy`
 #' (broom's own arguments) and QQ columns for `augment` (a blockr.stats
 #' convenience, so a QQ plot is a plain scatter). `glance()` has no
@@ -73,61 +73,50 @@ new_broom_block <- function(output = "tidy", conf_int = TRUE,
     ui = function(id) {
       ns <- NS(id)
       tagList(
-        # Blockr.icons + the shared gear-header styles come from blockr.dplyr;
-        # the in-flow settings band is vendored here (see settings_band_dep()).
-        blockr.dplyr::blockr_core_js_dep(),
-        blockr.dplyr::blockr_blocks_css_dep(),
-        settings_band_dep(),
+        stats_controls_dep(),
         div(
           class = "block-container",
-          # Gear and band together are conditional: glance() has no options,
+          # Gear and tray together are conditional: glance() has no options,
           # so it gets no gear at all rather than one that opens an empty
-          # band. tidy and augment each see only their own options.
+          # tray. tidy and augment each see only their own options.
           conditionalPanel(
             "input.output != 'glance'", ns = ns,
-            div(
-              class = "blockr-gear-header",
-              tags$button(id = ns("gear"), type = "button",
-                          class = "blockr-gear-btn", title = "Options")
-            ),
-            div(
-              id = ns("band"),
-              class = "blockr-settings blockr-settings--beak",
-              div(class = "blockr-settings__title", "Options"),
-              div(
-                class = "blockr-settings__grid",
-                conditionalPanel(
-                  "input.output == 'tidy'", ns = ns,
-                  class = "blockr-settings__field--full",
-                  checkboxInput(ns("conf_int"), "Confidence intervals",
-                    value = isTRUE(conf_int)),
-                  numericInput(ns("conf_level"), "Confidence level",
-                    value = conf_level, min = 0.5, max = 0.999, step = 0.01,
-                    width = "100%"),
-                  checkboxInput(ns("parametric"),
-                    "Parametric terms (GAM: coefficients, not smooths)",
-                    value = isTRUE(parametric))
-                ),
-                conditionalPanel(
-                  "input.output == 'augment'", ns = ns,
-                  class = "blockr-settings__field--full",
-                  checkboxInput(ns("qq"),
-                    "QQ columns (.qq_theoretical / .qq_sample)",
-                    value = isTRUE(qq)),
-                  checkboxInput(ns("response"),
-                    "Response scale (glm/gam: .fitted as a rate, not log-odds)",
-                    value = isTRUE(response))
-                )
-              )
+            gear_tray(
+              ns,
+              # Shiny draws a conditionalPanel as display: contents, so the
+              # fields inside are the tray grid's own.
+              conditionalPanel(
+                "input.output == 'tidy'", ns = ns,
+                checkbox_field(ns("conf_int"), "Confidence intervals",
+                               conf_int, size = "large"),
+                number_field(ns("conf_level"), "Confidence level",
+                             conf_level, min = 0.5, max = 0.999,
+                             step = 0.01),
+                checkbox_field(ns("parametric"),
+                  "Parametric terms (GAM: coefficients, not smooths)",
+                  parametric, size = "full")
+              ),
+              conditionalPanel(
+                "input.output == 'augment'", ns = ns,
+                checkbox_field(ns("qq"),
+                  "QQ columns (.qq_theoretical / .qq_sample)",
+                  qq, size = "full"),
+                checkbox_field(ns("response"),
+                  "Response scale (glm/gam: .fitted as a rate, not log-odds)",
+                  response, size = "full")
+              ),
+              label = "Output settings"
             )
           ),
-          selectInput(ns("output"), "Output",
-            choices = c("Coefficients (tidy)" = "tidy",
-                        "Fit summary (glance)" = "glance",
-                        "Per-observation (augment)" = "augment"),
-            selected = output, width = "100%")
-        ),
-        gear_band_script(ns)
+          div(
+            class = "blockr-stats-face",
+            select_field(ns("output"), "Output",
+              choices = c("Coefficients (tidy)" = "tidy",
+                          "Fit summary (glance)" = "glance",
+                          "Per-observation (augment)" = "augment"),
+              selected = output)
+          )
+        )
       )
     },
     class = "broom_block",

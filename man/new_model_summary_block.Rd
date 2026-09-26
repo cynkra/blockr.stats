@@ -18,8 +18,8 @@ new_model_summary_block(
 \item{uncertainty}{What the interval column and whisker show: \code{"ci95"}
 (default), \code{"ci90"}, \code{"ci99"}, \code{"se"} or \code{"none"}.}
 
-\item{significance}{\code{"chips"} (default; 0.1\% / 1\% / 5\% coloured, 10\%
-grey), \code{"p"} (a p-value column), \code{"stars"} or \code{"none"}.}
+\item{significance}{\code{"chips"} (default; a neutral badge at 0.1\% / 1\% / 5\%
+/ 10\%), \code{"p"} (a p-value column), \code{"stars"} or \code{"none"}.}
 
 \item{scale}{\code{"auto"} (default), \code{"raw"} or \code{"ratio"}.}
 

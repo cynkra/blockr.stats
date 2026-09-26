@@ -3,7 +3,7 @@
 #' A single adaptive block for running statistical tests. Pick a
 #' category and test; the parameter UI adapts to the chosen test.
 #' Optional group-by stratification. The adaptive UI is a `renderUI`;
-#' alternative / confidence level / null value live in the gear band, and
+#' alternative / confidence level / null value live in the gear tray, and
 #' tests that have none of them show no gear.
 #'
 #' @param type Test type key from `test_config` (default "normality").
@@ -42,66 +42,38 @@ new_stat_test_block <- function(
   ui <- function(id) {
     ns <- NS(id)
     tagList(
-      # Blockr.icons + gear-header styles from blockr.dplyr; the in-flow
-      # settings band is vendored here (see settings_band_dep()).
-      blockr.dplyr::blockr_core_js_dep(),
-      blockr.dplyr::blockr_blocks_css_dep(),
-      settings_band_dep(),
+      stats_controls_dep(),
       div(
         class = "block-container",
-        # Alternative / confidence level / null value live in the gear band,
+        # Alternative / confidence level / null value live in the gear tray,
         # like every other blockr block. Tests that have none of them (most
         # normality and categorical tests) get no gear at all.
         conditionalPanel(
           "output.has_advanced", ns = ns,
-          div(
-            class = "blockr-gear-header",
-            tags$button(id = ns("gear"), type = "button",
-                        class = "blockr-gear-btn", title = "Advanced options")
-          ),
-          div(
-            id = ns("band"),
-            class = "blockr-settings blockr-settings--beak",
-            div(class = "blockr-settings__title", "Advanced options"),
-            div(
-              class = "blockr-settings__grid",
-              div(class = "blockr-settings__field--full",
-                  uiOutput(ns("advanced_ui")))
-            )
+          gear_tray(
+            ns,
+            div(class = "blockr-settings__field--full",
+                uiOutput(ns("advanced_ui"))),
+            label = "Test settings"
           )
         ),
         div(
-          class = "block-form-grid",
-          div(style = "grid-column: 1 / -1;",
-            selectInput(ns("category"), "Category",
-              choices = cat_choices, selected = initial_category,
-              width = "100%")),
-          div(style = "grid-column: 1 / -1;",
-            uiOutput(ns("test_ui"))),
-          div(style = "grid-column: 1 / -1;",
-            selectizeInput(ns("values"), "Values",
-              choices = values, selected = values, multiple = TRUE,
-              width = "100%",
-              options = list(
-                placeholder = "Select column(s)...",
-                plugins = list("remove_button")))),
-          div(style = "grid-column: 1 / -1;",
-            selectizeInput(ns("groups"), "Comparison groups",
-              choices = groups, selected = groups, multiple = FALSE,
-              width = "100%",
-              options = list(
-                placeholder = "Select a grouping variable..."))),
-          div(style = "grid-column: 1 / -1;",
-            uiOutput(ns("params_ui"))),
-          div(style = "grid-column: 1 / -1;",
-            mod_column_selector_ui(
-              ns("by_selector"),
-              label = tags$span("Group by (optional)",
-                style = "font-size:0.875rem;color:#666;font-weight:normal;"),
-              initial_choices = by, initial_selected = by))
+          class = "blockr-stats-face",
+          select_field(ns("category"), "Category",
+            choices = cat_choices, selected = initial_category),
+          uiOutput(ns("test_ui")),
+          multi_field(ns("values"), "Values",
+            choices = values, selected = values,
+            placeholder = "Select columns"),
+          select_field(ns("groups"), "Comparison groups",
+            choices = groups, selected = groups,
+            placeholder = "Select a grouping variable",
+            allow_empty = TRUE, label_only = FALSE),
+          uiOutput(ns("params_ui")),
+          multi_field(ns("by"), "Group by (optional)",
+            choices = by, selected = by, placeholder = "None")
         )
-      ),
-      gear_band_script(ns)
+      )
     )
   }
 
@@ -118,17 +90,9 @@ new_stat_test_block <- function(
       r_null        <- as_rv(null)
       r_category    <- reactiveVal(initial_category)
 
-      r_by_selection <- mod_column_selector_server(
-        id = "by_selector",
-        get_cols = function() {
-          req(data())
-          cn <- colnames(data())
-          cn[vapply(data(), function(x) {
-            is.factor(x) || is.character(x)
-          }, logical(1))]
-        },
-        initial_value = by
-      )
+      r_by_selection <- as_rv(by)
+      observeEvent(input$by, r_by_selection(input$by %||% character()),
+                   ignoreNULL = FALSE, ignoreInit = TRUE)
 
       # Category -> set/keep test type
       observeEvent(input$category, {
@@ -141,10 +105,12 @@ new_stat_test_block <- function(
       observeEvent(input$test, r_type(input$test),
                    ignoreNULL = TRUE, ignoreInit = TRUE)
 
+      # ignoreInit: before the controls have reported, the inputs are NULL,
+      # and taking that would wipe the constructor's columns.
       observeEvent(input$values, r_values(input$values),
-                   ignoreNULL = FALSE)
+                   ignoreNULL = FALSE, ignoreInit = TRUE)
       observeEvent(input$groups, r_groups(input$groups),
-                   ignoreNULL = FALSE)
+                   ignoreNULL = FALSE, ignoreInit = TRUE)
       observeEvent(input$method, r_method(input$method))
       observeEvent(input$alternative, r_alternative(input$alternative))
       observeEvent(input$variant, r_variant(input$variant))
@@ -159,11 +125,10 @@ new_stat_test_block <- function(
           tests, vapply(tests, function(k) test_config[[k]]$label,
                         character(1)))
         sel <- if (r_type() %in% tests) r_type() else tests[1]
-        selectInput(ns("test"), "Test", choices = choices,
-                    selected = sel, width = "100%")
+        select_field(ns("test"), "Test", choices = choices, selected = sel)
       })
 
-      # Which of the current test's parameters belong in the gear band.
+      # Which of the current test's parameters belong in the gear tray.
       # Everything else (method, variant) is a primary choice and stays on
       # the block face.
       adv_params <- reactive({
@@ -185,6 +150,8 @@ new_stat_test_block <- function(
         cfg <- test_config[[ct]]
         req(cfg)
         p <- cfg$params
+        # Current values are read in isolation: the fields are drawn again
+        # when the test changes, not on every pick they report themselves.
         # The block can be constructed with method / variant unset, and a
         # test switch can leave a value the new test does not offer. Both
         # fall back to the test's default; a bare `%in%` on character(0)
@@ -194,47 +161,46 @@ new_stat_test_block <- function(
         }
         bits <- list()
         if ("method" %in% names(p)) {
-          bits <- c(bits, list(selectInput(ns("method"),
-            p$method$label %||% "Method", choices = p$method$choices,
-            selected = sel_or_default(r_method(), p$method$choices,
-                                      p$method$default), width = "100%")))
+          bits <- c(bits, list(choice_field(ns("method"),
+            p$method$label %||% "Method", p$method$choices,
+            sel_or_default(isolate(r_method()), p$method$choices,
+                           p$method$default))))
         }
         if ("variant" %in% names(p)) {
-          bits <- c(bits, list(selectInput(ns("variant"),
-            p$variant$label %||% "Variance assumption",
-            choices = p$variant$choices,
-            selected = sel_or_default(r_variant(), p$variant$choices,
-                                      p$variant$default), width = "100%")))
+          bits <- c(bits, list(choice_field(ns("variant"),
+            p$variant$label %||% "Variance assumption", p$variant$choices,
+            sel_or_default(isolate(r_variant()), p$variant$choices,
+                           p$variant$default))))
         }
         if (!length(bits)) return(NULL)
         do.call(tagList, bits)
       })
 
-      # Advanced parameter UI (gear band)
+      # Advanced parameter UI (gear tray)
       output$advanced_ui <- renderUI({
         keys <- adv_params()
         cfg <- test_config[[r_type()]]
         p <- cfg$params
         adv <- list()
         if ("alternative" %in% keys) {
-          adv <- c(adv, list(selectInput(ns("alternative"),
+          adv <- c(adv, list(segmented_field(ns("alternative"),
             "Alternative",
             choices = c("Two sided" = "two.sided",
                         "Greater" = "greater", "Less" = "less"),
-            selected = r_alternative(), width = "100%")))
+            selected = isolate(r_alternative()), size = "large")))
         }
         if ("conf_level" %in% keys) {
-          adv <- c(adv, list(numericInput(ns("conf_level"),
-            "Confidence level", value = r_conf_level(),
-            min = 0, max = 1, step = 0.01, width = "100%")))
+          adv <- c(adv, list(number_field(ns("conf_level"),
+            "Confidence level", isolate(r_conf_level()),
+            min = 0, max = 1, step = 0.01)))
         }
         if ("null" %in% keys) {
-          adv <- c(adv, list(numericInput(ns("null"),
-            p$null$label %||% "Null value", value = r_null(),
-            step = 0.1, width = "100%")))
+          adv <- c(adv, list(number_field(ns("null"),
+            p$null$label %||% "Null value", isolate(r_null()),
+            step = 0.1)))
         }
         if (!length(adv)) return(NULL)
-        do.call(tagList, adv)
+        div(class = "blockr-settings__grid", adv)
       })
 
       observeEvent(colnames(data()), {
@@ -248,11 +214,12 @@ new_stat_test_block <- function(
         cfg <- test_config[[r_type()]]
         val_type <- tryCatch(cfg$inputs$values$type, error = function(e) "numeric")
         vchoices <- if (identical(val_type, "factor")) fac else num
-        updateSelectizeInput(session, "values",
-          choices = vchoices, selected = r_values(),
-          options = list(plugins = list("remove_button")))
-        updateSelectizeInput(session, "groups",
-          choices = fac, selected = r_groups())
+        update_control(session, "values", choices = vchoices,
+                       selected = r_values())
+        update_control(session, "groups", choices = fac,
+                       selected = r_groups())
+        update_control(session, "by", choices = fac,
+                       selected = r_by_selection())
       }, ignoreNULL = FALSE)
 
       list(

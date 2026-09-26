@@ -66,8 +66,8 @@ new_correlate_block <- function(vars = character(), method = "pearson", ...) {
           if (!r_initialized() && length(colnames(data())) > 0) {
             d <- data()
             num_cols <- colnames(d)[vapply(d, is.numeric, logical(1))]
-            updateSelectizeInput(session, "vars",
-              choices = num_cols, selected = r_vars())
+            update_control(session, "vars", choices = num_cols,
+                           selected = r_vars())
             r_initialized(TRUE)
           }
         })
@@ -79,8 +79,8 @@ new_correlate_block <- function(vars = character(), method = "pearson", ...) {
             num_cols <- colnames(d)[vapply(d, is.numeric, logical(1))]
             new_vars <- intersect(r_vars(), num_cols)
             r_vars(new_vars)
-            updateSelectizeInput(session, "vars",
-              choices = num_cols, selected = new_vars)
+            update_control(session, "vars", choices = num_cols,
+                           selected = new_vars)
           }
         }, ignoreNULL = FALSE)
 
@@ -100,26 +100,19 @@ new_correlate_block <- function(vars = character(), method = "pearson", ...) {
     },
     ui = function(id) {
       tagList(
+        stats_controls_dep(),
         div(
-          class = "block-container",
-          selectizeInput(
-            NS(id, "vars"),
-            label = "Variables",
-            choices = vars,
-            selected = vars,
-            multiple = TRUE,
-            width = "100%",
-            options = list(
-              plugins = list("drag_drop", "remove_button"),
-              placeholder = "Pick numeric variables..."
-            )
+          class = "block-container blockr-stats-face",
+          multi_field(
+            NS(id, "vars"), "Variables",
+            choices = vars, selected = vars,
+            placeholder = "Pick numeric variables"
           ),
-          selectInput(
-            NS(id, "method"),
-            label = "Method",
-            choices = c("pearson", "spearman", "kendall"),
-            selected = method,
-            width = "100%"
+          segmented_field(
+            NS(id, "method"), "Method",
+            choices = c(Pearson = "pearson", Spearman = "spearman",
+                        Kendall = "kendall"),
+            selected = method
           )
         )
       )

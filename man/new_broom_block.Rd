@@ -43,7 +43,7 @@ the renderer boundary -- feed it to the generic drilldown chart/table
 }
 \details{
 The verb picker is the whole face of the block. Everything else is
-verb-specific and lives in the gear band, which shows only the options
+verb-specific and lives in the gear tray, which shows only the options
 the selected verb actually has: \code{conf.int} / \code{conf.level} for \code{tidy}
 (broom's own arguments) and QQ columns for \code{augment} (a blockr.stats
 convenience, so a QQ plot is a plain scatter). \code{glance()} has no
