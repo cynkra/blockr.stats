@@ -5,7 +5,7 @@
  * view/editor: chip edits produce already-canonical terms; the text field is
  * the round-trip path (raw text -> R parse_formula() -> normalized state back).
  *
- * Requires Blockr.Select, Blockr.icons, Blockr.tooltip (blockr.ui) and
+ * Requires Blockr.Select, Blockr.menu, Blockr.icons, Blockr.tooltip (blockr.ui) and
  * Blockr.Input (blockr.dplyr).
  */
 (function () {
@@ -185,8 +185,8 @@
     // effects) render as plain tags INSIDE the predictors select (see
     // renderChips), after the column tags.
 
-    // Visible affordance to open the build menu (interactions / transforms /
-    // splines). Styled like the filter block's "+ Add condition" link.
+    // The link that opens the build menu (interactions / transforms /
+    // splines), styled like the filter block's "+ Add condition" link.
     var addRow = document.createElement("div");
     addRow.className = "blockr-add-row formula-add-row";
     this._addLink = document.createElement("span");
@@ -196,8 +196,8 @@
       Blockr.icons.plus +
       "</span> interaction / transform";
     this._addLink.addEventListener("click", function (e) {
-      e.stopPropagation();
-      self._openMenu(self._addLink);
+      e.preventDefault();
+      self._toggleMenu();
     });
     addRow.appendChild(this._addLink);
 
@@ -218,11 +218,12 @@
     // appended AFTER the text row below, so the footer is under whichever
     // input is showing — not stranded above the field in text mode.
 
-    // Right-click anywhere on the predictors area opens the same menu.
+    // Right-click anywhere on the predictors area opens the same menu, under
+    // the link: a menu hangs from its trigger.
     if (this._ctxTarget) {
       this._ctxTarget.addEventListener("contextmenu", function (e) {
         e.preventDefault();
-        self._openMenu(null, { x: e.clientX, y: e.clientY });
+        self._openMenu();
       });
     }
 
@@ -484,130 +485,142 @@
   };
 
   // -- Build menu (interactions / transforms / splines) ----------------------
+  //
+  // "+ interaction / transform" opens a menu of term kinds (Blockr.menu). A
+  // kind opens the list of columns under the same link (Blockr.Select.menu,
+  // titled by the kind), and a click adds the term. An interaction is a
+  // multi pick over the predictors, added when the list closes with two or
+  // more. Splines start at 3 degrees of freedom; other values are typed in
+  // the formula text.
 
-  // Close any open menu and detach the outside-click / escape listeners.
+  // Close whichever menu is open (the kinds or a column list).
   FormulaInput.prototype._closeMenu = function () {
-    if (this._menu && this._menu.parentNode) {
-      this._menu.parentNode.removeChild(this._menu);
-    }
+    var m = this._menu;
     this._menu = null;
-    if (this._menuDismiss) {
-      document.removeEventListener("mousedown", this._menuDismiss, true);
-      document.removeEventListener("keydown", this._menuDismiss, true);
-      this._menuDismiss = null;
-    }
+    if (m) m.close();
   };
 
-  // Open the build menu. `anchor` (the link) positions it below the link;
-  // `at` ({x,y}) positions it at the cursor (right-click path).
-  FormulaInput.prototype._openMenu = function (anchor, at) {
+  // The link toggles: a click while a menu hangs under it closes that menu.
+  FormulaInput.prototype._toggleMenu = function () {
+    if (this._menu) this._closeMenu();
+    else this._openMenu();
+  };
+
+  // Numeric columns, for the transforms and splines.
+  FormulaInput.prototype._numericOptions = function () {
+    var self = this;
+    return this._colOptions().filter(function (o) {
+      var m = self.colMeta[o.value];
+      return m && m.type === "numeric";
+    });
+  };
+
+  var transformTerm = function (fn) {
+    return function (v) {
+      var l = fn + "(" + v + ")";
+      return { kind: "transform", fn: fn, var: v, raw: l, label: l };
+    };
+  };
+  var polyTerm = function (degree) {
+    return function (v) {
+      return { kind: "poly", var: v, degree: degree,
+               label: "poly(" + v + ", " + degree + ")" };
+    };
+  };
+  var splineTerm = function (fn) {
+    return function (v) {
+      return { kind: "spline", fn: fn, var: v, df: 3,
+               label: fn + "(" + v + ", 3)" };
+    };
+  };
+
+  // The kinds. A kind that cannot apply yet is listed disabled, with the
+  // reason in its tooltip.
+  FormulaInput.prototype._openMenu = function () {
     var self = this;
     this._closeMenu();
-
-    var menu = document.createElement("div");
-    menu.className = "formula-menu";
-    this._menu = menu;
-
-    this._renderMenuRoot(menu);
-
-    document.body.appendChild(menu);
-
-    // Position: anchored under the link, or at the cursor.
-    var top, left;
-    if (at) {
-      left = at.x;
-      top = at.y;
-    } else if (anchor) {
-      var r = anchor.getBoundingClientRect();
-      left = r.left;
-      top = r.bottom + 4;
-    } else {
-      left = 40;
-      top = 40;
-    }
-    // Keep within viewport.
-    var mw = menu.offsetWidth || 220;
-    var mh = menu.offsetHeight || 160;
-    if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
-    if (top + mh > window.innerHeight - 8) top = window.innerHeight - mh - 8;
-    menu.style.left = Math.max(8, left) + "px";
-    menu.style.top = Math.max(8, top) + "px";
-
-    // Dismiss on outside click or Escape.
-    this._menuDismiss = function (e) {
-      if (e.type === "keydown") {
-        if (e.key === "Escape") self._closeMenu();
-        return;
-      }
-      if (self._menu && !self._menu.contains(e.target)) self._closeMenu();
+    var fewPreds = this._colVars().length < 2
+      ? "Add at least two predictors first." : null;
+    var noNumeric = this._numericOptions().length
+      ? null : "No numeric columns.";
+    var row = function (label, reason, onSelect) {
+      var it = { label: label, onSelect: onSelect };
+      if (reason) { it.disabled = true; it.reason = reason; }
+      return it;
     };
-    document.addEventListener("mousedown", this._menuDismiss, true);
-    document.addEventListener("keydown", this._menuDismiss, true);
-  };
-
-  // Top-level item list.
-  FormulaInput.prototype._renderMenuRoot = function (menu) {
-    var self = this;
-    menu.innerHTML = "";
-    var items = [
-      { label: "Interaction…", fn: function () { self._panelInteraction(menu); } },
-      { label: "All 2-way", fn: function () { self._addAll2Way(); self._closeMenu(); } },
-      { label: "Transform…", fn: function () { self._panelTransform(menu); } },
-      { label: "Spline…", fn: function () { self._panelSpline(menu); } }
-    ];
-    items.forEach(function (it) {
-      var row = document.createElement("div");
-      row.className = "formula-menu__item";
-      row.textContent = it.label;
-      row.addEventListener("click", function (e) {
-        e.stopPropagation();
-        it.fn();
+    var columns = function (label, make) {
+      return row(label + "…", noNumeric, function () {
+        self._pickColumn(label + " of", make);
       });
-      menu.appendChild(row);
+    };
+    var handle = Blockr.menu(this._addLink, {
+      items: [
+        row("Interaction…", fewPreds, function () {
+          self._pickInteraction();
+        }),
+        row("All two-way interactions", fewPreds, function () {
+          self._addAll2Way();
+        }),
+        { divider: true },
+        columns("Log", transformTerm("log")),
+        columns("Square root", transformTerm("sqrt")),
+        columns("Polynomial, degree 2", polyTerm(2)),
+        columns("Polynomial, degree 3", polyTerm(3)),
+        { divider: true },
+        columns("Natural spline", splineTerm("ns")),
+        columns("B-spline", splineTerm("bs"))
+      ],
+      onClose: function () {
+        if (self._menu === handle) self._menu = null;
+      }
     });
+    this._menu = handle;
   };
 
-  // Sub-panel chrome: a back header + a confirm button row.
-  FormulaInput.prototype._menuPanel = function (menu, title) {
+  // A kind's column list: a click adds the term.
+  FormulaInput.prototype._pickColumn = function (title, make) {
     var self = this;
-    menu.innerHTML = "";
-    var head = document.createElement("div");
-    head.className = "formula-menu__head";
-    var back = document.createElement("span");
-    back.className = "formula-menu__back";
-    back.innerHTML = Blockr.icons.chevron;
-    back.addEventListener("click", function (e) {
-      e.stopPropagation();
-      self._renderMenuRoot(menu);
+    var handle = Blockr.Select.menu(this._addLink, {
+      title: title,
+      options: this._numericOptions(),
+      onChange: function (v) {
+        if (!v) return;
+        self.terms.push(make(v));
+        self.renderChips();
+        self._sync();
+      },
+      onClose: function () {
+        if (self._menu === handle) self._menu = null;
+      }
     });
-    var ttl = document.createElement("span");
-    ttl.className = "formula-menu__title";
-    ttl.textContent = title;
-    head.appendChild(back);
-    head.appendChild(ttl);
-    menu.appendChild(head);
-
-    var body = document.createElement("div");
-    body.className = "formula-menu__body";
-    menu.appendChild(body);
-    return body;
+    this._menu = handle;
   };
 
-  FormulaInput.prototype._menuConfirm = function (menu, label, onConfirm) {
+  // The interaction: a multi pick over the predictors, added on close.
+  FormulaInput.prototype._pickInteraction = function () {
     var self = this;
-    var foot = document.createElement("div");
-    foot.className = "formula-menu__foot";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "blockr-pill formula-menu__confirm";
-    btn.textContent = label || "Add";
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (onConfirm() !== false) self._closeMenu();
+    var preds = this._colVars();
+    var picked = [];
+    var handle = Blockr.Select.menu(this._addLink, {
+      mode: "multi",
+      title: "Interaction of",
+      options: this._colOptions().filter(function (o) {
+        return preds.indexOf(o.value) !== -1;
+      }),
+      onChange: function (v) { picked = v || []; },
+      onClose: function () {
+        if (self._menu === handle) self._menu = null;
+        if (picked.length < 2 || self._hasInteraction(picked)) return;
+        self.terms.push({
+          kind: "interaction",
+          label: picked.join(":"),
+          vars: picked.slice()
+        });
+        self.renderChips();
+        self._sync();
+      }
     });
-    foot.appendChild(btn);
-    menu.appendChild(foot);
-    return btn;
+    this._menu = handle;
   };
 
   // True when an interaction over exactly `vars` already exists.
@@ -638,158 +651,6 @@
     }
     this.renderChips();
     this._sync();
-  };
-
-  // Interaction sub-panel: checkboxes over current predictors.
-  FormulaInput.prototype._panelInteraction = function (menu) {
-    var self = this;
-    var body = this._menuPanel(menu, "Interaction");
-    var cols = this._colVars();
-    if (cols.length < 2) {
-      var note = document.createElement("div");
-      note.className = "formula-menu__note";
-      note.textContent = "Add at least two predictors first.";
-      body.appendChild(note);
-      return;
-    }
-    var checks = [];
-    cols.forEach(function (name) {
-      var row = document.createElement("label");
-      row.className = "formula-menu__check";
-      var cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.value = name;
-      row.appendChild(cb);
-      row.appendChild(document.createTextNode(" " + name));
-      body.appendChild(row);
-      checks.push(cb);
-    });
-    this._menuConfirm(menu, "Add interaction", function () {
-      var vars = checks
-        .filter(function (c) { return c.checked; })
-        .map(function (c) { return c.value; });
-      if (vars.length < 2) return false;
-      if (!self._hasInteraction(vars)) {
-        self.terms.push({
-          kind: "interaction",
-          label: vars.join(":"),
-          vars: vars
-        });
-        self.renderChips();
-        self._sync();
-      }
-      return true;
-    });
-  };
-
-  // Small native <select> helper for the panels.
-  FormulaInput.prototype._mkSelect = function (options) {
-    var sel = document.createElement("select");
-    sel.className = "formula-menu__select";
-    options.forEach(function (o) {
-      var opt = document.createElement("option");
-      opt.value = o.value;
-      opt.textContent = o.label;
-      sel.appendChild(opt);
-    });
-    return sel;
-  };
-
-  // Transform sub-panel: column + function (log/sqrt/poly2/poly3).
-  FormulaInput.prototype._panelTransform = function (menu) {
-    var self = this;
-    var body = this._menuPanel(menu, "Transform");
-    if (!this.columns.length) {
-      var note = document.createElement("div");
-      note.className = "formula-menu__note";
-      note.textContent = "No columns available.";
-      body.appendChild(note);
-      return;
-    }
-    var colSel = this._mkSelect(
-      this.columns.map(function (c) {
-        return { value: c.name, label: c.name };
-      })
-    );
-    var fnSel = this._mkSelect([
-      { value: "log", label: "log" },
-      { value: "sqrt", label: "sqrt" },
-      { value: "poly2", label: "poly(2)" },
-      { value: "poly3", label: "poly(3)" }
-    ]);
-    body.appendChild(colSel);
-    body.appendChild(fnSel);
-    this._menuConfirm(menu, "Add transform", function () {
-      var v = colSel.value;
-      var f = fnSel.value;
-      if (!v) return false;
-      if (f === "poly2" || f === "poly3") {
-        var degree = f === "poly2" ? 2 : 3;
-        self.terms.push({
-          kind: "poly",
-          var: v,
-          degree: degree,
-          label: "poly(" + v + ", " + degree + ")"
-        });
-      } else {
-        self.terms.push({
-          kind: "transform",
-          fn: f,
-          var: v,
-          raw: f + "(" + v + ")",
-          label: f + "(" + v + ")"
-        });
-      }
-      self.renderChips();
-      self._sync();
-      return true;
-    });
-  };
-
-  // Spline sub-panel: column + ns|bs + df (3/4/5).
-  FormulaInput.prototype._panelSpline = function (menu) {
-    var self = this;
-    var body = this._menuPanel(menu, "Spline");
-    if (!this.columns.length) {
-      var note = document.createElement("div");
-      note.className = "formula-menu__note";
-      note.textContent = "No columns available.";
-      body.appendChild(note);
-      return;
-    }
-    var colSel = this._mkSelect(
-      this.columns.map(function (c) {
-        return { value: c.name, label: c.name };
-      })
-    );
-    var fnSel = this._mkSelect([
-      { value: "ns", label: "ns (natural)" },
-      { value: "bs", label: "bs (B-spline)" }
-    ]);
-    var dfSel = this._mkSelect([
-      { value: "3", label: "df 3" },
-      { value: "4", label: "df 4" },
-      { value: "5", label: "df 5" }
-    ]);
-    body.appendChild(colSel);
-    body.appendChild(fnSel);
-    body.appendChild(dfSel);
-    this._menuConfirm(menu, "Add spline", function () {
-      var v = colSel.value;
-      var f = fnSel.value;
-      var df = parseInt(dfSel.value, 10);
-      if (!v) return false;
-      self.terms.push({
-        kind: "spline",
-        fn: f,
-        var: v,
-        df: df,
-        label: f + "(" + v + ", " + df + ")"
-      });
-      self.renderChips();
-      self._sync();
-      return true;
-    });
   };
 
   FormulaInput.prototype._currentFormulaText = function () {
