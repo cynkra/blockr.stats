@@ -148,7 +148,12 @@
       rhsWrap.className = "blockr-row-content";
       this._iceptEl = document.createElement("button");
       this._iceptEl.type = "button";
-      this._iceptEl.className = "formula-icept";
+      this._iceptEl.className = "blockr-tool formula-icept";
+      Blockr.tooltip.set(this._iceptEl, function () {
+        return self.intercept
+          ? "Intercept included. Click to fit through the origin."
+          : "No intercept, fitted through the origin. Click to include it.";
+      });
       this._iceptEl.addEventListener("click", function (e) {
         e.preventDefault();
         self.intercept = !self.intercept;
@@ -356,10 +361,25 @@
     });
   };
 
+  var ICEPT_GLYPH =
+    '<text x="6.5" y="12" text-anchor="middle" fill="currentColor" stroke="none" ' +
+    'font-size="13" font-weight="500">\u03b2</text>' +
+    '<text x="12" y="14.5" text-anchor="middle" fill="currentColor" stroke="none" ' +
+    'font-size="7.5" font-weight="600">0</text>';
+  var iceptSvg = function (d) {
+    return '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.25" stroke-linecap="round" ' +
+      'aria-hidden="true">' + d + '</svg>';
+  };
+  var ICEPT_ON = iceptSvg(ICEPT_GLYPH);
+  var ICEPT_OFF = iceptSvg(ICEPT_GLYPH + '<path d="M3 13 13 3"/>');
+
   FormulaInput.prototype._renderIntercept = function () {
     if (!this._iceptEl) return;
-    this._iceptEl.textContent = "intercept";
-    this._iceptEl.classList.toggle("formula-icept--off", !this.intercept);
+    // β₀, with a slash through it when the intercept is dropped.
+    this._iceptEl.innerHTML = this.intercept ? ICEPT_ON : ICEPT_OFF;
+    this._iceptEl.setAttribute("aria-pressed", String(this.intercept));
+    this._iceptEl.setAttribute("aria-label", "Intercept");
   };
 
   FormulaInput.prototype._setConfirmed = function (yes) {

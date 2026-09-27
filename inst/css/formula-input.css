@@ -75,37 +75,15 @@
   width: 100%;
 }
 
-/* Intercept: a click-through toggle button. Active = intercept included
-   (default); --off = dropped (struck through, muted). */
+/* Intercept: a tool button (blockr.ui's .blockr-tool) drawing β₀, with a
+   slash through it when the intercept is dropped. The glyph shows the state,
+   so it stays grey in both. */
 .formula-icept {
-  flex: 0 0 auto;
-  appearance: none;
   margin-right: 6px;
-  padding: 2px 8px;
-  border-radius: var(--blockr-radius-sm);
-  border: 1px solid var(--blockr-color-border-default);
-  background: var(--blockr-color-bg-hover);
-  color: var(--blockr-color-text-default);
-  font-size: var(--blockr-font-size-xs);
-  line-height: 1.4;
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
 }
 
-.formula-icept:hover {
-  border-color: var(--blockr-color-border-strong);
-}
-
-.formula-icept:focus-visible {
-  outline: var(--blockr-focus-outline);
-  outline-offset: var(--blockr-focus-offset);
-}
-
-.formula-icept--off {
-  background: transparent;
-  color: var(--blockr-color-text-muted);
-  text-decoration: line-through;
+.formula-icept svg {
+  display: block;
 }
 
 /* Derived terms (interactions / transforms / splines / opaque / random
