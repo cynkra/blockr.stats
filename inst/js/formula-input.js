@@ -181,9 +181,9 @@
       }
     });
 
-    // Derived/advanced terms (interactions, transforms, splines, opaque,
-    // random effects) render as colored chips INSIDE the predictors select
-    // (see renderChips), alongside the column chips.
+    // Derived terms (interactions, transforms, splines, opaque, random
+    // effects) render as plain tags INSIDE the predictors select (see
+    // renderChips), after the column tags.
 
     // Visible affordance to open the build menu (interactions / transforms /
     // splines). Styled like the filter block's "+ Add condition" link.
@@ -423,8 +423,9 @@
     this._sync();
   };
 
-  // Renders ONLY the derived/advanced terms (non-column) + random effects.
-  // Plain column predictors live inside the multi-select, not here.
+  // Renders ONLY the derived terms (non-column) and random effects, as tags
+  // drawn like the select's own: the text says what a term is (log(x), a:b,
+  // ns(x, 3)). Plain column predictors are the multi-select's own tags.
   FormulaInput.prototype.renderChips = function () {
     var self = this;
     var tags =
@@ -450,14 +451,17 @@
 
     derived.forEach(function (item) {
       var chip = document.createElement("span");
-      chip.className =
-        "blockr-select__tag formula-tag--derived formula-tag--" + item.kind;
+      chip.className = "blockr-select__tag formula-tag--derived";
       var lbl = document.createElement("span");
       lbl.className = "blockr-select__tag-label";
       lbl.textContent = item.label;
+      Blockr.tooltip.set(lbl, item.label, { overflow: true });
       var rm = document.createElement("button");
       rm.type = "button";
       rm.className = "blockr-select__tag-remove";
+      rm.setAttribute("aria-label", "Remove " + item.label);
+      // Not a tab stop: the select's keyboard remove finds a tag by its
+      // data-value, which these tags do not carry.
       rm.setAttribute("tabindex", "-1");
       rm.innerHTML = Blockr.icons.remove;
       rm.addEventListener("click", function (e) {

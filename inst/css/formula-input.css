@@ -1,5 +1,4 @@
-/* The formula-input widget (model and survival blocks). Tokens only, apart
-   from the derived-term tag colours, which wait on a design decision. */
+/* The formula-input widget (model and survival blocks). Tokens only. */
 
 .formula-input {
   display: flex;
@@ -84,32 +83,6 @@
 
 .formula-icept svg {
   display: block;
-}
-
-/* Derived terms (interactions / transforms / splines / opaque / random
-   effects) render as tags inside the predictors select, tinted by kind so
-   they read as "not a plain column". The tints are literal colours for now:
-   what replaces them is an open design question. */
-.formula-tag--derived {
-  gap: 4px;
-}
-
-.formula-tag--interaction {
-  background: #fff3cd;
-  border-color: #ffe69c;
-}
-
-.formula-tag--poly,
-.formula-tag--spline,
-.formula-tag--transform {
-  background: #e8f7ef;
-  border-color: #b7e4c7;
-}
-
-.formula-tag--opaque,
-.formula-tag--bar {
-  background: #f3e8ff;
-  border-color: #d8b4fe;
 }
 
 .formula-text-row {
