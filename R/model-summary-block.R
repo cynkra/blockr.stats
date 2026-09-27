@@ -97,7 +97,7 @@ new_model_summary_block <- function(uncertainty = "ci95",
                 "estimate \u00b1 one standard error (~68%)" = "se",
                 "estimate only, no interval" = "none"
               ),
-              uncertainty, label_only = FALSE, size = "large"
+              uncertainty, size = "large"
             ),
             select_field(
               ns("significance"), "Significance",
@@ -107,7 +107,7 @@ new_model_summary_block <- function(uncertainty = "ci95",
                 "stars: *** / ** / * / ." = "stars",
                 "not shown" = "none"
               ),
-              significance, label_only = FALSE, size = "large"
+              significance, size = "large"
             ),
             select_field(
               ns("scale"), "Coefficient scale",
@@ -116,7 +116,7 @@ new_model_summary_block <- function(uncertainty = "ci95",
                 "raw, on the link scale" = "raw",
                 "exponentiated, reference at 1" = "ratio"
               ),
-              scale, label_only = FALSE, size = "large"
+              scale, size = "large"
             ),
             checkbox_field(ns("effect_column"), "Effect column (forest)",
                            effect_column),
