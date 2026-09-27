@@ -1,6 +1,6 @@
 Package: blockr.stats
 Title: Statistical Blocks for blockr
-Version: 0.1.2.9008
+Version: 0.1.2.9009
 Authors@R:
     c(person(given = "Christoph",
              family = "Sax",
@@ -22,8 +22,7 @@ RoxygenNote: 7.3.3
 Imports:
     shiny,
     blockr.core (>= 0.1.2),
-    blockr.dplyr (>= 0.2.0.9031),
-    blockr.ui (>= 0.0.1.9030),
+    blockr.ui (>= 0.0.1.9034),
     broom,
     cmprsk,
     dplyr,
@@ -35,6 +34,7 @@ Imports:
     survival,
     tibble
 Suggests:
+    blockr.dplyr,
     car,
     glmmTMB,
     knitr,

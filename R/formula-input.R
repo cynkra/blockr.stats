@@ -26,8 +26,8 @@ formula_input_dep <- function() {
 
 #' Formula-input widget: UI container
 #'
-#' Pulls blockr.ui's shared controls, the code field with autocomplete
-#' (`Blockr.Input`, which still lives in blockr.dplyr) and the formula-input
+#' Pulls blockr.ui's shared controls, including the code field with
+#' autocomplete (`Blockr.Input`), and the formula-input
 #' dependency, then the namespaced container the JS binds to.
 #'
 #' @param id Module id (namespace).
@@ -38,7 +38,6 @@ formula_input_dep <- function() {
 formula_input_ui <- function(id, response_mode = "single") {
   htmltools::tagList(
     blockr.ui::controls_dep(),
-    blockr.dplyr::blockr_input_dep(),
     formula_input_dep(),
     shiny::div(
       id = shiny::NS(id, "formula_input"),
