@@ -110,10 +110,12 @@ new_broom_block <- function(output = "tidy", conf_int = TRUE,
           ),
           div(
             class = "blockr-stats-face",
-            select_field(ns("output"), "Output",
-              choices = c("Coefficients (tidy)" = "tidy",
-                          "Fit summary (glance)" = "glance",
-                          "Per-observation (augment)" = "augment"),
+            # Short labels, so all three fit as segments; the generated
+            # code still names the verb (broom::tidy()).
+            segmented_field(ns("output"), "Output",
+              choices = c("Coefficients" = "tidy",
+                          "Model fit" = "glance",
+                          "Per row" = "augment"),
               selected = output)
           )
         )
