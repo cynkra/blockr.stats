@@ -82,7 +82,6 @@
 
     var predHost = document.createElement("div");
     predHost.className = "formula-control";
-    var ctxTarget; // element the right-click build-menu binds to
 
     if (this.responseMode === "surv") {
       // One-line pill (time + event left, predictors right), with the labels
@@ -125,7 +124,6 @@
       spill.appendChild(predSeg);
       this.el.appendChild(spill);
       this._builderEls.push(spill);
-      ctxTarget = predSeg;
 
       this._timeSelect = Blockr.Select.single(timeSeg, {
         placeholder: "time…",
@@ -166,13 +164,11 @@
       row.appendChild(rhsWrap);
       this.el.appendChild(row);
       this._builderEls.push(row);
-      ctxTarget = rhsWrap;
       this._respSelect = Blockr.Select.single(respHost, {
         placeholder: "response…",
         onChange: function (v) { self.response = v || null; self._sync(); }
       });
     }
-    this._ctxTarget = ctxTarget;
 
     this._predSelect = Blockr.Select.multi(predHost, {
       placeholder: "add predictors…",
@@ -217,15 +213,6 @@
     addRow.appendChild(this._codeBtn);
     // appended AFTER the text row below, so the footer is under whichever
     // input is showing — not stranded above the field in text mode.
-
-    // Right-click anywhere on the predictors area opens the same menu, under
-    // the link: a menu hangs from its trigger.
-    if (this._ctxTarget) {
-      this._ctxTarget.addEventListener("contextmenu", function (e) {
-        e.preventDefault();
-        self._openMenu();
-      });
-    }
 
     // (intercept is the inline 1/0 toggle at the left of the RHS, above)
 
@@ -550,7 +537,7 @@
     };
     var columns = function (label, make) {
       return row(label + "…", noNumeric, function () {
-        self._pickColumn(label + " of", make);
+        self._pickColumn(label, make);
       });
     };
     var handle = Blockr.menu(this._addLink, {
@@ -603,7 +590,7 @@
     var picked = [];
     var handle = Blockr.Select.menu(this._addLink, {
       mode: "multi",
-      title: "Interaction of",
+      title: "Interaction",
       options: this._colOptions().filter(function (o) {
         return preds.indexOf(o.value) !== -1;
       }),

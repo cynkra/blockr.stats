@@ -197,9 +197,14 @@ css_summary_card <- function() {
        as every other quiet thing */
     .msc-int td { color: var(--blockr-color-text-muted); }
 
-    /* Significance levels are neutral badges (design system, Badges): an
-       18px capsule, 11px weight 500, bg-subtle inside a border-default
-       edge, text-muted. One width for every level, so a shorter label does
+    /* Significance levels: badges on a ladder. 0.1%, 1% and 5% are accent
+       tints deepening one step at a time, because 5% is the line most
+       readers look for and a grey badge there would dismiss the very terms
+       they want; 10% is neutral, borderline rather than a result; above
+       10% there is no badge. This is an exception to the spec's neutral
+       badge: the badge encodes the strength of the evidence, which is data.
+       The steps are one ramp on the accent token, so they follow the theme
+       and dark mode. One width for every level, so a shorter label does
        not read as a smaller finding. */
     .msc-chip {
       display: inline-flex; align-items: center; justify-content: center;
@@ -208,10 +213,23 @@ css_summary_card <- function() {
       font-size: 11px; font-weight: var(--blockr-font-weight-medium);
       line-height: 1; white-space: nowrap;
       border-radius: var(--blockr-radius-pill);
-      background: var(--blockr-color-bg-subtle);
-      border: 1px solid var(--blockr-color-border-default);
-      color: var(--blockr-color-text-muted);
+      background: color-mix(in srgb, var(--blockr-color-border-accent) 22%, transparent);
+      border: 1px solid color-mix(in srgb, var(--blockr-color-border-accent) 62%, transparent);
+      color: var(--blockr-color-text-accent);
       font-variant-numeric: tabular-nums;
+    }
+    .msc-chip--1 {
+      background: color-mix(in srgb, var(--blockr-color-border-accent) 13%, transparent);
+      border-color: color-mix(in srgb, var(--blockr-color-border-accent) 38%, transparent);
+    }
+    .msc-chip--5 {
+      background: color-mix(in srgb, var(--blockr-color-border-accent) 6%, transparent);
+      border-color: color-mix(in srgb, var(--blockr-color-border-accent) 20%, transparent);
+    }
+    .msc-chip--10 {
+      background: var(--blockr-color-bg-subtle);
+      border-color: var(--blockr-color-border-default);
+      color: var(--blockr-color-text-muted);
     }
 
     /* inline forest column */
