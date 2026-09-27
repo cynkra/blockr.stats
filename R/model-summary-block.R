@@ -22,7 +22,11 @@
 #'   (default), `"ci90"`, `"ci99"`, `"se"` or `"none"`.
 #' @param significance `"chips"` (default; a neutral badge at 0.1% / 1% / 5%
 #'   / 10%), `"p"` (a p-value column), `"stars"` or `"none"`.
-#' @param scale `"auto"` (default), `"raw"` or `"ratio"`.
+#' @param scale `"auto"` (default) shows odds, rate and hazard ratios for
+#'   models that have them and raw coefficients otherwise; `"raw"` always
+#'   shows raw coefficients. The gear's "Show ratios (when available)"
+#'   checkbox switches between the two. `"ratio"` (exponentiate regardless of
+#'   the model) is still accepted from code.
 #' @param effect_column,facts,intercept Show the forest column / the model
 #'   facts line / the intercept row (all `TRUE` by default).
 #' @param ... Forwarded to [new_transform_block()].
@@ -55,7 +59,13 @@ new_model_summary_block <- function(uncertainty = "ci95",
 
         observeEvent(input$uncertainty, r_uncertainty(input$uncertainty))
         observeEvent(input$significance, r_significance(input$significance))
-        observeEvent(input$scale, r_scale(input$scale))
+        # A preference, not a property of the model: on, whatever model
+        # arrives shows its ratios if its link has them.
+        observeEvent(input$ratio, {
+          on <- isTRUE(input$ratio)
+          if (on && identical(r_scale(), "raw")) r_scale("auto")
+          if (!on) r_scale("raw")
+        })
         observeEvent(input$effect_column, r_effect(isTRUE(input$effect_column)))
         observeEvent(input$facts, r_facts(isTRUE(input$facts)))
         observeEvent(input$intercept, r_intercept(isTRUE(input$intercept)))
@@ -109,15 +119,8 @@ new_model_summary_block <- function(uncertainty = "ci95",
               ),
               significance, size = "large"
             ),
-            select_field(
-              ns("scale"), "Coefficient scale",
-              c(
-                "ratio for glm / Cox, raw for lm" = "auto",
-                "raw, on the link scale" = "raw",
-                "exponentiated, reference at 1" = "ratio"
-              ),
-              scale, size = "large"
-            ),
+            checkbox_field(ns("ratio"), "Show ratios (when available)",
+                           !identical(scale, "raw"), size = "large"),
             checkbox_field(ns("effect_column"), "Effect column (forest)",
                            effect_column),
             checkbox_field(ns("facts"), "Model facts line", facts),

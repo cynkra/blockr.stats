@@ -132,3 +132,29 @@ test_that("survival_block returns a survfit", {
     args = list(x = blk, data = list(data = function() survival::lung))
   )
 })
+
+test_that("the ratio checkbox is a preference: on = ratios where available", {
+  blk <- new_model_summary_block()
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", blk),
+    {
+      code <- function() paste(deparse(session$returned$expr()), collapse = " ")
+      session$setInputs(`expr-ratio` = FALSE)
+      expect_match(code(), "scale = \"raw\"")
+      session$setInputs(`expr-ratio` = TRUE)
+      expect_false(grepl("scale", code()))
+    },
+    args = list(x = blk, data = list(data = function() glm(am ~ wt, mtcars, family = binomial)))
+  )
+  # A forced ratio from code survives the checkbox reporting its start value.
+  forced <- new_model_summary_block(scale = "ratio")
+  shiny::testServer(
+    blockr.core:::get_s3_method("block_server", forced),
+    {
+      session$setInputs(`expr-ratio` = TRUE)
+      expect_match(paste(deparse(session$returned$expr()), collapse = " "),
+                   "scale = \"ratio\"")
+    },
+    args = list(x = forced, data = list(data = function() lm(mpg ~ wt, mtcars)))
+  )
+})

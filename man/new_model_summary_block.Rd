@@ -21,7 +21,11 @@ new_model_summary_block(
 \item{significance}{\code{"chips"} (default; a neutral badge at 0.1\% / 1\% / 5\%
 / 10\%), \code{"p"} (a p-value column), \code{"stars"} or \code{"none"}.}
 
-\item{scale}{\code{"auto"} (default), \code{"raw"} or \code{"ratio"}.}
+\item{scale}{\code{"auto"} (default) shows odds, rate and hazard ratios for
+models that have them and raw coefficients otherwise; \code{"raw"} always
+shows raw coefficients. The gear's "Show ratios (when available)"
+checkbox switches between the two. \code{"ratio"} (exponentiate regardless of
+the model) is still accepted from code.}
 
 \item{effect_column, facts, intercept}{Show the forest column / the model
 facts line / the intercept row (all \code{TRUE} by default).}
