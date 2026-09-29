@@ -66,7 +66,7 @@
 #     watch", that is the difference between snappy and sluggish -- a
 #     ggplot block is a fresh R render round-tripped as a PNG on every
 #     keystroke, which is the wrong instrument for a dashboard. Reference
-#     geometry comes free too: `identity_line = TRUE` and `hlines = 0` are
+#     geometry comes free too: `identity_line = TRUE` and `value_lines = 0` are
 #     arguments, not layers to hand-write.
 #
 #   blockr.ggplot blocks, in the document. What lands in the rendered
@@ -295,7 +295,7 @@ board <- new_dock_board(
     resid = `attr<-`(
       blockr.viz::new_chart_block(
         chart_type = "scatter", x = ".fitted", y = ".resid",
-        color = "species", hlines = 0,
+        color = "species", value_lines = 0,
         block_name = "Residuals vs fitted"
       ),
       "visible", "inputs"
