@@ -28,11 +28,11 @@
 #     counted as ten independent facts. The point estimate survives that. The
 #     precision does not.
 #
-#   Arm 2, the code block. The model the statisticians actually published:
+#   Arm 2, the script block. The model the statisticians actually published:
 #     a negative binomial mixed model with a quadratic season, an exposure
 #     term for how long each trap sat in the field, and random intercepts for
 #     trap and municipality. `glmmTMB::glmmTMB` is not a blockr block and does
-#     not need to be. The code block is a CodeMirror editor holding a plain R
+#     not need to be. The script block is an editor holding a plain R
 #     script; the broom adapter tidies its result downstream exactly as it
 #     tidies the glm.
 #
@@ -89,9 +89,8 @@ blockr_pkgs <- c(
   "blockr.session",   # project save / load / versions
   "blockr.assistant", # board-level chat
   "blockr.outline",   # the report builder, the deck builder, the minidag
-  # NOT optional here, unlike in stats-101: the published arm below IS a
-  # blockr.extra code block. Without this the board does not construct.
-  "blockr.extra"
+  # The published arm below is a set of script blocks.
+  "blockr.script"
 )
 
 for (pkg in blockr_pkgs) {
@@ -176,13 +175,13 @@ if (is.null(getOption("blockr.chat_function"))) {
   }
 }
 
-# The published model, as a SCRIPT, because that is what a code block stores.
+# The published model, as a SCRIPT, because that is what a script block stores.
 #
 # This block used to be a Function block. The swap is the reason the exported
 # document reads the way it does. A Function block wraps its body in a
 # function and calls it, so the report got
 # `local({.fn <- function(data, random_trap = TRUE) {...}; .fn(ovi)})` --
-# correct, runnable, and not something anyone would write. A code block
+# correct, runnable, and not something anyone would write. A script block
 # substitutes the control values into the body as literals and emits the
 # statement bare, so the same model lands in the qmd as one `glmmTMB::glmmTMB()`
 # call a reader can lift.
@@ -223,7 +222,7 @@ glmm_script <- "glmmTMB::glmmTMB(
 # per trap, faceted by arm, the fitted curve and its 95% band on top (Ravasi et
 # al. Fig. 3, refitted). This is the figure the report exists to carry.
 #
-# ITS INPUT IS THE MODEL, NOT THE DATA, because a code block takes exactly one
+# ITS INPUT IS THE MODEL, NOT THE DATA, because a script block here takes one
 # input and the fit is the thing that cannot be recomputed cheaply. The observed
 # collections come back out of the fit's model frame, inverting the poly() basis
 # the same way `glmm_season_script` used to.
@@ -324,7 +323,7 @@ ggplot2::ggplot(grid, ggplot2::aes(Day.ovitrap.collected)) +
 # table block: FIVE blocks to turn a fit into four columns, three of them there
 # only because the table block renders a wide frame badly and rounds the panel
 # without rounding the report. All five are gone. The escalation story is
-# untouched -- the glmmTMB call is still hand-written R in a code block, which
+# untouched -- the glmmTMB call is still hand-written R in a script block, which
 # is the point being made -- but what happens AFTER the fit is no longer a
 # pipeline the audience has to watch being built.
 #
@@ -499,7 +498,7 @@ board <- new_dock_board(
     # -- Table 1 -----------------------------------------------------------
     # See `desc_script`: one gtsummary call, a dropdown for the grouping, and
     # the same table in the panel and in the document.
-    desc = new_code_block(
+    desc = new_script_block(
       script = desc_script, block_name = "Descriptive Stats"
     ),
 
@@ -571,12 +570,12 @@ board <- new_dock_board(
     # different-looking tables for one audience to read in eight minutes.
     #
     # Now they are one table three times.
-    mcoef = new_code_block(
+    mcoef = new_script_block(
       script = basic_regression_script, block_name = "Model Summary"
     ),
 
     # The formula widget's consequence, made visible. See `glm_diag_script`.
-    mdiag = new_code_block(
+    mdiag = new_script_block(
       script = glm_diag_script, block_name = "Compute Fitted"
     ),
     # A chart block for the same reason as the season chart, and with the same
@@ -603,13 +602,13 @@ board <- new_dock_board(
     # effect table and `gseason_gg` into the season figure. Three blocks, one
     # per job, so the exported document gets a model chunk, a table chunk and a
     # figure chunk instead of one script doing all three.
-    glmm = new_code_block(
+    glmm = new_script_block(
       script = glmm_script, block_name = "Published Model (GLMM)"
     ),
 
     # The headline number. `tbl_regression()` resolves its own tidier, so the
     # downloaded qmd does not depend on broom.mixed happening to be attached.
-    gtbl = new_code_block(
+    gtbl = new_script_block(
       script = regression_script, block_name = "Published Model Summary"
     ),
 
@@ -619,7 +618,7 @@ board <- new_dock_board(
     # better, but the four controls live in the input half and go with it --
     # gear included -- and hiding what a block can do is not how this project
     # asks for the trade to be made. Maximise the panel when presenting.
-    gseason_gg = new_code_block(
+    gseason_gg = new_script_block(
       script = season_gg_script, block_name = "Published Plot"
     )
   ),
@@ -950,7 +949,7 @@ board <- new_dock_board(
     #
     # The reason it probably does not need one: the mount rule that forced
     # document figures onto this view applies to CHART and ggplot BLOCKS, whose
-    # code is only known once the widget has drawn, whereas a code block's
+    # code is only known once the widget has drawn, whereas a script block's
     # chunk is just its script. NOT CONFIRMED END TO END -- the builder lists
     # the figure and no "waiting for R code" placeholder appears anywhere, but
     # the exported qmd was not read back. Download it once and check the
